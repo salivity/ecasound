@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programming Language of Ecasound Core Engine - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful, multitrack audio processing and recording tool designed primarily for Unix-like operating systems. This article details the primary programming language used to develop Ecasound's core processing engine, explores the technical rea">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/programming-language-of-ecasound-core-engine">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Programming Language of Ecasound Core Engine - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/programming-language-of-ecasound-core-engine" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful, multitrack audio processing and recording tool designed primarily for Unix-like operating systems. This article details the primary programming language used to develop Ecasound's core processing engine, explores the technical rea" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="programming-language-of-ecasound-core-engine">Programming
+Language of Ecasound Core Engine</h1>
+<p>Ecasound is a powerful, multitrack audio processing and recording
+tool designed primarily for Unix-like operating systems. This article
+details the primary programming language used to develop Ecasound's core
+processing engine, explores the technical reasons behind this design
+choice, and outlines the various interface layers available for
+integrating the engine into other software environments.</p>
+<p>The core engine of Ecasound is implemented in
+<strong>C++</strong>.</p>
+<p>Ecasound relies on an object-oriented architecture to handle complex
+digital audio processing tasks, including multitrack recording, effects
+routing, format conversions, and real-time playback. Implementing the
+core library (<code>libecasound</code>) in C++ allows the software to
+achieve the high execution speed and low-latency performance required
+for real-time audio manipulation while maintaining a modular,
+maintainable code base.</p>
+<p>In Ecasound's design, signal routing and processing graph
+elements—such as audio inputs, audio outputs, chains, and chain
+operators (effects and filters)—are modeled as distinct C++ classes.
+This allows developers to easily extend the engine by adding new
+plugins, audio format parsers, or hardware driver interfaces.</p>
+<p>Although the core engine is written in C++, Ecasound provides several
+language bindings and control mechanisms via the Ecasound Control
+Interface (ECA-CI). This architecture allows developers to control the
+C++ engine using other languages, including C, Python, Perl, and
+standard interactive shell scripts, without needing to interact directly
+with the underlying C++ audio processing loop.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

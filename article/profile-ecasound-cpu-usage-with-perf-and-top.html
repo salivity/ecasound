@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Ecasound CPU Usage with Perf and Top - ecasound</title>
+    <meta name="description" content="This guide demonstrates how to accurately measure and analyze the CPU utilization of Ecasound, a command-line multitrack audio processing tool, using native Linux utilities. By combining coarse-grained monitoring tools like top and pidstat with detailed">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/profile-ecasound-cpu-usage-with-perf-and-top">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Profile Ecasound CPU Usage with Perf and Top - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/profile-ecasound-cpu-usage-with-perf-and-top" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to accurately measure and analyze the CPU utilization of Ecasound, a command-line multitrack audio processing tool, using native Linux utilities. By combining coarse-grained monitoring tools like top and pidstat with detailed" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="profile-ecasound-cpu-usage-with-perf-and-top">Profile Ecasound
+CPU Usage with Perf and Top</h1>
+<p>This guide demonstrates how to accurately measure and analyze the CPU
+utilization of Ecasound, a command-line multitrack audio processing
+tool, using native Linux utilities. By combining coarse-grained
+monitoring tools like <code>top</code> and <code>pidstat</code> with
+detailed kernel-level profiling via <code>perf</code>, you can pinpoint
+whether processing bottlenecks stem from specific DSP effects, audio
+subsystem I/O, or core mixing routines.</p>
+<h3 id="monitoring-high-level-cpu-usage-with-top-and-pidstat">Monitoring
+High-Level CPU Usage with <code>top</code> and <code>pidstat</code></h3>
+<p>To get an immediate overview of Ecasound's resource consumption,
+identify its process ID (PID) and monitor its thread execution.</p>
+<ol type="1">
+<li><p><strong>Locate the Process:</strong> Find the PID of your running
+Ecasound session:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pgrep</span> <span class="at">-a</span> ecasound</span></code></pre></div></li>
+<li><p><strong>Monitor Real-Time Thread Activity with
+<code>top</code>:</strong> Because Ecasound uses separate threads for
+audio engines, real-time control, and I/O buffering, viewing
+thread-level statistics is essential.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">top</span> <span class="at">-H</span> <span class="at">-p</span> <span class="va">$(</span><span class="ex">pgrep</span> ecasound<span class="va">)</span></span></code></pre></div>
+<ul>
+<li>Press <strong>1</strong> while <code>top</code> is running to view
+per-core distribution.</li>
+<li>Look at the <code>RES</code> and <code>%CPU</code> columns to
+identify which individual thread is causing spikes.</li>
+</ul></li>
+<li><p><strong>Log Resource Consumption with
+<code>pidstat</code>:</strong> To measure CPU percentage over a steady
+interval without the interactive overhead of <code>top</code>, use
+<code>pidstat</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pidstat</span> <span class="at">-u</span> <span class="at">-t</span> <span class="at">-p</span> <span class="va">$(</span><span class="ex">pgrep</span> ecasound<span class="va">)</span> 1</span></code></pre></div>
+<p>The <code>-t</code> flag splits the output into individual thread IDs
+(<code>TID</code>), giving you a time-series log of CPU
+distribution.</p></li>
+</ol>
+<hr />
+<h3 id="low-level-function-profiling-with-perf">Low-Level Function
+Profiling with <code>perf</code></h3>
+<p>When high CPU usage cannot be explained by thread volume alone,
+<code>perf</code> identifies the exact functions, libraries, or LADSPA
+plugins consuming CPU cycles.</p>
+<h4 id="1-real-time-inspection-with-perf-top">1. Real-Time Inspection
+with <code>perf top</code></h4>
+<p>To quickly inspect functions executing inside Ecasound without
+writing a trace file to disk:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> perf top <span class="at">-p</span> <span class="va">$(</span><span class="ex">pgrep</span> ecasound<span class="va">)</span></span></code></pre></div>
+<p>This display highlights the hottest functions in real time,
+separating code executed within <code>libecasound.so</code>, the Linux
+kernel (e.g., ALSA drivers), and the C runtime.</p>
+<h4 id="2-recording-a-sampling-profile">2. Recording a Sampling
+Profile</h4>
+<p>To capture a representative workload with call graph data for offline
+analysis:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> perf record <span class="at">-F</span> 99 <span class="at">-p</span> <span class="va">$(</span><span class="ex">pgrep</span> ecasound<span class="va">)</span> <span class="at">-g</span> <span class="at">--</span> sleep 20</span></code></pre></div>
+<ul>
+<li><code>-F 99</code>: Samples at 99 Hertz, avoiding lockstep
+synchronization with system timers.</li>
+<li><code>-p &lt;PID&gt;</code>: Attaches directly to the running
+Ecasound process.</li>
+<li><code>-g</code>: Captures full call chains (stack traces) to see
+which callers invoked high-overhead functions.</li>
+<li><code>-- sleep 20</code>: Records for a duration of 20 seconds.</li>
+</ul>
+<h4 id="3-analyzing-the-profile-report">3. Analyzing the Profile
+Report</h4>
+<p>Once recorded, open the interactive report viewer:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> perf report <span class="at">--stdio</span></span></code></pre></div>
+<p>Or launch the interactive TUI:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> perf report</span></code></pre></div>
+<h3 id="interpreting-the-results">Interpreting the Results</h3>
+<ul>
+<li><strong><code>libecasound</code> / <code>sample_t</code>
+routines:</strong> High overhead inside Ecasound's native functions
+usually indicates heavy routing, volume scaling, or sample format
+conversion.</li>
+<li><strong>External Plugins (e.g., <code>ladspa</code> /
+<code>liblo</code>):</strong> If a specific <code>.so</code> file
+dominates the top percentages, the bottleneck lies within a dynamic DSP
+effect rather than Ecasound's core engine.</li>
+<li><strong>Kernel Audio Drivers (<code>snd_pcm_*</code>):</strong> High
+usage in kernel ALSA routines typically signifies an audio buffer
+underrun/overrun (xrun) condition, overly small period sizes
+(<code>-b:buffersize</code>), or excessive system call overhead from
+low-latency real-time scheduling.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

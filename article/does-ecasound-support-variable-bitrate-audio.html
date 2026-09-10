@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Does Ecasound Support Variable Bitrate Audio? - ecasound</title>
+    <meta name="description" content="Ecasound supports writing audio files with variable bitrates (VBR), but its capability depends on the audio format selected and the method used to encode the file. While Ecasound's native command-line format options default to constant bitrate parameters">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/does-ecasound-support-variable-bitrate-audio">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Does Ecasound Support Variable Bitrate Audio? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/does-ecasound-support-variable-bitrate-audio" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound supports writing audio files with variable bitrates (VBR), but its capability depends on the audio format selected and the method used to encode the file. While Ecasound's native command-line format options default to constant bitrate parameters" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="does-ecasound-support-variable-bitrate-audio">Does Ecasound
+Support Variable Bitrate Audio?</h1>
+<p>Ecasound supports writing audio files with variable bitrates (VBR),
+but its capability depends on the audio format selected and the method
+used to encode the file. While Ecasound's native command-line format
+options default to constant bitrate parameters for formats like MP3, it
+natively supports inherently variable formats such as Ogg Vorbis and
+FLAC. Furthermore, full VBR control for MP3 and other formats can be
+achieved by utilizing standard audio piping or configuring Ecasound's
+external codec definitions.</p>
+<h3 id="native-format-support">Native Format Support</h3>
+<p>For formats that use variable bitrates or quality-based encoding by
+default, such as Ogg Vorbis (<code>.ogg</code>), Ecasound handles VBR
+encoding naturally through its underlying libraries. When encoding to
+lossless compressed formats like FLAC, the bitrate is inherently
+variable based on the complexity of the audio signal, which Ecasound
+handles without extra configuration.</p>
+<h3 id="the-limitation-with-mp3s">The Limitation with MP3s</h3>
+<p>When outputting to MP3 files directly via the
+<code>-o:filename.mp3</code> syntax, Ecasound relies on external tools
+or underlying libraries such as LAME. In standard Ecasound syntax, the
+<code>-f</code> (format) argument controls sample format, channel count,
+and sampling rate, but does not provide a direct command-line parameter
+to set LAME VBR quality presets (such as <code>-V 0</code> or
+<code>-V 2</code>). Consequently, standard direct output to MP3
+typically defaults to constant bitrate (CBR).</p>
+<h3 id="methods-to-produce-vbr-audio-with-ecasound">Methods to Produce
+VBR Audio with Ecasound</h3>
+<p>Users seeking precise variable bitrate output have two primary
+methods to achieve it:</p>
+<ol type="1">
+<li><p><strong>Piping to External Encoders:</strong><br />
+Ecasound allows routing processed raw PCM audio to standard output,
+which can be piped directly into any command-line encoder supporting
+VBR. For example, piping Ecasound's stdout to LAME allows you to pass
+standard VBR flags:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-o:stdout</span> <span class="kw">|</span> <span class="ex">lame</span> <span class="at">-V</span> 2 <span class="at">-</span> output.mp3</span></code></pre></div></li>
+<li><p><strong>Customizing the <code>ecasoundrc</code>
+Configuration:</strong><br />
+Ecasound defines how it interfaces with external encoders through its
+resource configuration file (<code>~/.ecasound/ecasoundrc</code> or the
+global <code>/etc/ecasound/ecasoundrc</code>). By locating the external
+codec definition for MP3 or other formats, you can modify the default
+command-line string used to execute the encoder. Adding a variable
+bitrate argument directly to the encoder definition allows Ecasound to
+write VBR files natively when targeting that file extension.</p></li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

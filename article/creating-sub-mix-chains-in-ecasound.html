@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creating Sub-Mix Chains in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to construct sub-mix chains inside an Ecasound configuration by routing multiple audio streams into intermediary buses. In Ecasound, sub-mixing is achieved using virtual loop devices, which collect audio outputs from multiple in">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/creating-sub-mix-chains-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Creating Sub-Mix Chains in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/creating-sub-mix-chains-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to construct sub-mix chains inside an Ecasound configuration by routing multiple audio streams into intermediary buses. In Ecasound, sub-mixing is achieved using virtual loop devices, which collect audio outputs from multiple in" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="creating-sub-mix-chains-in-ecasound">Creating Sub-Mix Chains in
+Ecasound</h1>
+<p>This article explains how to construct sub-mix chains inside an
+Ecasound configuration by routing multiple audio streams into
+intermediary buses. In Ecasound, sub-mixing is achieved using virtual
+loop devices, which collect audio outputs from multiple individual
+chains and redirect them as a combined input into a secondary processing
+chain before reaching the final master output.</p>
+<h3 id="the-loop-device-mechanism">The Loop Device Mechanism</h3>
+<p>Ecasound uses the loop object syntax (<code>loop,id</code>) to pass
+audio internally between chains without writing to physical disk storage
+or external sound cards. To create a sub-mix:</p>
+<ol type="1">
+<li>Route the outputs of source chains to a designated loop device:
+<code>-o:loop,name</code></li>
+<li>Assign that same loop device as the input for a processing or bus
+chain: <code>-i:loop,name</code></li>
+</ol>
+<p>Any chains that output to the same loop identifier are automatically
+summed together, effectively functioning as a sub-mix bus.</p>
+<h3 id="core-syntax-structure">Core Syntax Structure</h3>
+<p>When executing via the command line or within an <code>.ecs</code>
+preset file, define the individual inputs, direct them to a shared loop,
+and attach the loop to a final target chain:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:track1</span> <span class="at">-i:kick.wav</span> <span class="at">-ea:100</span> <span class="at">-o:loop,drums</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:track2</span> <span class="at">-i:snare.wav</span> <span class="at">-ea:90</span> <span class="at">-o:loop,drums</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drum_bus</span> <span class="at">-i:loop,drums</span> <span class="at">-efl:800</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<h3 id="breakdown-of-the-configuration-parameters">Breakdown of the
+Configuration Parameters</h3>
+<ul>
+<li><strong><code>-a:chain_name</code></strong>: Declares or selects an
+active chain. You can select multiple chains simultaneously using comma
+separation (e.g., <code>-a:track1,track2</code>).</li>
+<li><strong><code>-i:source</code></strong>: Defines the input for the
+currently active chain. In sub-mixes, the receiver chain sets its input
+to <code>-i:loop,&lt;id&gt;</code>.</li>
+<li><strong><code>-o:target</code></strong>: Directs the processed
+signal. Feeding source chains into <code>-o:loop,&lt;id&gt;</code> mixes
+them into the internal bus.</li>
+<li><strong><code>-ea:value</code> / <code>-efl:value</code></strong>:
+Represents chain-specific effects and gain stages. Processing placed on
+the source chains affects individual tracks, while processing placed on
+the receiving bus chain applies across the entire sub-mix.</li>
+</ul>
+<h3 id="multi-bus-sub-mixing-example">Multi-Bus Sub-Mixing Example</h3>
+<p>To route multiple sub-mixes (for example, drums and synths) into a
+final master output bus:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drum1</span> <span class="at">-i:drum1.wav</span> <span class="at">-o:loop,drums</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drum2</span> <span class="at">-i:drum2.wav</span> <span class="at">-o:loop,drums</span> <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:synth1</span> <span class="at">-i:lead.wav</span> <span class="at">-o:loop,synths</span> <span class="dt">\</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:synth2</span> <span class="at">-i:pad.wav</span> <span class="at">-o:loop,synths</span> <span class="dt">\</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drum_bus</span> <span class="at">-i:loop,drums</span> <span class="at">-ea:110</span> <span class="at">-o:loop,master</span> <span class="dt">\</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:synth_bus</span> <span class="at">-i:loop,synths</span> <span class="at">-ea:95</span> <span class="at">-o:loop,master</span> <span class="dt">\</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:master</span> <span class="at">-i:loop,master</span> <span class="at">-epp:50</span> <span class="at">-o:final_output.wav</span></span></code></pre></div>
+<p>In this setup, <code>drum1</code> and <code>drum2</code> sum into
+<code>loop,drums</code>, which is managed by the <code>drum_bus</code>
+chain. Similarly, the synths sum into <code>loop,synths</code>. Both
+buses are then processed and routed to <code>loop,master</code>, which
+handles global gain and stereo panning before exporting to a physical
+output file.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

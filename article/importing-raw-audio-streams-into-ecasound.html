@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importing Raw Audio Streams into Ecasound - ecasound</title>
+    <meta name="description" content="Raw audio streams lack file headers, meaning they do not contain metadata describing how the binary data is organized. To import and process raw audio streams using the Ecasound command-line utility, you must explicitly declare the audio format parameter">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/importing-raw-audio-streams-into-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Importing Raw Audio Streams into Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/importing-raw-audio-streams-into-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Raw audio streams lack file headers, meaning they do not contain metadata describing how the binary data is organized. To import and process raw audio streams using the Ecasound command-line utility, you must explicitly declare the audio format parameter" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="importing-raw-audio-streams-into-ecasound">Importing Raw Audio
+Streams into Ecasound</h1>
+<p>Raw audio streams lack file headers, meaning they do not contain
+metadata describing how the binary data is organized. To import and
+process raw audio streams using the Ecasound command-line utility, you
+must explicitly declare the audio format parameters before declaring the
+input source. This guide details the mandatory parameters—specifically
+sample format, channel count, and sample rate—required by Ecasound to
+accurately read and process raw PCM data.</p>
+<h3 id="the-audio-format-parameter-option--f">The Audio Format Parameter
+Option (<code>-f</code>)</h3>
+<p>In Ecasound, stream properties are configured using the
+<code>-f</code> (format) option. When reading raw files or streams (such
+as input piped from standard input or a <code>.raw</code> file), the
+<code>-f</code> option must precede the input option
+(<code>-i</code>).</p>
+<p>The general syntax for defining format parameters is:</p>
+<p><code>-f:sample_format,channels,sample_rate,interleaving</code></p>
+<p>To properly interpret raw audio, you must provide the following three
+core parameters, along with an optional fourth parameter:</p>
+<h4 id="1-sample-format-sample_format">1. Sample Format
+(<code>sample_format</code>)</h4>
+<p>This defines the bit depth, data type, and byte order (endianness) of
+the raw audio data. Common values include:</p>
+<ul>
+<li><code>s16_le</code>: Signed 16-bit integer, little-endian (standard
+for CD audio and most PC systems).</li>
+<li><code>s16_be</code>: Signed 16-bit integer, big-endian.</li>
+<li><code>s24_le</code>: Signed 24-bit integer, little-endian.</li>
+<li><code>s32_le</code>: Signed 32-bit integer, little-endian.</li>
+<li><code>f32_le</code>: 32-bit floating point, little-endian.</li>
+<li><code>u8</code>: Unsigned 8-bit integer.</li>
+</ul>
+<h4 id="2-channel-count-channels">2. Channel Count
+(<code>channels</code>)</h4>
+<p>This specifies the number of discrete audio tracks contained within
+the raw stream. Common values are:</p>
+<ul>
+<li><code>1</code>: Mono</li>
+<li><code>2</code>: Stereo</li>
+<li>Values greater than <code>2</code> for multi-channel surround
+setups.</li>
+</ul>
+<h4 id="3-sample-rate-sample_rate">3. Sample Rate
+(<code>sample_rate</code>)</h4>
+<p>This defines the frequency at which the analog signal was digitized,
+expressed in Hertz (Hz). Typical values include:</p>
+<ul>
+<li><code>44100</code>: CD quality (44.1 kHz).</li>
+<li><code>48000</code>: Standard broadcast and video audio (48
+kHz).</li>
+<li><code>96000</code>: High-resolution audio (96 kHz).</li>
+</ul>
+<h4 id="4-interleaving-mode-interleaving">4. Interleaving Mode
+(<code>interleaving</code>)</h4>
+<p>This optional parameter specifies how multi-channel data is arranged.
+If omitted, Ecasound defaults to standard interleaved data.</p>
+<ul>
+<li><code>i</code>: Interleaved (samples alternate by channel: L, R, L,
+R...).</li>
+<li><code>n</code>: Non-interleaved (all samples for channel 1 occur
+before channel 2).</li>
+</ul>
+<h3 id="command-line-application">Command-Line Application</h3>
+<p>Because raw audio provides no self-identifying markers, Ecasound
+relies on parameter ordering. The format configuration must be declared
+directly before the target input source.</p>
+<p><strong>Example 1: Importing a raw stereo file</strong> To play a
+16-bit signed, little-endian, 44.1 kHz stereo raw file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-i:audio_data.raw</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p><strong>Example 2: Reading a raw stream from standard input</strong>
+To capture and convert a 48 kHz, 24-bit mono stream piped from another
+application via <code>stdin</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> input_stream <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-f:s24_le,1,48000</span> <span class="at">-i:stdin</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>If any of the three primary parameters (sample format, channels, or
+sample rate) are omitted or misidentified, Ecasound will either fail to
+initialize the chainsetup or produce severely distorted output, such as
+white noise or incorrect playback speeds.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

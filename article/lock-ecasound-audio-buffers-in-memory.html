@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lock Ecasound Audio Buffers in Memory - ecasound</title>
+    <meta name="description" content="To prevent Ecasound audio buffers from being paged out to disk swap, you must grant the process memory locking privileges at the operating system level, configure POSIX real-time scheduling within Ecasound, and optimize system swappiness. Because Ecasoun">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/lock-ecasound-audio-buffers-in-memory">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lock Ecasound Audio Buffers in Memory - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/lock-ecasound-audio-buffers-in-memory" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="To prevent Ecasound audio buffers from being paged out to disk swap, you must grant the process memory locking privileges at the operating system level, configure POSIX real-time scheduling within Ecasound, and optimize system swappiness. Because Ecasoun" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="lock-ecasound-audio-buffers-in-memory">Lock Ecasound Audio
+Buffers in Memory</h1>
+<p>To prevent Ecasound audio buffers from being paged out to disk swap,
+you must grant the process memory locking privileges at the operating
+system level, configure POSIX real-time scheduling within Ecasound, and
+optimize system swappiness. Because Ecasound relies on standard POSIX
+system calls and underlying audio engines (such as ALSA or JACK) to
+handle low-latency I/O, memory locking is enforced by combining PAM
+<code>memlock</code> limits, real-time runtime flags, and audio server
+lock directives.</p>
+<h3 id="1-configure-os-level-memory-locking-limits">1. Configure
+OS-Level Memory Locking Limits</h3>
+<p>Before Ecasound or its audio backends can pin buffer memory into
+physical RAM via <code>mlock()</code> or <code>mlockall()</code>, the
+user running the process must have adequate <code>memlock</code>
+privileges configured in PAM.</p>
+<p>Edit <code>/etc/security/limits.conf</code> (or create a file such as
+<code>/etc/security/limits.d/99-audio.conf</code>) and add the following
+lines for your audio group or user:</p>
+<pre class="text"><code>@audio   soft   memlock   unlimited
+@audio   hard   memlock   unlimited
+@audio   soft   rtprio    95
+@audio   hard   rtprio    95</code></pre>
+<p>Ensure your user is a member of the target group (e.g.,
+<code>sudo usermod -a -G audio $USER</code>), then log out and log back
+in. If Ecasound is managed by a <code>systemd</code> service, specify
+the resource limit directly inside the service unit file:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode ini"><code class="sourceCode ini"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[Service]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">LimitMEMLOCK</span><span class="ot">=</span><span class="st">infinity</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">LimitRTPRIO</span><span class="ot">=</span><span class="dv">95</span></span></code></pre></div>
+<h3 id="2-enable-ecasound-real-time-priority">2. Enable Ecasound
+Real-Time Priority</h3>
+<p>Ecasound supports POSIX real-time scheduling
+(<code>SCHED_FIFO</code>), which works in tandem with locked memory to
+prevent page faults and buffer underruns during processing.</p>
+<p>To enable real-time scheduling from the command line, pass the
+<code>-r</code> option:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-r</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>To set a specific scheduling priority between 1 and 99 (for example,
+priority 50):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-r:50</span> <span class="at">-i:somefile.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>When run with <code>-r</code> and valid PAM <code>rtprio</code>
+permissions, Ecasound prioritizes audio processing threads, reducing the
+risk of page out events during heavy I/O.</p>
+<h3 id="3-use-jack-with-real-time-memory-locking">3. Use JACK with
+Real-Time Memory Locking</h3>
+<p>When ultra-low latency and guaranteed unpaged memory are required,
+route Ecasound through the JACK Audio Connection Kit. JACK explicitly
+calls <code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>, ensuring all
+client buffers—including those instantiated by Ecasound—remain locked in
+physical RAM.</p>
+<ol type="1">
+<li>Start the JACK server with memory locking enabled (<code>-R</code>
+or <code>--realtime</code>):
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">jackd</span> <span class="at">-R</span> <span class="at">-d</span> alsa <span class="at">-p</span> 128 <span class="at">-r</span> 48000</span></code></pre></div></li>
+<li>Connect Ecasound as a JACK client using the <code>-i:jack</code> and
+<code>-o:jack</code> options:
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:jack,system:capture_1</span> <span class="at">-o:jack,system:playback_1</span></span></code></pre></div></li>
+</ol>
+<p>Because JACK holds an active global memory lock on its shared audio
+ringbuffers, Ecasound's streaming buffers within the JACK graph cannot
+be swapped to disk.</p>
+<h3 id="4-reduce-kernel-swappiness">4. Reduce Kernel Swappiness</h3>
+<p>To further ensure the Linux kernel does not aggressively target audio
+process memory during background memory pressure, lower the kernel
+swappiness value.</p>
+<p>Run the following command to temporarily lower swappiness:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl vm.swappiness=10</span></code></pre></div>
+<p>To make this permanent, add <code>vm.swappiness = 10</code> to
+<code>/etc/sysctl.conf</code> or
+<code>/etc/sysctl.d/99-audio.conf</code> and reload with
+<code>sudo sysctl --system</code>. This discourages anonymous memory
+pages from being pushed to swap while audio streams are active.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

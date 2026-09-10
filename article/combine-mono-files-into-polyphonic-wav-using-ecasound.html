@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combine Mono Files into Polyphonic WAV Using Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound is a command-line multitrack audio processing tool capable of combining multiple discrete mono audio files into a single polyphonic (multichannel) WAV file. This process is accomplished by assigning each mono file to an independent processing ch">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/combine-mono-files-into-polyphonic-wav-using-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Combine Mono Files into Polyphonic WAV Using Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/combine-mono-files-into-polyphonic-wav-using-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a command-line multitrack audio processing tool capable of combining multiple discrete mono audio files into a single polyphonic (multichannel) WAV file. This process is accomplished by assigning each mono file to an independent processing ch" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="combine-mono-files-into-polyphonic-wav-using-ecasound">Combine
+Mono Files into Polyphonic WAV Using Ecasound</h1>
+<p>Ecasound is a command-line multitrack audio processing tool capable
+of combining multiple discrete mono audio files into a single polyphonic
+(multichannel) WAV file. This process is accomplished by assigning each
+mono file to an independent processing chain, routing that file's signal
+to a specific channel position using channel routing operators, and
+binding all chains together into a multichannel audio destination.</p>
+<h3 id="understanding-the-ecasound-architecture">Understanding the
+Ecasound Architecture</h3>
+<p>To merge audio tracks, Ecasound relies on four core elements:</p>
+<ol type="1">
+<li><strong>Chains (<code>-a:N</code>):</strong> Independent processing
+paths. Each mono file must run in its own chain so that its signal can
+be routed independently.</li>
+<li><strong>Inputs (<code>-i:filename.wav</code>):</strong> The source
+files assigned to specific chains.</li>
+<li><strong>Channel Ordering (<code>-chorder</code>):</strong> An
+operator that positions the mono stream into a specific output slot
+while filling the remaining channels with silence (<code>0</code>).</li>
+<li><strong>Multichannel Output (<code>-o:output.wav</code> and
+<code>-f</code>):</strong> A unified target configured to accept all
+chains simultaneously with an explicit multichannel specification.</li>
+</ol>
+<h3 id="the-command-syntax">The Command Syntax</h3>
+<p>To combine four separate mono files into a single 4-channel
+polyphonic WAV file, use the following terminal command:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:track1.wav</span> <span class="at">-chorder:1,0,0,0</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:track2.wav</span> <span class="at">-chorder:0,1,0,0</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:3</span> <span class="at">-i:track3.wav</span> <span class="at">-chorder:0,0,1,0</span> <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:4</span> <span class="at">-i:track4.wav</span> <span class="at">-chorder:0,0,0,1</span> <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1,2,3,4</span> <span class="at">-f:s16_le,4,44100</span> <span class="at">-o:polyphonic.wav</span></span></code></pre></div>
+<h3 id="breakdown-of-the-command">Breakdown of the Command</h3>
+<ul>
+<li><strong>Chain Assignment (<code>-a:1</code>, <code>-a:2</code>,
+etc.):</strong> Declares chains 1 through 4. Every setting following a
+chain declaration applies strictly to that chain until another
+<code>-a</code> parameter appears.</li>
+<li><strong>Source Mapping (<code>-i:trackN.wav</code>):</strong> Binds
+each discrete mono recording to its designated chain.</li>
+<li><strong>Channel Positioning (<code>-chorder</code>):</strong> The
+<code>-chorder:c1,c2,...,cN</code> operator maps input channels to
+target channels. Passing <code>0</code> inserts an empty (silent)
+channel.
+<ul>
+<li><code>-chorder:1,0,0,0</code> places the audio from
+<code>track1.wav</code> onto channel 1 while muting channels 2, 3, and
+4.</li>
+<li><code>-chorder:0,1,0,0</code> places the audio from
+<code>track2.wav</code> onto channel 2, leaving the others silent.</li>
+<li>This structure ensures that signals do not automatically sum
+together onto the first channel.</li>
+</ul></li>
+<li><strong>Output Binding (<code>-a:1,2,3,4</code>):</strong> Selects
+all active chains simultaneously so that they output to the same
+destination.</li>
+<li><strong>Format Specification
+(<code>-f:format,channels,rate</code>):</strong> Explicitly sets the
+output stream format. In <code>-f:s16_le,4,44100</code>,
+<code>s16_le</code> specifies signed 16-bit little-endian PCM audio,
+<code>4</code> sets the total channel count, and <code>44100</code>
+establishes the sample rate.</li>
+<li><strong>Target File (<code>-o:polyphonic.wav</code>):</strong>
+Writes the summed, multi-channel stream into the final target WAV
+container.</li>
+</ul>
+<h3 id="scaling-to-different-channel-counts">Scaling to Different
+Channel Counts</h3>
+<p>This method scales to any number of channels supported by the WAV
+format specification:</p>
+<ul>
+<li><strong>Stereo (2-channel):</strong> Set
+<code>-f:s16_le,2,44100</code> and use <code>-chorder:1,0</code> for the
+first chain and <code>-chorder:0,1</code> for the second chain.</li>
+<li><strong>Surround 5.1 (6-channel):</strong> Set
+<code>-f:s24_le,6,48000</code> (for 24-bit, 48 kHz production) and pad
+six comma-separated arguments in each <code>-chorder</code> operator,
+moving the <code>1</code> index to position each mono track into the
+correct channel layout (Left, Right, Center, LFE, Left Surround, Right
+Surround).</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

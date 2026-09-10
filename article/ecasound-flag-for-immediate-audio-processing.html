@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Flag for Immediate Audio Processing - ecasound</title>
+    <meta name="description" content="This article explains how to configure Ecasound for immediate audio processing without initial pre-buffering delays. It identifies the primary command-line flag responsible for altering buffer behavior, explains the underlying mechanics of Ecasound's buf">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-flag-for-immediate-audio-processing">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Flag for Immediate Audio Processing - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-flag-for-immediate-audio-processing" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure Ecasound for immediate audio processing without initial pre-buffering delays. It identifies the primary command-line flag responsible for altering buffer behavior, explains the underlying mechanics of Ecasound's buf" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-flag-for-immediate-audio-processing">Ecasound Flag for
+Immediate Audio Processing</h1>
+<p>This article explains how to configure Ecasound for immediate audio
+processing without initial pre-buffering delays. It identifies the
+primary command-line flag responsible for altering buffer behavior,
+explains the underlying mechanics of Ecasound's buffering modes, and
+provides practical syntax examples for low-latency, real-time audio
+workflows.</p>
+<h2 id="the-immediate-processing-flag--brealtime">The Immediate
+Processing Flag: <code>-B:realtime</code></h2>
+<p>In Ecasound, the flag that forces immediate audio processing without
+pre-buffering is <strong><code>-B:realtime</code></strong>.</p>
+<p>By default, Ecasound operates under <code>-B:auto</code>, where it
+analyzes the signal chain and often fills internal audio buffers prior
+to playback or recording to avoid dropouts (buffer underruns). Setting
+the buffering mode explicitly to <code>realtime</code> forces Ecasound
+to bypass this pre-buffering phase and begin streaming audio through the
+processing engine immediately.</p>
+<h2 id="how-buffering-modes-work-in-ecasound">How Buffering Modes Work
+in Ecasound</h2>
+<p>The <code>-B</code> option controls the overall buffering policy of
+the Ecasound engine. It accepts three main parameters:</p>
+<ul>
+<li><strong><code>-B:auto</code> (Default):</strong> Automatically
+selects the buffering strategy based on the inputs and outputs. When
+working with static files or complex routing, it pre-buffers frames
+before starting the transport.</li>
+<li><strong><code>-B:nonrealtime</code>:</strong> Maximizes throughput
+by using large buffers and aggressive pre-buffering. This mode is
+intended for offline rendering, batch conversions, or non-interactive
+processing where latency is irrelevant.</li>
+<li><strong><code>-B:realtime</code>:</strong> Disables pre-buffering
+and switches the engine to minimal-latency operation. Audio streams
+directly between endpoints with zero pre-fill delay.</li>
+</ul>
+<h2 id="command-line-usage-and-syntax">Command-Line Usage and
+Syntax</h2>
+<p>To run an Ecasound session with immediate processing enabled, supply
+the flag at the start of your command:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-B:realtime</span> <span class="at">-i:alsahw,0,0</span> <span class="at">-o:alsahw,0,0</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li><code>-B:realtime</code> disables pre-buffering and forces real-time
+execution.</li>
+<li><code>-i:alsahw,0,0</code> captures audio directly from the
+specified hardware input.</li>
+<li><code>-o:alsahw,0,0</code> outputs audio directly to the hardware
+output with immediate start.</li>
+</ul>
+<h2 id="optimizing-latency-with--b">Optimizing Latency with
+<code>-b</code></h2>
+<p>While <code>-B:realtime</code> ensures processing begins without
+waiting to fill a pre-buffer queue, total round-trip latency is governed
+by the engine buffer size set by the <code>-b</code> flag:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-B:realtime</span> <span class="at">-b:128</span> <span class="at">-i:jack</span> <span class="at">-o:jack</span></span></code></pre></div>
+<p>Using a small buffer size (such as <code>-b:128</code> or
+<code>-b:256</code> frames) alongside <code>-B:realtime</code> ensures
+both an immediate start and minimal delay between input and output. Note
+that running without pre-buffering at very low buffer sizes requires
+adequate CPU performance and real-time system privileges (such as using
+the <code>-r</code> priority flag) to prevent buffer underruns
+(<code>xruns</code>).</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

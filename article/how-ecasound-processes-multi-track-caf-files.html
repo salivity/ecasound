@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Processes Multi-Track CAF Files - ecasound</title>
+    <meta name="description" content="This article explains how the Ecasound command-line audio utility handles multi-track Core Audio Format (CAF) files. It covers the underlying libraries responsible for decoding the CAF container, how multi-channel streams are split into processing chains">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-processes-multi-track-caf-files">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Processes Multi-Track CAF Files - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-processes-multi-track-caf-files" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Ecasound command-line audio utility handles multi-track Core Audio Format (CAF) files. It covers the underlying libraries responsible for decoding the CAF container, how multi-channel streams are split into processing chains" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-processes-multi-track-caf-files">How Ecasound
+Processes Multi-Track CAF Files</h1>
+<p>This article explains how the Ecasound command-line audio utility
+handles multi-track Core Audio Format (CAF) files. It covers the
+underlying libraries responsible for decoding the CAF container, how
+multi-channel streams are split into processing chains, and the specific
+routing options available for manipulating multi-track audio
+effectively.</p>
+<h3 id="decoding-caf-files-via-libsndfile">Decoding CAF Files via
+libsndfile</h3>
+<p>Ecasound does not parse the Core Audio Format specification directly;
+instead, it relies on <code>libsndfile</code> as its underlying audio
+file I/O engine. Because modern versions of <code>libsndfile</code>
+support Apple’s CAF specification, Ecasound automatically recognizes
+<code>.caf</code> files upon input.</p>
+<p>When Ecasound opens a CAF file, it queries <code>libsndfile</code> to
+detect the container's structural parameters, such as sample rate, bit
+depth, and total channel count. This enables Ecasound to overcome the 4
+GB file size limitation common to standard 32-bit RIFF/WAV headers,
+making CAF ideal for recording and processing long, high-resolution,
+multi-track sessions.</p>
+<h3 id="chain-architecture-and-channel-allocation">Chain Architecture
+and Channel Allocation</h3>
+<p>Ecasound manages audio streams using an architecture based on
+"chains." A multi-track CAF file contains interleaved audio channels
+within a single container. To process these channels independently,
+Ecasound maps the file’s internal tracks to distinct processing chains
+using the <code>-a</code> option.</p>
+<p>By default, an input file assigned to a single chain reads all
+channels simultaneously. However, when dealing with multi-track CAF
+files, you typically route individual channels or sub-mixes into
+separate chains using channel-routing operators:</p>
+<ul>
+<li><strong><code>-chcopy:src,dst</code></strong>: Copies an audio
+channel from an input slot to an internal processing slot.</li>
+<li><strong><code>-chorder:ch1,ch2,...</code></strong>: Reorders or
+selects specific channels from the input stream.</li>
+<li><strong><code>-chmove:src,dst</code></strong>: Moves a channel,
+clearing the source slot.</li>
+</ul>
+<h3 id="practical-multi-track-workflow">Practical Multi-Track
+Workflow</h3>
+<p>To work with a multi-track CAF file, you instantiate the file as an
+input across multiple chains, then configure channel filtering on each
+chain.</p>
+<p>For example, processing a 4-channel CAF file by splitting tracks 1
+and 2 into one stereo chain and tracks 3 and 4 into another is
+structured as follows:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:multitrack.caf</span> <span class="at">-chorder:1,2</span> <span class="at">-o:stereo_mix1.wav</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:multitrack.caf</span> <span class="at">-chorder:3,4</span> <span class="at">-o:stereo_mix2.wav</span></span></code></pre></div>
+<p>In this command:</p>
+<ol type="1">
+<li><code>-a:1</code> creates the first chain, defines
+<code>multitrack.caf</code> as the input, and selects channels 1 and 2
+with <code>-chorder:1,2</code>.</li>
+<li><code>-a:2</code> creates the second chain, accesses the same file
+simultaneously, and isolates channels 3 and 4 with
+<code>-chorder:3,4</code>.</li>
+<li>Ecasound reads the interleaved CAF stream, and its internal routing
+engine dispatches the respective audio samples to the assigned chain
+buffers before rendering the output.</li>
+</ol>
+<h3 id="real-time-handling-and-buffering">Real-Time Handling and
+Buffering</h3>
+<p>When running multi-track CAF processing in real-time, buffer
+management is controlled using the <code>-b:buffersize</code> and
+<code>-z:feature</code> flags (such as double-buffering or real-time
+priority). Because multi-track audio multiplies the data throughput per
+processing cycle, Ecasound reads interleaved multi-channel blocks into
+memory, de-interleaves them for internal chain effects or dynamic DSP
+plugins (such as LADSPA), and re-interleaves them if the output format
+requires it.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

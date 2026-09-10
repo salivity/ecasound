@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Separates Engine and User Interface - ecasound</title>
+    <meta name="description" content="This article examines the architectural design of Ecasound, focusing on how it achieves a strict decoupling between its core audio processing engine and its various user interfaces. By employing a dedicated control API, client-server design principles, a">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-separates-engine-and-user-interface">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Separates Engine and User Interface - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-separates-engine-and-user-interface" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines the architectural design of Ecasound, focusing on how it achieves a strict decoupling between its core audio processing engine and its various user interfaces. By employing a dedicated control API, client-server design principles, a" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-separates-engine-and-user-interface">How Ecasound
+Separates Engine and User Interface</h1>
+<p>This article examines the architectural design of Ecasound, focusing
+on how it achieves a strict decoupling between its core audio processing
+engine and its various user interfaces. By employing a dedicated control
+API, client-server design principles, and distinct process threading,
+Ecasound ensures that low-latency digital signal processing remains
+completely isolated from UI operations, user input handling, and
+external scripting.</p>
+<h3 id="the-core-engine-libecasound">The Core Engine
+(<code>libecasound</code>)</h3>
+<p>At the foundation of Ecasound is <code>libecasound</code>, a
+standalone C++ library responsible for all signal routing, multi-track
+recording, playback, effect processing, and audio hardware interaction.
+The engine operates independently of any display or interactive user
+environment. It executes audio streaming inside high-priority, real-time
+audio threads to prevent buffer underruns, ensuring that CPU-heavy user
+interface tasks never interrupt the audio stream.</p>
+<h3 id="the-ecasound-control-interface-eci">The Ecasound Control
+Interface (ECI)</h3>
+<p>To communicate with the engine without tight coupling, Ecasound uses
+the Ecasound Control Interface (ECI). ECI serves as an abstraction layer
+and the sole programming interface between the underlying engine and
+external software.</p>
+<p>Instead of manipulating audio buffers or internal objects directly,
+frontends interact with ECI using a standardized set of high-level
+commands (such as <code>cs-add</code>, <code>c-select</code>,
+<code>start</code>, and <code>stop</code>). ECI interprets these
+instructions, validates them, and translates them into thread-safe
+operations within the engine. This design allows developers to build
+interfaces without needing deep knowledge of the DSP codebase.</p>
+<h3 id="inter-process-communication-and-neteci">Inter-Process
+Communication and NetECI</h3>
+<p>Ecasound extends this architectural boundary through NetECI, a
+socket-based protocol that allows the processing engine and user
+interfaces to run in separate processes or even on entirely separate
+network nodes.</p>
+<p>Through standard UNIX domain sockets or TCP/IP connections, frontends
+send plain-text commands to the engine and receive status updates and
+return values asynchronously. Because the user interface communicates
+over an IPC boundary, a crash, freeze, or intensive rendering task in
+the frontend cannot crash the audio engine or cause xruns (buffer
+overruns or underruns) in the processing pipeline.</p>
+<h3 id="decoupled-frontends">Decoupled Frontends</h3>
+<p>Because of this rigid boundary, Ecasound supports diverse frontends
+that share no code with the audio engine itself:</p>
+<ul>
+<li><strong>Interactive Mode (CLI):</strong> A command-line shell
+reading standard input and writing to standard output via the control
+interpreter.</li>
+<li><strong>Batch Mode:</strong> Non-interactive scripts that launch the
+engine with predetermined parameters and terminate upon completion.</li>
+<li><strong>Graphical Interfaces:</strong> Independent GUI applications
+(such as Tk-based or Python/Qt-based interfaces) that act solely as
+clients generating ECI commands.</li>
+<li><strong>Language Bindings:</strong> External languages like Python,
+Perl, and C can manage sessions via lightweight wrappers around the ECI
+API.</li>
+</ul>
+<p>By strictly confining audio execution to <code>libecasound</code> and
+delegating control exclusively to the ECI layer, Ecasound guarantees
+stability, low latency, and interface flexibility across all audio
+operations.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

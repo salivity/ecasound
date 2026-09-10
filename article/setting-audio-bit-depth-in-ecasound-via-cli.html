@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setting Audio Bit Depth in Ecasound via CLI - ecasound</title>
+    <meta name="description" content="This article provides a concise overview of how Ecasound configures audio bit depth through its command-line interface. It covers the syntax of the audio format flag, the specific naming conventions used for integer and floating-point bit depths, how pla">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/setting-audio-bit-depth-in-ecasound-via-cli">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Setting Audio Bit Depth in Ecasound via CLI - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/setting-audio-bit-depth-in-ecasound-via-cli" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a concise overview of how Ecasound configures audio bit depth through its command-line interface. It covers the syntax of the audio format flag, the specific naming conventions used for integer and floating-point bit depths, how pla" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="setting-audio-bit-depth-in-ecasound-via-cli">Setting Audio Bit
+Depth in Ecasound via CLI</h1>
+<p>This article provides a concise overview of how Ecasound configures
+audio bit depth through its command-line interface. It covers the syntax
+of the audio format flag, the specific naming conventions used for
+integer and floating-point bit depths, how placement order determines
+input and output parameters, and how the internal audio engine processes
+varying bit depths.</p>
+<h3 id="the-audio-format-option--f">The Audio Format Option
+(<code>-f</code>)</h3>
+<p>Ecasound controls bit depth using the <code>-f</code> (format)
+command-line parameter. The argument accepts up to four comma-separated
+values specifying the sample format, channel count, sampling rate, and
+channel interleaving style:</p>
+<pre class="text"><code>-f:sample_format,channels,sample_rate,interleave</code></pre>
+<p>The first field, <code>sample_format</code>, dictates the bit depth
+and representation of the audio samples. If you only need to define or
+change the bit depth while leaving other parameters at their defaults or
+auto-detected values, you can provide the format and leave trailing
+fields empty, such as <code>-f:s24_le</code>.</p>
+<h3 id="bit-depth-format-specifiers">Bit-Depth Format Specifiers</h3>
+<p>Ecasound identifies bit depth using standard ALSA/OSS-style sample
+format strings. The format descriptor typically combines three
+components:</p>
+<ol type="1">
+<li><strong>Representation</strong>: <code>s</code> for signed integer,
+<code>u</code> for unsigned integer, or <code>f</code> for
+floating-point.</li>
+<li><strong>Bit Depth</strong>: The numerical bit-width of each sample
+(e.g., <code>8</code>, <code>16</code>, <code>24</code>,
+<code>32</code>).</li>
+<li><strong>Endianness</strong>: <code>_le</code> for little-endian or
+<code>_be</code> for big-endian.</li>
+</ol>
+<p>Commonly used bit-depth strings include:</p>
+<ul>
+<li><strong>16-bit Integer</strong>: <code>s16_le</code> (signed 16-bit
+little-endian) or <code>s16_be</code> (big-endian).</li>
+<li><strong>24-bit Integer</strong>: <code>s24_le</code> (signed 24-bit
+little-endian, packed or padded depending on the audio subsystem).</li>
+<li><strong>32-bit Integer</strong>: <code>s32_le</code> (signed 32-bit
+little-endian).</li>
+<li><strong>32-bit Floating-Point</strong>: <code>f32_le</code>
+(single-precision float).</li>
+<li><strong>8-bit Integer</strong>: <code>u8</code> (unsigned 8-bit) or
+<code>s8</code> (signed 8-bit).</li>
+</ul>
+<h3 id="command-line-placement-and-scope">Command-Line Placement and
+Scope</h3>
+<p>Ecasound parses options sequentially from left to right. When an
+<code>-f</code> flag is issued, it sets the active format for all
+subsequently defined audio inputs (<code>-i</code>) and outputs
+(<code>-o</code>) until another <code>-f</code> argument alters the
+configuration.</p>
+<p>To read a file at its native format but output a specific bit
+depth:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-f:s16_le,2,44100</span> <span class="at">-o</span> output_16bit.wav</span></code></pre></div>
+<p>To enforce distinct bit depths on both the input stream (such as a
+hardware sound card capture) and the output file:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s32_le,2,96000</span> <span class="at">-i</span> alsa,default <span class="at">-f:s24_le,2,96000</span> <span class="at">-o</span> recording_24bit.wav</span></code></pre></div>
+<p>In this command, the capture device is read as 32-bit integer audio,
+and the resulting file is encoded down to 24-bit.</p>
+<h3 id="internal-processing-and-bit-depth-conversion">Internal
+Processing and Bit-Depth Conversion</h3>
+<p>Regardless of the bit depth chosen on the command line for inputs and
+outputs, Ecasound converts incoming audio samples to 32-bit or 64-bit
+floating-point internally for processing, effects, and mixing. When
+writing to an output target with a reduced bit depth (such as converting
+24-bit input to 16-bit output), Ecasound handles the quantization
+conversion automatically during the output write stage.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

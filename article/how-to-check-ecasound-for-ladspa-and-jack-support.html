@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Check Ecasound for LADSPA and JACK Support - ecasound</title>
+    <meta name="description" content="This guide explains how to verify that an Ecasound installation or source build includes full support for both LADSPA plugins and the JACK Audio Connection Kit. You will learn how to inspect compile-time flags, query the ecasound binary for enabled subsy">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-check-ecasound-for-ladspa-and-jack-support">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Check Ecasound for LADSPA and JACK Support - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-check-ecasound-for-ladspa-and-jack-support" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to verify that an Ecasound installation or source build includes full support for both LADSPA plugins and the JACK Audio Connection Kit. You will learn how to inspect compile-time flags, query the ecasound binary for enabled subsy" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-check-ecasound-for-ladspa-and-jack-support">How to Check
+Ecasound for LADSPA and JACK Support</h1>
+<p>This guide explains how to verify that an Ecasound installation or
+source build includes full support for both LADSPA plugins and the JACK
+Audio Connection Kit. You will learn how to inspect compile-time flags,
+query the <code>ecasound</code> binary for enabled subsystems, and run
+quick command-line tests to confirm that both audio interfaces operate
+correctly at runtime.</p>
+<h3 id="1-check-compiled-feature-flags">1. Check Compiled Feature
+Flags</h3>
+<p>The fastest way to determine which subsystems are compiled into your
+Ecasound binary is to pass the <code>--version</code> flag:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">--version</span></span></code></pre></div>
+<p>Look at the output under the configuration features or libraries
+section. A build with full support will explicitly list both
+<code>JACK</code> and <code>LADSPA</code> among the enabled components.
+If either is missing, the binary was compiled without the necessary
+development headers (<code>libjack-dev</code> or
+<code>ladspa-sdk</code>).</p>
+<p>If you are compiling from source, check the summary output at the
+conclusion of running <code>./configure</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./configure</span></span></code></pre></div>
+<p>Ensure the status report at the end displays:</p>
+<ul>
+<li><code>JACK support: yes</code></li>
+<li><code>LADSPA support: yes</code></li>
+</ul>
+<p>If either shows <code>no</code>, inspect <code>config.log</code> to
+identify missing header files or linker dependencies before running
+<code>make</code>.</p>
+<hr />
+<h3 id="2-verify-functional-jack-support">2. Verify Functional JACK
+Support</h3>
+<p>Even if compiled in, verify that the JACK driver initializes properly
+with the audio server.</p>
+<ol type="1">
+<li>Ensure your JACK server is running (e.g., via <code>jackd</code> or
+<code>pipewire-jack</code>).</li>
+<li>Run a minimal test command routing null audio to a JACK output:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> null <span class="at">-o</span> jack</span></code></pre></div>
+<p><strong>Results:</strong></p>
+<ul>
+<li><strong>Success:</strong> Ecasound starts processing, registers its
+ports with the JACK graph, and displays the continuous engine status bar
+without errors.</li>
+<li><strong>Failure:</strong> If JACK support is missing entirely,
+Ecasound will exit with an error such as:
+<pre class="text"><code>(eca-session) Unknown audio subsystem: &#39;jack&#39;</code></pre></li>
+<li>If JACK support is compiled in but the server is not reachable,
+Ecasound will output an error stating it cannot connect to the JACK
+daemon, confirming the driver exists.</li>
+</ul>
+<hr />
+<h3 id="3-verify-functional-ladspa-support">3. Verify Functional LADSPA
+Support</h3>
+<p>To confirm that the LADSPA subsystem functions, test Ecasound's
+ability to locate and instantiate a plugin.</p>
+<ol type="1">
+<li>Ensure you have standard LADSPA plugins installed (e.g.,
+<code>swh-plugins</code> or <code>tap-plugins</code>) and that the
+<code>LADSPA_PATH</code> environment variable includes your plugin
+directory (commonly <code>/usr/lib/ladspa</code> or
+<code>/usr/local/lib/ladspa</code>).</li>
+<li>Run Ecasound in interactive mode:</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<ol start="3" type="1">
+<li>At the <code>ecasound&gt;</code> prompt, query available LADSPA
+plugins:</li>
+</ol>
+<pre class="text"><code>ladspa-list</code></pre>
+<p><strong>Results:</strong></p>
+<ul>
+<li><strong>Success:</strong> Ecasound prints a list of detected LADSPA
+unique IDs and plugin labels.</li>
+<li><strong>Failure:</strong> An error indicating
+<code>Command not found</code> or an empty list (when plugins are
+verified to be on the disk) indicates LADSPA support is disabled or not
+recognizing the plugin directory.</li>
+</ul>
+<p>You can also run a direct non-interactive command applying a known
+plugin:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> null <span class="at">-o</span> null <span class="at">-el:amp_mono,1.0</span></span></code></pre></div>
+<p>If LADSPA is properly integrated, Ecasound will load the plugin
+without throwing an "unknown effect" or "subsystem not supported"
+error.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

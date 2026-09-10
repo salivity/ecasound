@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound MIDI Dynamic Parameter Modulation - ecasound</title>
+    <meta name="description" content="Dynamic parameter modulation in Ecasound allows you to automate effects and alter audio parameters in real time using MIDI continuous controllers and predefined envelope curves. This guide details how to assign MIDI controls to effect operators, configur">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-midi-dynamic-parameter-modulation">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound MIDI Dynamic Parameter Modulation - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-midi-dynamic-parameter-modulation" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Dynamic parameter modulation in Ecasound allows you to automate effects and alter audio parameters in real time using MIDI continuous controllers and predefined envelope curves. This guide details how to assign MIDI controls to effect operators, configur" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-midi-dynamic-parameter-modulation">Ecasound MIDI
+Dynamic Parameter Modulation</h1>
+<p>Dynamic parameter modulation in Ecasound allows you to automate
+effects and alter audio parameters in real time using MIDI continuous
+controllers and predefined envelope curves. This guide details how to
+assign MIDI controls to effect operators, configure scaling curves, and
+apply envelopes using Ecasound’s native command-line syntax.</p>
+<h3 id="the-ecasound-controller-architecture">The Ecasound Controller
+Architecture</h3>
+<p>Ecasound modifies audio parameters using "controllers" attached to
+"operators" (such as filters, amplifiers, or panning). Operators are
+indexed per chain, and their internal parameters are numbered starting
+from 1.</p>
+<p>To modulate these parameters, Ecasound provides several controller
+types:</p>
+<ul>
+<li><strong><code>-km</code></strong>: MIDI continuous controller (maps
+hardware MIDI messages to an operator parameter).</li>
+<li><strong><code>-kl</code> / <code>-kl2</code></strong>: Linear
+envelope curves over time.</li>
+<li><strong><code>-klg</code></strong>: Logarithmic envelope
+curves.</li>
+<li><strong><code>-kf</code></strong>: Custom envelope curves loaded
+from an external text file.</li>
+</ul>
+<h3 id="mapping-midi-cc-to-dynamic-parameters--km">Mapping MIDI CC to
+Dynamic Parameters (<code>-km</code>)</h3>
+<p>The standard way to dynamically modulate an effect parameter using
+MIDI is the <code>-km</code> controller. Its syntax binds an incoming
+MIDI Continuous Controller (CC) to a targeted effect parameter and maps
+the standard 0–127 MIDI range to a specified numerical range.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:fx_param,midi_channel,controller_number,min_value,max_value</span></span></code></pre></div>
+<ul>
+<li><strong><code>fx_param</code></strong>: The parameter index of the
+target operator (e.g., <code>1</code> for the cutoff frequency in a
+resonant low-pass filter).</li>
+<li><strong><code>midi_channel</code></strong>: The MIDI channel
+(1–16).</li>
+<li><strong><code>controller_number</code></strong>: The MIDI CC number
+(e.g., <code>1</code> for Modulation Wheel, <code>7</code> for Volume,
+<code>74</code> for Filter Brightness).</li>
+<li><strong><code>min_value</code></strong>: The minimum parameter value
+output when the MIDI CC is at <code>0</code>.</li>
+<li><strong><code>max_value</code></strong>: The maximum parameter value
+output when the MIDI CC is at <code>127</code>.</li>
+</ul>
+<h4 id="example-modulating-a-low-pass-filter">Example: Modulating a
+Low-Pass Filter</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-Md:alsaseq,128:0</span> <span class="at">-efl:1000</span> <span class="at">-km:1,1,74,200,8000</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-Md:alsaseq,128:0</code> routes MIDI input from ALSA sequencer
+port 128:0.</li>
+<li><code>-efl:1000</code> inserts a low-pass filter with an initial
+cutoff of 1000 Hz.</li>
+<li><code>-km:1,1,74,200,8000</code> maps MIDI CC 74 on Channel 1 to
+operator parameter 1 (cutoff frequency), scaling the input from 200 Hz
+to 8000 Hz.</li>
+</ul>
+<h3 id="combining-time-based-envelope-curves-with-modulation">Combining
+Time-Based Envelope Curves with Modulation</h3>
+<p>When automation curves are required alongside or in place of
+real-time manual MIDI input, Ecasound uses automated envelope
+generators.</p>
+<h4 id="linear-envelopes--kl-and--kl2">Linear Envelopes
+(<code>-kl</code> and <code>-kl2</code>)</h4>
+<p>Linear envelopes ramp an operator's parameter between specified
+points over time:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ramps parameter 1 from 200 to 5000 over 10 seconds:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">-kl:1,200,5000,10</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Multi-stage envelope: ramps from 200 to 4000 in 5s, then down to 1000 in 5s:</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">-kl2:1,200,4000,1000,5,5</span></span></code></pre></div>
+<h4 id="logarithmic-curves--klg">Logarithmic Curves
+(<code>-klg</code>)</h4>
+<p>For parameters where perception is non-linear (such as frequency or
+volume), logarithmic envelopes provide natural-sounding sweeps:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-klg:fx_param,start_value,end_value,duration</span></span></code></pre></div>
+<p>Example mapping a frequency rise over 8 seconds:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-efl:200</span> <span class="at">-klg:1,200,10000,8</span></span></code></pre></div>
+<h3 id="custom-multi-point-envelopes-via-files--kf">Custom Multi-Point
+Envelopes via Files (<code>-kf</code>)</h3>
+<p>For complex modulation curves that follow non-standard shapes,
+envelope data can be stored in an external ASCII text file and bound
+using <code>-kf</code>.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-kf:fx_param,filename,column</span></span></code></pre></div>
+<p>The envelope text file must contain time-stamped key-value pairs
+formatted as:</p>
+<pre class="text"><code>0.0   200
+2.5   1500
+3.0   800
+10.0  12000</code></pre>
+<p>Ecasound interpolates values between the defined timestamps, allowing
+continuous, high-resolution parameter sweeps matching pre-arranged
+modulation patterns.</p>
+<h3 id="real-time-routing-considerations">Real-Time Routing
+Considerations</h3>
+<p>To ensure low-latency response when using MIDI controllers to
+manipulate envelope ranges or direct parameters:</p>
+<ol type="1">
+<li><strong>Audio Buffering</strong>: Set lower buffer sizes using
+<code>-B:audio_buffer_size</code> (e.g., <code>-b:128</code> or
+<code>-b:256</code>) to minimize the control-rate latency between a
+physical MIDI movement and the resulting parameter update.</li>
+<li><strong>MIDI Subsystem</strong>: Specify the proper MIDI device
+driver using <code>-Md:device_type,device_name</code>. Use
+<code>alsaseq</code> for virtual software patching or
+<code>rawmidi</code> (e.g., <code>/dev/snd/midiC1D0</code>) for
+dedicated hardware interfaces.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

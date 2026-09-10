@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handling Non-Interleaved Audio in Ecasound - ecasound</title>
+    <meta name="description" content="This article provides an overview of how Ecasound handles non-interleaved multi-channel audio streams from hardware devices. While Ecasound's internal processing pipelines and standard ALSA input/output layers are structured around interleaved sample for">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/handling-non-interleaved-audio-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Handling Non-Interleaved Audio in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/handling-non-interleaved-audio-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Ecasound handles non-interleaved multi-channel audio streams from hardware devices. While Ecasound's internal processing pipelines and standard ALSA input/output layers are structured around interleaved sample for" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="handling-non-interleaved-audio-in-ecasound">Handling
+Non-Interleaved Audio in Ecasound</h1>
+<p>This article provides an overview of how Ecasound handles
+non-interleaved multi-channel audio streams from hardware devices. While
+Ecasound's internal processing pipelines and standard ALSA input/output
+layers are structured around interleaved sample formats, it accommodates
+non-interleaved hardware streams through driver abstraction layers, ALSA
+plugins, JACK integration, and internal channel routing operators.</p>
+<h3 id="interleaved-vs-non-interleaved-architecture">Interleaved vs.
+Non-Interleaved Architecture</h3>
+<p>In interleaved audio streams, sample frames alternate across channels
+sequentially in a single memory buffer (e.g., Left, Right, Left, Right).
+In non-interleaved (planar) audio, hardware writes separate memory
+blocks for each channel—Buffer 1 contains all samples for Channel 1,
+Buffer 2 contains all samples for Channel 2, and so on. Professional
+multi-channel sound cards frequently operate natively in non-interleaved
+direct memory access (DMA) modes to optimize bus bandwidth.</p>
+<h3 id="direct-alsa-device-limitations-and-plughw">Direct ALSA Device
+Limitations and <code>plughw</code></h3>
+<p>Ecasound's native ALSA engine defaults to interleaved read/write
+operations (<code>SND_PCM_ACCESS_RW_INTERLEAVED</code> or
+<code>SND_PCM_ACCESS_MMAP_INTERLEAVED</code>). When attempting to access
+raw hardware directly via the ALSA hardware parameter
+(<code>-i:alsa,hw:0,0</code>), Ecasound will fail if the underlying
+hardware exclusively requires non-interleaved access
+(<code>SND_PCM_ACCESS_MMAP_NONINTERLEAVED</code>).</p>
+<p>To resolve this hardware limitation, Ecasound relies on ALSA's
+<code>plughw</code> layer:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:alsa,plughw:0,0</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>The ALSA <code>plug</code> layer acts as a transparent,
+kernel-to-userspace translation bridge. It reads the planar,
+non-interleaved buffers directly from the sound card's memory addresses
+and multiplexes them on the fly into an interleaved stream that Ecasound
+can ingest.</p>
+<h3 id="handling-non-interleaved-audio-via-jack">Handling
+Non-Interleaved Audio via JACK</h3>
+<p>For systems requiring low-latency routing without the software
+overhead of ALSA's conversion plugins, running Ecasound on top of the
+JACK Audio Connection Kit provides native support for non-interleaved
+processing.</p>
+<p>JACK abstracts audio hardware by treating every input and output
+channel as an independent, single-channel floating-point buffer. Because
+JACK already splits hardware channels into distinct mono ports:</p>
+<ol type="1">
+<li>The hardware’s non-interleaved configuration is handled at the
+driver level by JACK.</li>
+<li>Ecasound binds to individual JACK ports via the <code>jack</code>
+audio object (<code>-i:jack,system:capture_1</code>).</li>
+<li>Each hardware channel enters Ecasound as an isolated signal chain,
+bypassing manual stream interleaving entirely.</li>
+</ol>
+<h3 id="channel-de-interleaving-and-routing-inside-ecasound">Channel
+De-Interleaving and Routing Inside Ecasound</h3>
+<p>Once multi-channel audio is pulled into Ecasound, the software must
+often separate or redistribute the combined stream into individual
+tracks or chains for processing. Ecasound uses dedicated channel-routing
+operators to address individual channels within an aggregate stream:</p>
+<ul>
+<li><strong><code>-erc:from_channel,to_channel</code></strong>: Copies
+audio from one channel index to another.</li>
+<li><strong><code>-chcopy:from_channel,to_channel</code></strong>:
+Duplicates channel data within a signal chain.</li>
+<li><strong><code>-chmove:from_channel,to_channel</code></strong>:
+Shifts a channel, zeroing the source position.</li>
+<li><strong><code>-chorder:ch1,ch2,...</code></strong>: Reorders
+channels to match targeted routing paths.</li>
+</ul>
+<p>For example, to split an 8-channel hardware capture into separate
+processing chains:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:alsa,plughw:0,0</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-chorder:1</span> <span class="at">-o:chan1.wav</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:alsa,plughw:0,0</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-chorder:2</span> <span class="at">-o:chan2.wav</span></span></code></pre></div>
+<p>By leveraging ALSA's <code>plug</code> conversion layer or delegating
+transport management to JACK, Ecasound processes non-interleaved
+hardware inputs predictably and routes individual audio channels
+efficiently.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

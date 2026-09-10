@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accessing Ecasound Audio Sample Buffers in C++ - ecasound</title>
+    <meta name="description" content="Direct access to internal audio sample buffers in Ecasound is achieved by working directly with the core C++ multimedia classes rather than the high-level control interfaces. By extending the CHAINOPERATOR or AUDIOIO base classes, developers can intercep">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/accessing-ecasound-audio-sample-buffers-in-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Accessing Ecasound Audio Sample Buffers in C++ - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/accessing-ecasound-audio-sample-buffers-in-c" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Direct access to internal audio sample buffers in Ecasound is achieved by working directly with the core C++ multimedia classes rather than the high-level control interfaces. By extending the CHAINOPERATOR or AUDIOIO base classes, developers can intercep" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="accessing-ecasound-audio-sample-buffers-in-c">Accessing Ecasound
+Audio Sample Buffers in C++</h1>
+<p>Direct access to internal audio sample buffers in Ecasound is
+achieved by working directly with the core C++ multimedia classes rather
+than the high-level control interfaces. By extending the
+<code>CHAIN_OPERATOR</code> or <code>AUDIO_IO</code> base classes,
+developers can intercept the signal graph and manipulate Ecasound’s
+internal <code>SAMPLE_BUFFER</code> objects. This architecture grants
+real-time access to raw audio sample arrays represented as native
+floating-point pointers, bypassing the IPC overhead of the standard
+Ecasound Control Interface (ECA-CI).</p>
+<h3 id="the-sample_buffer-architecture">The <code>SAMPLE_BUFFER</code>
+Architecture</h3>
+<p>At the heart of Ecasound’s internal processing is the
+<code>SAMPLE_BUFFER</code> class. Ecasound processes audio in discrete
+chunks determined by the engine's buffer size. Within
+<code>SAMPLE_BUFFER</code>, audio is represented using the internal
+<code>sample_t</code> type, which is typically a 32-bit single-precision
+float (<code>float</code>) or 64-bit double depending on compilation
+flags.</p>
+<p>Rather than exposing raw global memory, <code>SAMPLE_BUFFER</code>
+manages multi-channel audio data either as interleaved or
+non-interleaved channel vectors. To retrieve the memory location of raw
+samples:</p>
+<ul>
+<li>The method <code>channel_data(int channel)</code> returns a direct
+pointer of type <code>sample_t*</code> to the beginning of the memory
+block for the specified audio channel.</li>
+<li>The method <code>number_of_samples()</code> provides the current
+frame count stored within the buffer.</li>
+<li>The method <code>number_of_channels()</code> defines the channel
+layout width.</li>
+</ul>
+<h3 id="implementing-direct-access-via-chain_operator">Implementing
+Direct Access via <code>CHAIN_OPERATOR</code></h3>
+<p>The primary mechanism to inspect or modify buffers directly is to
+implement a custom plugin by subclassing <code>CHAIN_OPERATOR</code>.
+Chain operators are execution units inserted into Ecasound signal
+chains.</p>
+<ol type="1">
+<li><strong>Subclassing:</strong> A C++ class inherits from
+<code>CHAIN_OPERATOR</code> (defined in <code>libcasound</code>).</li>
+<li><strong>Overriding <code>process()</code>:</strong> The engine
+invokes the operator’s <code>process()</code> method on every iteration
+of the processing loop.</li>
+<li><strong>Retrieving the Buffer:</strong> Inside
+<code>process()</code>, the operator accesses the chain's active buffer
+via the protected member pointer <code>chain_buffer</code> or by
+receiving a direct reference to the current
+<code>SAMPLE_BUFFER</code>.</li>
+<li><strong>Pointer Arithmetic:</strong> The developer calls
+<code>chain_buffer-&gt;channel_data(ch)</code> to acquire the underlying
+<code>sample_t*</code> pointer for each active channel. From there,
+standard pointer operations or SIMD vector instructions can be used
+directly on the audio frames.</li>
+</ol>
+<h3
+id="implementing-custom-audio-sources-or-sinks-via-audio_io">Implementing
+Custom Audio Sources or Sinks via <code>AUDIO_IO</code></h3>
+<p>For stream endpoints that generate or consume audio directly from
+memory, the <code>AUDIO_IO</code> base class is used. Inheriting from
+<code>AUDIO_IO</code> allows developers to bypass disk or ALSA/JACK
+subsystems:</p>
+<ul>
+<li>Custom input objects override the
+<code>read_buffer(SAMPLE_BUFFER *buf)</code> function, where they write
+directly into the memory locations obtained from
+<code>buf-&gt;channel_data()</code>.</li>
+<li>Custom output objects override the
+<code>write_buffer(SAMPLE_BUFFER *buf)</code> function, reading directly
+from the <code>sample_t*</code> pointers into user-defined memory or
+custom network pipelines.</li>
+</ul>
+<h3 id="concurrency-and-performance-implications">Concurrency and
+Performance Implications</h3>
+<p>Ecasound’s direct C++ API executes custom <code>CHAIN_OPERATOR</code>
+and <code>AUDIO_IO</code> code directly inside the audio engine’s
+real-time execution thread. Direct pointer access to
+<code>SAMPLE_BUFFER</code> memory eliminates dynamic allocation and data
+copying between buffers. However, because operations run synchronously
+within the real-time loop, any code accessing these raw buffers must
+remain deterministic, non-blocking, and free of system calls that could
+trigger buffer underruns or dropouts.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

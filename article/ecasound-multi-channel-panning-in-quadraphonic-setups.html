@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Multi-Channel Panning in Quadraphonic Setups - ecasound</title>
+    <meta name="description" content="This article explores how the command-line audio processor Ecasound facilitates multi-channel panning in a four-channel (quadraphonic) environment. It outlines the core mechanics of Ecasound's chain setup, native channel routing operators, gain manipulat">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-multi-channel-panning-in-quadraphonic-setups">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Multi-Channel Panning in Quadraphonic Setups - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-multi-channel-panning-in-quadraphonic-setups" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the command-line audio processor Ecasound facilitates multi-channel panning in a four-channel (quadraphonic) environment. It outlines the core mechanics of Ecasound's chain setup, native channel routing operators, gain manipulat" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-multi-channel-panning-in-quadraphonic-setups">Ecasound
+Multi-Channel Panning in Quadraphonic Setups</h1>
+<p>This article explores how the command-line audio processor Ecasound
+facilitates multi-channel panning in a four-channel (quadraphonic)
+environment. It outlines the core mechanics of Ecasound's chain setup,
+native channel routing operators, gain manipulation, and LADSPA plugin
+integration to achieve accurate spatial distribution across front and
+rear speaker pairs.</p>
+<h3 id="chain-architecture-and-channel-mapping">Chain Architecture and
+Channel Mapping</h3>
+<p>Ecasound manages multi-channel spatialization by defining distinct
+signal processing chains routed to a unified multi-channel output. In a
+quadraphonic configuration, the target output file or hardware device
+(via ALSA or JACK) is declared with four audio channels using the
+<code>-f</code> formatting switch, typically set as
+<code>-f:s24_le,4,48000</code> (format, channels, sample rate).</p>
+<p>To control where an input signal lands within this 4-channel array,
+Ecasound assigns parallel chains to individual speakers:</p>
+<ul>
+<li>Channel 1: Front-Left (FL)</li>
+<li>Channel 2: Front-Right (FR)</li>
+<li>Channel 3: Rear-Left (RL)</li>
+<li>Channel 4: Rear-Right (RR)</li>
+</ul>
+<h3 id="channel-routing-with-native-operators">Channel Routing with
+Native Operators</h3>
+<p>Ecasound provides native channel routing operators to direct mono or
+stereo sources into specific positions in the quad soundstage:</p>
+<ul>
+<li><strong>Channel Copying (<code>-chcopy</code>):</strong> Replicates
+channels across the setup.</li>
+<li><strong>Channel Routing (<code>-erc:from,to</code>):</strong>
+Enables direct inter-channel routing. For example, routing a mono input
+(channel 1) to the rear-left speaker (channel 3) is expressed as
+<code>-erc:1,3</code>.</li>
+</ul>
+<p>By splitting an incoming audio signal into four parallel chains using
+the <code>-a:1,2,3,4</code> syntax, an operator can isolate each chain
+to a distinct speaker channel while independently adjusting the signal
+level for each destination.</p>
+<h3 id="gain-based-matrix-panning">Gain-Based Matrix Panning</h3>
+<p>True 2D spatial positioning requires balancing relative signal levels
+among all four speakers. Ecasound manages this via real-time gain
+multipliers:</p>
+<ul>
+<li><strong>Static Attenuation (<code>-ea:percent</code>):</strong>
+Multiplies the signal amplitude to position an image statically. For
+instance, centering a sound directly between the front and rear left
+speakers involves equal gain applied across the chains dedicated to
+channels 1 and 3, while muting channels 2 and 4.</li>
+<li><strong>Dynamic Envelope Controls (<code>-ev</code> and
+<code>-evp</code>):</strong> These operators permit smooth volume shifts
+to dynamically move sounds across the quadrants.</li>
+</ul>
+<h3 id="automated-spatial-trajectories-with-controllers">Automated
+Spatial Trajectories with Controllers</h3>
+<p>Ecasound includes built-in continuous controllers to automate panning
+paths around the quadraphonic field:</p>
+<ul>
+<li><strong>Oscillator Control
+(<code>-kos:fx_param,start,end,freq,phase</code>):</strong> Assigns a
+low-frequency oscillator to chain gain levels. By offsetting the phase
+of sine wave oscillators across the four chains, an operator can
+automate circular 360-degree panning around the listener.</li>
+<li><strong>MIDI and Control Signals (<code>-km</code>):</strong> Maps
+physical MIDI sliders or control voltages directly to the gain of
+individual quadraphonic channels for live, interactive panning
+control.</li>
+</ul>
+<h3 id="ladspa-spatialization-plugins">LADSPA Spatialization
+Plugins</h3>
+<p>For complex multi-channel panning involving distance modeling or
+Ambisonics, Ecasound interfaces directly with the LADSPA (Linux Audio
+Developer's Simple Plugin API) ecosystem using the
+<code>-el:plugin_name</code> flag.</p>
+<p>Rather than calculating 4-way gain offsets manually, Ecasound routes
+mono or stereo inputs into multi-channel LADSPA surround panners. These
+plugins process X/Y coordinate inputs directly, and Ecasound maps their
+four resulting outputs across the quadraphonic hardware buses.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

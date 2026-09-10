@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound MIDI Disconnection in Live Performance - ecasound</title>
+    <meta name="description" content="When a MIDI controller is physically disconnected during a live performance, Ecasound’s response is dictated by its chosen audio/MIDI subsystem interface—specifically RawMIDI, the ALSA Sequencer, or JACK MIDI. While Ecasound excels at lightweight, lo">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-midi-disconnection-in-live-performance">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound MIDI Disconnection in Live Performance - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-midi-disconnection-in-live-performance" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a MIDI controller is physically disconnected during a live performance, Ecasound’s response is dictated by its chosen audio/MIDI subsystem interface—specifically RawMIDI, the ALSA Sequencer, or JACK MIDI. While Ecasound excels at lightweight, lo" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-midi-disconnection-in-live-performance">Ecasound MIDI
+Disconnection in Live Performance</h1>
+<p>When a MIDI controller is physically disconnected during a live
+performance, Ecasound’s response is dictated by its chosen audio/MIDI
+subsystem interface—specifically RawMIDI, the ALSA Sequencer, or JACK
+MIDI. While Ecasound excels at lightweight, low-latency signal routing,
+it does not natively feature dynamic plug-and-play recovery. Depending
+on the configuration, an unplugged device will either trigger an
+unrecoverable input/output error that halts the entire engine, or result
+in silent failure where processing continues uninterrupted while waiting
+for the missing stream.</p>
+<h3 id="rawmidi-interface-failures">RawMIDI Interface Failures</h3>
+<p>If Ecasound is configured to read directly from a device node using
+the raw MIDI input module (e.g.,
+<code>-i:rawmidi,/dev/snd/midiC1D0</code>), a hardware disconnection
+causes an immediate critical failure. The Linux kernel closes or
+invalidates the underlying character device node, triggering an
+<code>ENODEV</code> (No such device) or <code>EIO</code> (Input/output
+error) system error on the next read operation. Ecasound's processing
+loop treats this as a fatal streaming fault, stopping the engine and
+exiting the live session to prevent infinite error cycling.</p>
+<h3 id="alsa-sequencer-behavior">ALSA Sequencer Behavior</h3>
+<p>Using the ALSA sequencer subsystem (<code>-i:alsaseq,port-id</code>)
+provides a layer of isolation between the physical port and Ecasound.
+When a controller is disconnected:</p>
+<ul>
+<li>The kernel-level ALSA sequencer automatically tears down the sender
+port.</li>
+<li>The logical subscription between the hardware port and Ecasound’s
+ALSA client breaks.</li>
+<li>Ecasound does not crash; instead, its input buffer stops receiving
+MIDI events, resulting in silent dropped control signals.</li>
+<li>If the device is reconnected to the system, Ecasound will not
+automatically detect it. The newly assigned ALSA port requires an
+external reconnect command (via <code>aconnect</code> or an ALSA
+patchbay) to restore communication.</li>
+</ul>
+<h3 id="jack-midi-abstraction">JACK MIDI Abstraction</h3>
+<p>Running Ecasound inside a JACK Audio Connection Kit environment
+provides the highest resilience for live performances. JACK decouples
+physical hardware from client ports by routing MIDI signals through
+virtual software endpoints:</p>
+<ul>
+<li>If hardware disconnects, the JACK server manages the hardware drop,
+leaving Ecasound’s virtual JACK MIDI input port alive and
+functional.</li>
+<li>The main audio and MIDI processing loop remains entirely unaffected,
+avoiding dropouts, engine crashes, or audio buffer under-runs.</li>
+<li>Using session managers or tools like <code>jack-plumbing</code>
+allows automatic reconnection as soon as the hardware device is plugged
+back in, restoring control transparently without restarting
+Ecasound.</li>
+</ul>
+<h3 id="recommended-live-practices">Recommended Live Practices</h3>
+<p>To avoid total session failure from loose cables or USB dropouts:</p>
+<ol type="1">
+<li><strong>Never use RawMIDI in live environments:</strong> Direct
+hardware access lacks fault isolation.</li>
+<li><strong>Utilize JACK MIDI or <code>a2jmidid</code>:</strong>
+Decoupling ensures that sudden hardware changes do not terminate the
+underlying Ecasound process.</li>
+<li><strong>Automate Reconnection:</strong> Employ background utilities
+such as <code>udev</code> rules paired with connection scripts to
+re-bind the device to Ecasound's sequencer ports automatically upon
+reconnection.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound ECI Parameter Update Execution Latency - ecasound</title>
+    <meta name="description" content="This article provides an analysis of the execution latency encountered when issuing parameter updates through the Ecasound Control Interface (ECI). It examines the underlying architecture of Ecasound, detailing how communication mechanisms, text parsing,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-eci-parameter-update-execution-latency">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound ECI Parameter Update Execution Latency - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-eci-parameter-update-execution-latency" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an analysis of the execution latency encountered when issuing parameter updates through the Ecasound Control Interface (ECI). It examines the underlying architecture of Ecasound, detailing how communication mechanisms, text parsing," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-eci-parameter-update-execution-latency">Ecasound ECI
+Parameter Update Execution Latency</h1>
+<p>This article provides an analysis of the execution latency
+encountered when issuing parameter updates through the Ecasound Control
+Interface (ECI). It examines the underlying architecture of Ecasound,
+detailing how communication mechanisms, text parsing, and audio engine
+buffer cycles collectively define the time between sending a control
+command and its physical realization in the audio stream.</p>
+<h3 id="understanding-eci-architecture">Understanding ECI
+Architecture</h3>
+<p>The Ecasound Control Interface (ECI) is the primary API used to
+control the Ecasound multitrack audio processing engine
+programmatically. It operates through various language bindings (such as
+C, Python, and Perl) or via standalone interactive modes using standard
+I/O (stdio) or UNIX domain sockets.</p>
+<p>When an external program updates a parameter—such as an oscillator
+frequency, filter cutoff, or track volume—the execution latency is the
+sum of communication overhead, command interpretation, and audio engine
+scheduling.</p>
+<h3 id="components-of-eci-execution-latency">Components of ECI Execution
+Latency</h3>
+<p>The delay between dispatching a command and hearing or rendering its
+effect consists of three primary stages:</p>
+<h4 id="1-inter-process-communication-ipc-overhead">1. Inter-Process
+Communication (IPC) Overhead</h4>
+<p>If ECI is accessed via Python or shell scripts using standard
+input/output pipes or sockets, communication latency is introduced:</p>
+<ul>
+<li><strong>Direct Library Calls (C/C++ API):</strong> Latency is
+virtually negligible (sub-microsecond), as updates directly modify
+memory structures within the application process.</li>
+<li><strong>Pipes and UNIX Domain Sockets:</strong> Typical IPC
+transport latency ranges from 0.05 ms to 0.5 ms, depending on operating
+system scheduling and context switching.</li>
+</ul>
+<h4 id="2-string-parsing-and-command-dispatch">2. String Parsing and
+Command Dispatch</h4>
+<p>ECI processes commands formatted as plain text strings (e.g.,
+<code>cop-set 1,2,500</code>). Ecasound must parse the string, resolve
+the target operator, and validate the arguments before passing the
+updated value to the audio chain. This step typically takes between 10
+to 50 microseconds on modern hardware.</p>
+<h4 id="3-audio-engine-buffer-boundaries-the-dominant-factor">3. Audio
+Engine Buffer Boundaries (The Dominant Factor)</h4>
+<p>Ecasound processes audio in discrete blocks or buffers. Parameter
+changes issued through ECI are not interpolated sample-by-sample
+mid-block; instead, the audio engine polls for incoming control events
+between buffer processing iterations.</p>
+<p>Consequently, the audio buffer period represents the single largest
+contributor to execution latency: <span
+class="math display">\[\text{Buffer Latency} = \frac{\text{Buffer Size
+(samples)}}{\text{Sample Rate (Hz)}}\]</span></p>
+<ul>
+<li><strong>Low-Latency Setup (e.g., JACK or optimized ALSA):</strong>
+With a buffer size of 64 or 128 samples at 48 kHz, the buffer duration
+is approximately 1.33 ms to 2.67 ms.</li>
+<li><strong>Default Setup (e.g., standard ALSA / OSS drivers):</strong>
+Using default buffers (often 1024 or 2048 samples) at 44.1 kHz results
+in a latency of 23.2 ms to 46.4 ms.</li>
+</ul>
+<h3 id="total-expected-execution-latency">Total Expected Execution
+Latency</h3>
+<p>In practice, the total execution latency of an ECI parameter update
+falls into two categories based on engine configuration:</p>
+<ul>
+<li><strong>Real-Time Configurations (JACK / Low-latency ALSA):</strong>
+Between <strong>1.5 ms and 5 ms</strong>. Control updates occur almost
+immediately at the next buffer boundary.</li>
+<li><strong>Standard Desktop Configurations:</strong> Between <strong>25
+ms and 50 ms</strong>. Noticeable delay may occur during interactive
+real-time control, such as moving a physical MIDI fader routed through
+ECI.</li>
+</ul>
+<h3 id="methods-to-minimize-eci-latency">Methods to Minimize ECI
+Latency</h3>
+<p>To achieve the lowest possible execution latency when automating or
+controlling parameters via ECI:</p>
+<ol type="1">
+<li><strong>Reduce the Engine Buffer Size:</strong> Configure Ecasound
+with the <code>-b</code> option to set a smaller audio buffer size
+(e.g., <code>-b:128</code>), or run Ecasound with the JACK audio server
+backend configured for low buffer periods.</li>
+<li><strong>Utilize Native C/C++ Bindings:</strong> Avoid running ECI
+commands through standard shell pipes to eliminate IPC context switching
+and process piping bottlenecks.</li>
+<li><strong>Avoid Output Queries on Updates:</strong> Issuing a state
+query immediately after an update causes a round-trip wait over the
+control interface, effectively doubling the apparent command cycle
+time.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

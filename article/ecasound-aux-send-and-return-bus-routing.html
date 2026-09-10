@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Aux Send and Return Bus Routing - ecasound</title>
+    <meta name="description" content="This article explains how to implement auxiliary (aux) send and return buses in Ecasound for shared effects processing during a multitrack mixing session. By leveraging Ecasound’s chain architecture and real-time loop devices, you can route multiple au">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-aux-send-and-return-bus-routing">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Aux Send and Return Bus Routing - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-aux-send-and-return-bus-routing" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to implement auxiliary (aux) send and return buses in Ecasound for shared effects processing during a multitrack mixing session. By leveraging Ecasound’s chain architecture and real-time loop devices, you can route multiple au" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-aux-send-and-return-bus-routing">Ecasound Aux Send and
+Return Bus Routing</h1>
+<p>This article explains how to implement auxiliary (aux) send and
+return buses in Ecasound for shared effects processing during a
+multitrack mixing session. By leveraging Ecasound’s chain architecture
+and real-time loop devices, you can route multiple audio tracks into a
+single shared processing chain—such as a reverb or delay bus—and blend
+the processed wet signal back into the master mix.</p>
+<h3 id="core-routing-architecture">Core Routing Architecture</h3>
+<p>In Ecasound, auxiliary buses rely on three core components:</p>
+<ol type="1">
+<li><strong>Chains (<code>-a:chain_name</code>)</strong>: Independent
+signal paths that can host inputs, outputs, and effect operators.</li>
+<li><strong>Loop Devices (<code>loop,name</code>)</strong>: Internal
+virtual audio buffers used to pass audio between different chains
+without writing to physical disk or hardware.</li>
+<li><strong>Shared Audio Objects</strong>: Multiple chains can write to
+the same output or read from the same input, providing automatic summing
+and distribution.</li>
+</ol>
+<h3 id="step-1-defining-the-tracks-and-the-aux-send">Step 1: Defining
+the Tracks and the Aux Send</h3>
+<p>To create an auxiliary send, a track’s dry signal is split. One path
+goes directly to the master output, while a parallel path acts as the
+"send," routing a copy of the signal into a shared loop device.</p>
+<p>The amplitude operator (<code>-ea:percent</code>) placed on the send
+chain controls the send level for that specific track.</p>
+<pre class="text"><code># Track 1: Direct path and Aux Send path
+-a:t1_dry  -i:guitar.wav -ea:100 -o:loop,master
+-a:t1_send -i:guitar.wav -ea:35  -o:loop,reverb_bus
+
+# Track 2: Direct path and Aux Send path
+-a:t2_dry  -i:vocals.wav -ea:100 -o:loop,master
+-a:t2_send -i:vocals.wav -ea:60  -o:loop,reverb_bus</code></pre>
+<p>Because both <code>-a:t1_send</code> and <code>-a:t2_send</code>
+target the same output buffer (<code>-o:loop,reverb_bus</code>),
+Ecasound automatically sums these signals together, functioning as an
+aux send bus.</p>
+<h3 id="step-2-setting-up-the-aux-return-effect-bus">Step 2: Setting Up
+the Aux Return (Effect Bus)</h3>
+<p>The aux return is implemented as a dedicated chain that consumes
+audio from the send loop, processes it with one or more effects, and
+sends the wet signal to the master bus.</p>
+<p>Effects on the aux return should typically be configured to 100% wet,
+as the dry signal is already routed directly via the dry track
+chains.</p>
+<pre class="text"><code># Aux Return: Reads the bus, applies LADSPA reverb, controls return level
+-a:reverb_return -i:loop,reverb_bus -el:tap_reverb,2500,-10,-20 -ea:80 -o:loop,master</code></pre>
+<p>In this chain:</p>
+<ul>
+<li><code>-i:loop,reverb_bus</code> reads the combined audio from all
+send chains.</li>
+<li><code>-el:plugin_name,params...</code> applies the shared LADSPA
+effect.</li>
+<li><code>-ea:80</code> functions as the aux return fader.</li>
+<li><code>-o:loop,master</code> sends the processed wet signal to be
+combined with the dry mix.</li>
+</ul>
+<h3 id="step-3-summing-at-the-master-output">Step 3: Summing at the
+Master Output</h3>
+<p>Finally, a master chain receives all audio routed to
+<code>loop,master</code> (both dry tracks and wet return buses) and
+sends the finalized mix to the physical sound card or an export
+file.</p>
+<pre class="text"><code># Master: Sums all dry tracks and aux returns, outputs to ALSA hardware
+-a:master -i:loop,master -ea:100 -o:alsa</code></pre>
+<h3 id="complete-implementation-example">Complete Implementation
+Example</h3>
+<p>The complete Ecasound command to run a session with two tracks, one
+shared reverb aux bus, and a hardware output is:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:t1_dry</span>  <span class="at">-i:guitar.wav</span> <span class="at">-ea:100</span> <span class="at">-o:loop,master</span> <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:t1_send</span> <span class="at">-i:guitar.wav</span> <span class="at">-ea:30</span>  <span class="at">-o:loop,fx_bus</span> <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:t2_dry</span>  <span class="at">-i:vocals.wav</span> <span class="at">-ea:100</span> <span class="at">-o:loop,master</span> <span class="dt">\</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:t2_send</span> <span class="at">-i:vocals.wav</span> <span class="at">-ea:50</span>  <span class="at">-o:loop,fx_bus</span> <span class="dt">\</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:fx_ret</span>  <span class="at">-i:loop,fx_bus</span> <span class="at">-el:plate_reverb,1.5,100</span> <span class="at">-ea:75</span> <span class="at">-o:loop,master</span> <span class="dt">\</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:master</span>  <span class="at">-i:loop,master</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>This workflow eliminates duplicate effect processing across tracks,
+reduces CPU overhead, and provides cohesive spatial cohesion across the
+mix.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

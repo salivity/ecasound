@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time FFT Spectral Analysis in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound is a modular, command-line multitrack audio processing tool capable of real-time signal routing, effect processing, and spectral monitoring. This article examines how Ecasound executes real-time Fast Fourier Transforms (FFT) for spectral analysi">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/real-time-fft-spectral-analysis-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Real-Time FFT Spectral Analysis in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/real-time-fft-spectral-analysis-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a modular, command-line multitrack audio processing tool capable of real-time signal routing, effect processing, and spectral monitoring. This article examines how Ecasound executes real-time Fast Fourier Transforms (FFT) for spectral analysi" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="real-time-fft-spectral-analysis-in-ecasound">Real-Time FFT
+Spectral Analysis in Ecasound</h1>
+<p>Ecasound is a modular, command-line multitrack audio processing tool
+capable of real-time signal routing, effect processing, and spectral
+monitoring. This article examines how Ecasound executes real-time Fast
+Fourier Transforms (FFT) for spectral analysis, detailing its internal
+buffering system, the integration of optimized transform routines,
+windowing techniques, and its low-latency streaming pipeline.</p>
+<h3 id="the-audio-engine-and-buffering-pipeline">The Audio Engine and
+Buffering Pipeline</h3>
+<p>Ecasound’s core architecture processes audio through a signal routing
+graph composed of chains and chain operators. Audio data moves through
+the pipeline in discrete chunks called sample buffers. To achieve
+real-time capability without audio dropouts (xruns), the system relies
+on fixed-size block processing.</p>
+<p>For spectral analysis, incoming time-domain PCM samples are pulled
+from the stream and placed into a dedicated circular buffer. Because the
+optimal buffer size for real-time audio playback (often 64 to 512
+samples) may differ from the window size required for fine frequency
+resolution in spectral analysis (typically 1024, 2048, or 4096 samples),
+Ecasound decouples playback buffer sizing from the analysis frame
+size.</p>
+<h3 id="windowing-functions">Windowing Functions</h3>
+<p>Before computing the Fourier transform, the continuous audio stream
+is segmented into finite-length frames. Directly applying an FFT to a
+raw, truncated block of samples introduces spectral leakage due to
+discontinuities at the frame boundaries.</p>
+<p>To mitigate this, Ecasound applies a mathematical windowing function
+across the buffer. Common windows used in spectral operators
+include:</p>
+<ul>
+<li><strong>Hann Window:</strong> Balances frequency resolution and
+side-lobe suppression, making it the standard choice for general
+spectral monitoring.</li>
+<li><strong>Hamming Window:</strong> Optimizes the cancellation of the
+first side-lobe.</li>
+<li><strong>Blackman Window:</strong> Provides even higher side-lobe
+attenuation at the cost of a slightly wider main frequency lobe.</li>
+</ul>
+<p>The window coefficients are calculated and stored in memory during
+initialization, allowing the time-domain samples to be multiplied
+point-by-point via fast vector operations prior to transform
+execution.</p>
+<h3 id="overlapping-frames">Overlapping Frames</h3>
+<p>To capture transient events and maintain temporal continuity,
+Ecasound uses overlapping analysis frames—typically with a 50% or 75%
+overlap. As new audio samples enter the circular buffer, older samples
+are retained, shifting the analysis window forward by a hop size that is
+smaller than the FFT length. This ensures that the attenuation
+introduced at the edges of the window function does not lead to lost
+spectral data.</p>
+<h3 id="fft-execution-and-external-libraries">FFT Execution and External
+Libraries</h3>
+<p>To compute the discrete Fourier transform efficiently, Ecasound
+utilizes optimized discrete mathematical routines, most commonly
+interfacing with the <strong>FFTW (Fastest Fourier Transform in the
+West)</strong> library.</p>
+<p>FFTW optimizes the real-to-complex (R2C) transform algorithm:</p>
+<ol type="1">
+<li><strong>Plan Initialization:</strong> During setup, before real-time
+audio streaming begins, an execution plan (<code>fftw_plan</code>) is
+computed. FFTW benchmarks various factorization algorithms (such as
+Cooley-Tukey, Prime Factor, and split-radix algorithms) against the host
+machine's specific CPU cache and instruction set (e.g., SSE, AVX).</li>
+<li><strong>Deterministic Execution:</strong> During playback, the
+real-time thread executes the pre-configured plan using static memory
+allocations. This avoids dynamic memory allocation
+(<code>malloc</code>), system calls, or context switching within the
+real-time audio loop.</li>
+<li><strong>Real-to-Complex Optimization:</strong> Because raw audio
+input consists solely of real values, the negative frequency spectrum is
+the complex conjugate of the positive spectrum. Ecasound computes only
+the non-redundant <span class="math inline">\(N/2 + 1\)</span> complex
+output points, cutting computation time and memory requirements roughly
+in half.</li>
+</ol>
+<h3 id="magnitude-spectrum-and-bin-resolution">Magnitude Spectrum and
+Bin Resolution</h3>
+<p>The output of the FFT consists of complex numbers representing the
+real (<span class="math inline">\(\text{Re}\)</span>) and imaginary
+(<span class="math inline">\(\text{Im}\)</span>) components of each
+frequency bin. For spectral analysis and visualization, Ecasound
+converts these coordinates into polar form to determine the
+magnitude:</p>
+<p><span class="math display">\[\text{Magnitude} = \sqrt{\text{Re}^2 +
+\text{Im}^2}\]</span></p>
+<p>The physical frequency represented by each bin <span
+class="math inline">\(k\)</span> is calculated based on the sample rate
+(<span class="math inline">\(f_s\)</span>) and the transform size (<span
+class="math inline">\(N\)</span>):</p>
+<p><span class="math display">\[f(k) = \frac{k \cdot
+f_s}{N}\]</span></p>
+<p>For visualization purposes or peak-frequency tracking, these linear
+magnitude values are often converted to a logarithmic decibel (dB) scale
+and smoothed across frames using an exponential decay filter.</p>
+<h3 id="threading-and-real-time-safety">Threading and Real-Time
+Safety</h3>
+<p>To maintain low latency, Ecasound isolates critical audio processing
+from output tasks. While the FFT calculation itself is executed in real
+time within the signal chain operator, the visualization of the
+data—such as terminal output or OSC/MIDI telemetry—runs asynchronously.
+This design ensures that graphical rendering or slower I/O operations do
+not block the high-priority thread delivering audio to hardware devices
+via ALSA, JACK, or OSS.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

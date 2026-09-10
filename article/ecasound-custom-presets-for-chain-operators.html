@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Custom Presets for Chain Operators - ecasound</title>
+    <meta name="description" content="Ecasound fully supports combining multiple chain operators into reusable custom presets, allowing you to streamline complex signal-processing workflows. Instead of chaining dozens of individual parameters directly on the command line, you can bundle filt">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-custom-presets-for-chain-operators">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Custom Presets for Chain Operators - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-custom-presets-for-chain-operators" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound fully supports combining multiple chain operators into reusable custom presets, allowing you to streamline complex signal-processing workflows. Instead of chaining dozens of individual parameters directly on the command line, you can bundle filt" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-custom-presets-for-chain-operators">Ecasound Custom
+Presets for Chain Operators</h1>
+<p>Ecasound fully supports combining multiple chain operators into
+reusable custom presets, allowing you to streamline complex
+signal-processing workflows. Instead of chaining dozens of individual
+parameters directly on the command line, you can bundle filters,
+envelopes, amplifiers, and LADSPA plugins into predefined modules. This
+guide explains how Ecasound presets function, how to configure them
+using preset files, and how to execute your custom processing
+chains.</p>
+<h3 id="understanding-ecasound-chain-operator-presets">Understanding
+Ecasound Chain Operator Presets</h3>
+<p>In Ecasound, a chain operator modifies an audio signal passing
+through a chain. Complex audio workflows often require stacking several
+operators together, such as applying a low-pass filter, adjusting the
+gain, and adding dynamic compression.</p>
+<p>Ecasound enables you to define custom chain operator presets (often
+referred to as COP presets). These presets act as macros or aliases,
+grouping multiple operators under a single name. They also accept
+dynamic positional parameters, making them adaptable to different audio
+sources.</p>
+<h3 id="preset-configuration-and-file-locations">Preset Configuration
+and File Locations</h3>
+<p>Presets are defined in text-based configuration files. When Ecasound
+launches, it parses preset definitions from standard locations:</p>
+<ul>
+<li><strong>System-wide configuration:</strong> Typically located at
+<code>/etc/ecasound/ecasoundrc</code> or dedicated preset directories
+like <code>/usr/share/ecasound/generic_presets/</code>.</li>
+<li><strong>User-specific configuration:</strong> Located in your home
+directory at <code>~/.ecasound/ecasoundrc</code> or within individual
+preset files stored in <code>~/.ecasound/presets/</code>.</li>
+</ul>
+<p>Creating a dedicated preset file inside
+<code>~/.ecasound/presets/</code> with the <code>.cop</code> extension
+is the cleanest approach for managing custom setups.</p>
+<h3 id="defining-custom-preset-syntax">Defining Custom Preset
+Syntax</h3>
+<p>A preset definition consists of a preset name, an optional
+description, parameter definitions, and the list of chain operators to
+execute. Dynamic values are injected using positional placeholders like
+<code>$1</code>, <code>$2</code>, and so on.</p>
+<p>Here is the general syntax used in a preset file:</p>
+<pre class="text"><code>preset_name = [description] ; operator1 , operator2 , ...</code></pre>
+<p>For a concrete implementation, consider a custom mastering filter
+that rolls off extreme low-end frequencies and boosts overall gain:</p>
+<pre class="text"><code># Define a high-pass filter followed by an amplifier
+clean_bass_boost = High-pass filter and gain ; -efh:$1,2 -ea:$2</code></pre>
+<p>In this definition:</p>
+<ul>
+<li><code>clean_bass_boost</code> is the identifier called from the
+command line.</li>
+<li><code>High-pass filter and gain</code> is an optional descriptive
+string.</li>
+<li><code>-efh:$1,2</code> applies a high-pass filter using the first
+supplied argument as the cutoff frequency with a 2-pole resonance.</li>
+<li><code>-ea:$2</code> applies an amplification factor using the second
+argument.</li>
+</ul>
+<h3 id="calling-presets-via-the-command-line">Calling Presets via the
+Command Line</h3>
+<p>Once your preset is saved in <code>~/.ecasound/ecasoundrc</code> or a
+recognized preset file, call it using the <code>-pn</code> (preset name)
+chain operator option:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-pn:clean_bass_boost,80,120</span> <span class="at">-o</span> output.wav</span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-pn:clean_bass_boost,80,120</code> applies the preset.</li>
+<li><code>80</code> replaces <code>$1</code> (setting the cutoff to 80
+Hz).</li>
+<li><code>120</code> replaces <code>$2</code> (applying a 120% volume
+boost).</li>
+</ul>
+<h3 id="loading-external-preset-files">Loading External Preset
+Files</h3>
+<p>If you create an independent preset file outside of the default
+search paths (such as <code>my_effects.cop</code>), load it explicitly
+during execution using the <code>-pf</code> flag:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-pf:my_effects.cop</span> <span class="at">-i</span> input.wav <span class="at">-pn:clean_bass_boost,80,120</span> <span class="at">-o</span> output.wav</span></code></pre></div>
+<h3 id="benefits-of-using-presets">Benefits of Using Presets</h3>
+<ul>
+<li><strong>Readability:</strong> Replaces dozens of verbose operator
+flags with clean, descriptive aliases.</li>
+<li><strong>Reusability:</strong> Allows the same multi-stage processing
+chains to be shared across shell scripts and interactive sessions.</li>
+<li><strong>Consistency:</strong> Guarantees that audio effects like
+normalization, equalization curves, and plugin routings are applied
+uniformly across different projects.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

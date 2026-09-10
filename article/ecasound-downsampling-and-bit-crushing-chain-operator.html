@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Downsampling and Bit-Crushing Chain Operator - ecasound</title>
+    <meta name="description" content="Ecasound is a versatile command-line digital audio workstation and signal processor that supports complex sound design effects. While Ecasound includes built-in operators for amplitude, filtering, and time delays, downsampling and bit-crushing effects ar">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-downsampling-and-bit-crushing-chain-operator">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Downsampling and Bit-Crushing Chain Operator - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-downsampling-and-bit-crushing-chain-operator" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a versatile command-line digital audio workstation and signal processor that supports complex sound design effects. While Ecasound includes built-in operators for amplitude, filtering, and time delays, downsampling and bit-crushing effects ar" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-downsampling-and-bit-crushing-chain-operator">Ecasound
+Downsampling and Bit-Crushing Chain Operator</h1>
+<p>Ecasound is a versatile command-line digital audio workstation and
+signal processor that supports complex sound design effects. While
+Ecasound includes built-in operators for amplitude, filtering, and time
+delays, downsampling and bit-crushing effects are handled through
+external plugin chain operators. This guide identifies the specific
+chain operator required, details its parameter syntax, and provides a
+clear example of how to implement real-time sample rate decimation and
+bit reduction in an audio chain.</p>
+<h2 id="the-chain-operator--el-ladspa-plugin-integration">The Chain
+Operator: <code>-el</code> (LADSPA Plugin Integration)</h2>
+<p>Ecasound achieves downsampling and bit-crushing through the
+<strong><code>-el</code></strong> (LADSPA by label) or
+<strong><code>-eli</code></strong> (LADSPA by ID) chain operator.
+Because Ecasound does not feature a hardcoded internal bit-crusher, it
+uses its LADSPA host operator to load modular audio destruction
+tools—most notably the SWH (Steve Harris)
+<strong><code>decimator</code></strong> plugin (ID
+<code>1202</code>).</p>
+<p>For users utilizing LV2 plugins instead of LADSPA, the corresponding
+operator is <strong><code>-elv2</code></strong>.</p>
+<h2 id="syntax-and-parameters">Syntax and Parameters</h2>
+<p>When loading the <code>decimator</code> plugin via the
+<code>-el</code> chain operator, pass the effect parameters as a
+comma-separated list directly after the plugin label:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-el:decimator,bit_depth,sample_rate</span></span></code></pre></div>
+<ul>
+<li><strong><code>bit_depth</code></strong>: Specifies the bit
+resolution (typically ranging from <code>1</code> to <code>24</code>).
+Lowering this value quantizes the audio, creating harsh digital
+distortion and reducing dynamic range.</li>
+<li><strong><code>sample_rate</code></strong>: Specifies the decimated
+target sampling rate in Hertz (e.g., <code>8000</code> or
+<code>4000</code>). Reducing this value removes high-frequency detail
+and introduces heavy aliasing distortion.</li>
+</ul>
+<h2 id="practical-example">Practical Example</h2>
+<p>To process an audio file named <code>input.wav</code>, reduce its bit
+resolution to 8-bit, decimate its effective sample rate to 8,000 Hz, and
+save the result to <code>output.wav</code>, run:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-el:decimator,8,8000</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>If referencing the plugin by its unique numerical identifier instead
+of its name, use the <code>-eli</code> operator:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-eli:1202,8,8000</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>This operator allows continuous modulation inside interactive
+Ecasound sessions, letting you automate or adjust the bit depth and
+decimation rates in real time.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

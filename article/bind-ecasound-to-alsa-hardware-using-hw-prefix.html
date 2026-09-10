@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bind Ecasound to ALSA Hardware Using hw Prefix - ecasound</title>
+    <meta name="description" content="Ecasound can directly interface with Advanced Linux Sound Architecture (ALSA) hardware devices using the standard hw: prefix syntax. This article explains how Ecasound integrates with ALSA hardware, outlines the required command-line syntax for input and">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/bind-ecasound-to-alsa-hardware-using-hw-prefix">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Bind Ecasound to ALSA Hardware Using hw Prefix - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/bind-ecasound-to-alsa-hardware-using-hw-prefix" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound can directly interface with Advanced Linux Sound Architecture (ALSA) hardware devices using the standard hw: prefix syntax. This article explains how Ecasound integrates with ALSA hardware, outlines the required command-line syntax for input and" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="bind-ecasound-to-alsa-hardware-using-hw-prefix">Bind Ecasound to
+ALSA Hardware Using hw Prefix</h1>
+<p>Ecasound can directly interface with Advanced Linux Sound
+Architecture (ALSA) hardware devices using the standard <code>hw:</code>
+prefix syntax. This article explains how Ecasound integrates with ALSA
+hardware, outlines the required command-line syntax for input and output
+routing, and covers key considerations such as exclusive device access
+and format compatibility when bypassing software mixing layers.</p>
+<h2 id="direct-alsa-binding-in-ecasound">Direct ALSA Binding in
+Ecasound</h2>
+<p>Ecasound natively supports ALSA devices through its ALSA I/O object
+type. By utilizing the <code>hw:</code> prefix, Ecasound establishes
+direct communication with the sound card's hardware buffer, completely
+bypassing ALSA's software mixing layer (<code>dmix</code>) and sample
+rate conversion plugins.</p>
+<p>To bind to an ALSA hardware device, specify the audio format type as
+<code>alsa</code> followed by the target device string in Ecasound’s
+input (<code>-i</code>) or output (<code>-o</code>) parameters.</p>
+<h3 id="command-syntax">Command Syntax</h3>
+<p>The general syntax for addressing an ALSA device directly is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-i</span> alsa,hw:CARD,DEVICE</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">-o</span> alsa,hw:CARD,DEVICE</span></code></pre></div>
+<ul>
+<li><strong>CARD</strong>: The index number or string identifier of the
+sound card (e.g., <code>0</code>, <code>1</code>, or named identifiers
+like <code>hw:DAC</code>).</li>
+<li><strong>DEVICE</strong>: The specific subdevice number on that card
+(typically <code>0</code> if unspecified).</li>
+</ul>
+<h3 id="example-usage">Example Usage</h3>
+<p>To route input directly from the first hardware device of the first
+sound card to the first hardware device of the second card:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-i</span> alsa,hw:0,0 <span class="at">-o</span> alsa,hw:1,0</span></code></pre></div>
+<p>You can identify available card and device numbers on your system
+using the standard ALSA utility:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">arecord</span> <span class="at">-l</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">aplay</span> <span class="at">-l</span></span></code></pre></div>
+<h2 id="considerations-when-using-the-hw-prefix">Considerations When
+Using the hw Prefix</h2>
+<ul>
+<li><strong>Format Matching</strong>: Because the <code>hw:</code>
+prefix communicates directly with the hardware without software
+emulation, the stream parameters (sample format, channel count, and
+sampling rate set via the <code>-f</code> option) must match the exact
+capabilities of your sound card. If the parameters do not match,
+Ecasound will exit with an initialization error.</li>
+<li><strong>Fallback to plughw</strong>: If hardware format conversion
+is required, you can use <code>plughw:</code> instead of
+<code>hw:</code>. The <code>plughw:</code> prefix still targets the
+physical card but allows ALSA to automatically convert sample rates and
+formats when necessary.</li>
+<li><strong>Exclusive Access</strong>: Direct hardware access requires
+exclusive control of the ALSA device. If another application or sound
+server (such as PulseAudio or PipeWire) has locked the hardware device,
+Ecasound will fail to open it until the resource is freed.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Flanger and Chorus Native Effects Guide - ecasound</title>
+    <meta name="description" content="This article provides an overview of how Ecasound implements flanging and chorus effects through its native signal-processing operators. You will learn the mechanics behind the primary time-modulated delay operator (-efl), the theoretical distinction bet">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-flanger-and-chorus-native-effects-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Flanger and Chorus Native Effects Guide - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-flanger-and-chorus-native-effects-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Ecasound implements flanging and chorus effects through its native signal-processing operators. You will learn the mechanics behind the primary time-modulated delay operator (-efl), the theoretical distinction bet" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-flanger-and-chorus-native-effects-guide">Ecasound
+Flanger and Chorus Native Effects Guide</h1>
+<p>This article provides an overview of how Ecasound implements flanging
+and chorus effects through its native signal-processing operators. You
+will learn the mechanics behind the primary time-modulated delay
+operator (<code>-efl</code>), the theoretical distinction between
+flanging and chorus in command-line audio processing, and how to
+configure single-chain and multi-chain audio routes to generate both
+classic comb-filtering and rich multi-voice modulation.</p>
+<h3 id="the-native-time-modulation-operator--efl">The Native
+Time-Modulation Operator: <code>-efl</code></h3>
+<p>Ecasound handles time-varying delay effects natively using the
+flanger operator, specified on the command line or within chainsetup
+scripts as <code>-efl</code>. The operator takes three primary
+arguments:</p>
+<pre class="text"><code>-efl:delay_time,freq,amplitude</code></pre>
+<ul>
+<li><strong><code>delay_time</code></strong>: The center delay time in
+milliseconds. This defines the baseline offset between the dry and wet
+audio signals.</li>
+<li><strong><code>freq</code></strong>: The modulation frequency of the
+Low-Frequency Oscillator (LFO) in Hertz (Hz). This controls how rapidly
+the delay time oscillates.</li>
+<li><strong><code>amplitude</code></strong>: The modulation depth in
+milliseconds. This determines how far the delay sweeps around the base
+<code>delay_time</code>. The amplitude value must not exceed the base
+delay time, as negative delay is not physically realizable.</li>
+</ul>
+<p>Under the hood, Ecasound maintains a ring buffer for the incoming
+audio samples. A sinusoidal LFO continuously modulates the read
+pointer's position relative to the write pointer based on the specified
+frequency and amplitude. The delayed, pitch-modulated signal is then
+summed with the dry direct signal.</p>
+<h3 id="configuring-classic-flanging">Configuring Classic Flanging</h3>
+<p>Flanging relies on short delay times that produce constructive and
+destructive interference across the frequency spectrum, known as comb
+filtering. When the delay time modulates, these comb peaks and troughs
+sweep up and down the audible spectrum, creating the signature jet-plane
+swoosh.</p>
+<p>To achieve standard flanging in Ecasound, set a short base delay
+between 1 and 5 milliseconds, a slow-to-moderate LFO speed (0.1 Hz to
+1.0 Hz), and an amplitude close to the delay time:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-efl:3,0.5,2.5</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li>Base delay is set to 3 ms.</li>
+<li>The LFO modulates the signal at 0.5 Hz (one full sweep every two
+seconds).</li>
+<li>The sweep varies by ±2.5 ms, swinging the delay between 0.5 ms and
+5.5 ms.</li>
+</ul>
+<h3 id="implementing-chorus-with--efl">Implementing Chorus with
+<code>-efl</code></h3>
+<p>While flanging requires sub-10ms delays to trigger audible phase
+cancellation, a chorus effect simulates multiple instruments playing the
+same part simultaneously. This requires longer delay times (typically 15
+to 40 milliseconds) to decouple the phase interaction, avoiding heavy
+comb filtering while introducing subtle pitch detuning (pitch
+modulation) via the LFO.</p>
+<p>Because Ecasound does not include a separate distinct
+<code>-efc</code> chorus operator, the native <code>-efl</code> engine
+is repurposed for chorus by shifting these delay parameters:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-efl:25,0.8,3</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li>A 25 ms delay avoids static hollow comb filtering.</li>
+<li>The 0.8 Hz LFO creates slow, natural movement.</li>
+<li>The 3 ms amplitude slightly fluctuates the pitch of the delayed
+voice without causing disorienting vibrato.</li>
+</ul>
+<h3 id="multi-voice-chorus-via-parallel-routing">Multi-Voice Chorus via
+Parallel Routing</h3>
+<p>A single modulated delay line can sound thin compared to dedicated
+hardware or multi-tap chorus units. Ecasound's native chain-routing
+architecture allows you to construct a richer, multi-voice chorus by
+splitting the input into parallel chains, applying asymmetrical
+<code>-efl</code> settings to each, and panning the results:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1,2</span> <span class="at">-i</span> input.wav <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:1</span> <span class="at">-efl:20,0.6,2.5</span> <span class="at">-erc:1,2</span> <span class="at">-epp:20</span> <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-efl:30,0.9,3.5</span> <span class="at">-erc:1,2</span> <span class="at">-epp:80</span> <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:1,2</span> <span class="at">-o</span> output.wav</span></code></pre></div>
+<p>This configuration routes the input audio into two independent
+processing chains (<code>-a:1</code> and <code>-a:2</code>):</p>
+<ul>
+<li><strong>Chain 1</strong> applies a 20 ms delay modulated at 0.6 Hz,
+panned toward the left channel (<code>-epp:20</code>).</li>
+<li><strong>Chain 2</strong> applies a 30 ms delay modulated at 0.9 Hz,
+panned toward the right channel (<code>-epp:80</code>).</li>
+<li>Combining these unsynchronized LFOs and different delay anchors
+generates a dense, stereo-widened chorus effect entirely through native
+Ecasound operators.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

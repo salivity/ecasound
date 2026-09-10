@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Batch Audio Conversion and Pipelines - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool designed for recording, mixing, effects processing, and format conversion. This article examines how Ecasound facilitates automated batch audio conversion and multi-stage processing pip">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-batch-audio-conversion-and-pipelines">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Batch Audio Conversion and Pipelines - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-batch-audio-conversion-and-pipelines" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool designed for recording, mixing, effects processing, and format conversion. This article examines how Ecasound facilitates automated batch audio conversion and multi-stage processing pip" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-batch-audio-conversion-and-pipelines">Ecasound Batch
+Audio Conversion and Pipelines</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool
+designed for recording, mixing, effects processing, and format
+conversion. This article examines how Ecasound facilitates automated
+batch audio conversion and multi-stage processing pipelines through its
+modular chain architecture, flexible input/output routing, native
+effects integration, and scripting capabilities via shell environments
+and programming language interfaces.</p>
+<h2 id="command-line-modularity-and-shell-integration">Command-Line
+Modularity and Shell Integration</h2>
+<p>Ecasound operates natively as a POSIX-compliant command-line utility,
+making it inherently suited for shell-based batch automation. Rather
+than relying on a graphical user interface, operations are defined via
+arguments and flags. This architecture allows users to integrate
+Ecasound into standard Bash, Zsh, or Python loops to iterate over entire
+directories of audio files.</p>
+<p>For batch conversions, a standard shell loop can pass files
+individually to an Ecasound command string:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> <span class="pp">*</span>.wav<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">ecasound</span> <span class="at">-i</span> <span class="st">&quot;</span><span class="va">$file</span><span class="st">&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">${file</span><span class="op">%</span>.wav<span class="va">}</span><span class="st">.flac&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+<p>Because Ecasound returns standard exit codes and can run in
+non-interactive batch mode (<code>-B:batch</code>), automated workflows
+can easily incorporate error handling, logging, and conditional
+execution.</p>
+<h2 id="the-chain-setup-architecture">The Chain Setup Architecture</h2>
+<p>At the core of Ecasound's processing pipeline model is the "Chain
+Setup." A chain setup consists of:</p>
+<ul>
+<li><strong>Audio Inputs (<code>-i</code>):</strong> Files, ALSA/JACK
+devices, standard input, or tone generators.</li>
+<li><strong>Audio Outputs (<code>-o</code>):</strong> Files, audio
+hardware endpoints, standard output, or null devices.</li>
+<li><strong>Chains (<code>-c</code>):</strong> Independent processing
+paths that connect inputs to outputs.</li>
+<li><strong>Chain Operators (<code>-e*</code>):</strong> DSP effects,
+filters, dynamics processors, or gain adjustments applied within a
+chain.</li>
+</ul>
+<p>This setup allows complex multi-stage pipelines to be executed in a
+single pass without generating intermediate disk files. For example, a
+single command can read an input, split the signal into two frequency
+bands across separate chains, apply independent compression and
+equalization, and sum them into a single encoded output file.</p>
+<h2 id="in-flight-format-conversion-and-sample-rate-handling">In-Flight
+Format Conversion and Sample Rate Handling</h2>
+<p>Ecasound abstracts audio data into 32-bit floating-point streams
+internally. During batch processing, this allows automatic or
+user-defined conversion of:</p>
+<ul>
+<li><strong>Bit Depths and Encodings:</strong> Conversion between linear
+PCM (16-bit, 24-bit, 32-bit), floating-point formats, and compressed
+formats such as Ogg Vorbis, FLAC, and MP3 (via external libraries like
+LAME).</li>
+<li><strong>Channel Routing:</strong> Summing stereo files to mono,
+expanding mono to stereo, or redistributing channels within multichannel
+audio using channel operators (<code>-erc</code>,
+<code>-erm</code>).</li>
+<li><strong>Resampling:</strong> Dynamic sample rate conversion between
+mismatching inputs and outputs directly within the processing
+pipeline.</li>
+</ul>
+<h2 id="standard-input-standard-output-and-unix-pipes">Standard Input,
+Standard Output, and UNIX Pipes</h2>
+<p>Ecasound supports reading from standard input (<code>-i stdin</code>)
+and writing to standard output (<code>-o stdout</code>). This capability
+allows Ecasound to act as an intermediary processor within broader UNIX
+pipelines alongside tools like <code>ffmpeg</code>, <code>sox</code>, or
+<code>curl</code>.</p>
+<p>For example, an audio stream can be fetched over a network, decoded,
+filtered through Ecasound's internal DSP modules, and piped directly
+into an encoder without touching persistent storage:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> http://example.com/stream.wav <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-i</span> stdin <span class="at">-ea:150</span> <span class="at">-o</span> stdout <span class="kw">|</span> <span class="ex">lame</span> <span class="at">-</span> output.mp3</span></code></pre></div>
+<h2 id="reusable-chain-setup-files-ecs">Reusable Chain Setup Files
+(.ecs)</h2>
+<p>To avoid managing long, complex parameter strings in scripts,
+Ecasound supports native Chain Setup files (<code>.ecs</code>). These
+configuration files store input/output definitions, effect parameters,
+and routing maps.</p>
+<p>In batch operations, a template <code>.ecs</code> file can be
+declared once and dynamically invoked with overridden input and output
+parameters. This ensures consistent processing pipelines—such as
+standardizing audio levels, DC offset correction, and brickwall
+limiting—across varied batches of assets.</p>
+<h2 id="the-ecasound-control-interface-eci">The Ecasound Control
+Interface (ECI)</h2>
+<p>For complex processing pipelines requiring dynamic logic, Ecasound
+includes the Ecasound Control Interface (ECI). ECI provides an API for
+Python, Perl, C, C++, and Ruby, as well as an interactive command
+interpreter (<code>-c</code>).</p>
+<p>Through ECI, developers can build standalone automation daemons
+that:</p>
+<ul>
+<li>Monitor directories for incoming audio assets.</li>
+<li>Dynamically query audio metadata (duration, sample rate,
+channels).</li>
+<li>Construct dynamic chain setups based on file properties.</li>
+<li>Monitor real-time processing statistics (such as peak amplitude or
+clipping indicators).</li>
+<li>Adjust processing parameters programmatically based on analysis
+passes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

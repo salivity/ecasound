@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Built-in Limiter Algorithms Explained - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool, but its core engine possesses very few native dynamics processors built directly into its C++ codebase. While users often look for a dedicated, native brickwall peak limiter, Ecasound">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-built-in-limiter-algorithms-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Built-in Limiter Algorithms Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-built-in-limiter-algorithms-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool, but its core engine possesses very few native dynamics processors built directly into its C++ codebase. While users often look for a dedicated, native brickwall peak limiter, Ecasound" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-built-in-limiter-algorithms-explained">Ecasound
+Built-in Limiter Algorithms Explained</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool,
+but its core engine possesses very few native dynamics processors built
+directly into its C++ codebase. While users often look for a dedicated,
+native brickwall peak limiter, Ecasound’s internal processing engine
+does not contain a proprietary standalone lookahead limiter algorithm.
+Instead, direct limiting within Ecasound’s native toolset is achieved
+primarily through its built-in envelope-following dynamic compressor
+algorithm (<code>-ec</code>) adjusted to hard-limiting ratios,
+accompanied by internal sample-clamping mechanisms at output stages.</p>
+<h3 id="native-envelope-dynamic-compressor--ec">Native Envelope Dynamic
+Compressor (<code>-ec</code>)</h3>
+<p>The primary algorithm built directly into the Ecasound engine for
+controlling signal dynamic range is the native dynamic compressor,
+invoked via the <code>-ec</code> command. This algorithm tracks the
+signal's envelope using four fundamental parameters:</p>
+<ul>
+<li><strong>Attack Time (ms):</strong> Determines how rapidly the gain
+reduction activates once the signal exceeds the threshold.</li>
+<li><strong>Release Time (ms):</strong> Governs how quickly the gain
+returns to unity after the input level drops below the threshold.</li>
+<li><strong>Threshold (%):</strong> Sets the linear amplitude level
+above which compression takes place.</li>
+<li><strong>Compression Ratio:</strong> Defines the input-to-output gain
+ratio applied to audio exceeding the threshold.</li>
+</ul>
+<p>To make this native compressor act as a peak limiter, the compression
+ratio is set to an extreme value (such as <code>20:1</code>,
+<code>50:1</code>, or higher), combined with the minimum possible attack
+time (e.g., 0 to 1 ms). This turns the dynamic curve from gradual
+compression into a hard ceiling, attenuating transient peaks that
+surpass the threshold percentage.</p>
+<h3 id="hard-clamping-and-saturation">Hard Clamping and Saturation</h3>
+<p>Beyond the envelope-driven dynamic compressor, the internal digital
+signal path of Ecasound incorporates basic sample clamping during
+float-to-integer conversion and output buffering. Ecasound works
+internally with 32-bit or 64-bit floating-point audio data. When
+rendering or routing audio to fixed-point hardware drivers or integer
+PCM files, the native engine enforces an absolute hard limit: values
+exceeding normalized full scale (<span
+class="math inline">\(-1.0\)</span> to <span
+class="math inline">\(+1.0\)</span>) are truncated or clamped to the
+maximum permissible integer values to prevent numeric wrap-around
+distortion. While not a musical dynamic limiter, this built-in
+hard-limiting mechanism prevents digital overflow errors.</p>
+<h3 id="the-role-of-external-architectures-for-true-peak-limiting">The
+Role of External Architectures for True Peak Limiting</h3>
+<p>Because Ecasound's core philosophy prioritizes modularity and
+low-latency stream routing over duplicating complex mastering
+algorithms, advanced limiting algorithms—such as lookahead brickwall
+limiters, soft-knee limiters, and multi-band limiters—are not hardcoded
+into the base engine.</p>
+<p>Instead, Ecasound natively exposes hooks to host LADSPA (Linux Audio
+Developer's Simple Plugin API) plugins directly within its chainsetup
+architecture. For lookahead peak limiting without clipping or
+overshoots, Ecasound relies on LADSPA limiters (such as Steve Harris's
+Fast Lookahead Limiter or TAP Limiter) rather than maintaining separate,
+built-in algorithmic alternatives inside the core executable.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

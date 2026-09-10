@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide to Ecasound Chainsetup Configuration - ecasound</title>
+    <meta name="description" content="This article provides an overview of the chainsetup architecture in Ecasound, detailing the mandatory components and structural rules required to establish a valid, fully functioning audio processing environment. Readers will learn how signal routing pat">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/guide-to-ecasound-chainsetup-configuration">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Guide to Ecasound Chainsetup Configuration - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/guide-to-ecasound-chainsetup-configuration" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the chainsetup architecture in Ecasound, detailing the mandatory components and structural rules required to establish a valid, fully functioning audio processing environment. Readers will learn how signal routing pat" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="guide-to-ecasound-chainsetup-configuration">Guide to Ecasound
+Chainsetup Configuration</h1>
+<p>This article provides an overview of the chainsetup architecture in
+Ecasound, detailing the mandatory components and structural rules
+required to establish a valid, fully functioning audio processing
+environment. Readers will learn how signal routing paths, inputs, and
+outputs interact within a chainsetup to form a complete, executable
+configuration for multitrack recording, processing, and playback.</p>
+<p>In Ecasound, a chainsetup serves as the central framework for
+defining an entire audio processing session. It encapsulates the routing
+configuration, audio formats, input/output assignments, and any
+signal-processing effects applied to the audio streams. For a chainsetup
+to be considered complete and ready for execution, it must satisfy a
+precise set of structural requirements within the Ecasound configuration
+framework.</p>
+<h3 id="1-at-least-one-active-chain">1. At Least One Active Chain</h3>
+<p>A chain represents a single signal path through which audio flows.
+Within a chainsetup, you must define at least one chain (commonly named
+<code>default</code> or designated by an explicit name such as
+<code>chain1</code>). Chains serve as the intermediate conduits that
+bind inputs to outputs and host digital signal processing (DSP)
+operators, filters, and controllers.</p>
+<h3 id="2-at-least-one-audio-input">2. At Least One Audio Input</h3>
+<p>Every functional chainsetup requires an audio source assigned to one
+or more chains. An input can be:</p>
+<ul>
+<li>An audio file (e.g., WAV, FLAC, Ogg Vorbis).</li>
+<li>A real-time hardware interface via ALSA, OSS, or CoreAudio.</li>
+<li>A virtual subsystem, such as a JACK audio server client.</li>
+<li>A synthetic source, such as a tone generator or null device.</li>
+</ul>
+<p>An input must be explicitly attached to at least one valid chain to
+direct where its incoming audio data should flow.</p>
+<h3 id="3-at-least-one-audio-output">3. At Least One Audio Output</h3>
+<p>Similar to inputs, a complete chainsetup requires a designated
+destination for processed audio. Valid outputs match the types supported
+for inputs, including audio files, hardware sound cards, JACK ports, or
+null endpoints. Audio outputs must also be mapped to at least one chain
+that receives processed signal data.</p>
+<h3 id="4-unbroken-signal-routing">4. Unbroken Signal Routing</h3>
+<p>A valid chainsetup requires an unbroken signal pathway connecting
+inputs to outputs through the defined chains:</p>
+<ul>
+<li><strong>Input-to-Chain Mapping:</strong> Each input feeds into one
+or more specified chains.</li>
+<li><strong>Chain-to-Output Mapping:</strong> Each output receives audio
+from one or more specified chains.</li>
+</ul>
+<p>If an input is connected to a chain, but that chain does not
+terminate at an output, or if an output is connected to a chain with no
+corresponding input, the chainsetup is incomplete and Ecasound will
+either report an error or produce no audio output upon engine
+activation.</p>
+<h3 id="5-compatible-audio-stream-properties">5. Compatible Audio Stream
+Properties</h3>
+<p>A complete configuration requires consistent or properly converted
+audio parameters across all interconnected elements. These parameters
+include:</p>
+<ul>
+<li><strong>Sampling Rate:</strong> The frequency of the audio (e.g.,
+44100 Hz, 48000 Hz).</li>
+<li><strong>Channel Count:</strong> The number of audio channels (e.g.,
+1 for mono, 2 for stereo).</li>
+<li><strong>Sample Format:</strong> The data bit-depth and
+representation (e.g., 16-bit linear, 32-bit float).</li>
+</ul>
+<p>While Ecasound provides internal resampling and format conversion
+capabilities, these parameters must resolve cleanly across the chains
+without conflicting constraints.</p>
+<h3 id="6-optional-components-operators-and-controllers">6. Optional
+Components (Operators and Controllers)</h3>
+<p>While not strictly required for a setup to be complete, a chainsetup
+often includes:</p>
+<ul>
+<li><strong>Chain Operators (<code>-e</code> options):</strong> Volume
+adjustments, panning, dynamic compressors, and LADSPA plugins placed
+inside chains.</li>
+<li><strong>Controllers (<code>-k</code> options):</strong> Automation
+tools for modulating operator parameters (such as envelopes or LFOs)
+over time.</li>
+</ul>
+<p>A chainsetup is formally complete when at least one audio input
+routes through at least one chain to at least one audio output with
+matched audio parameters, creating a runnable state that the Ecasound
+engine can initialize, buffer, and process.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

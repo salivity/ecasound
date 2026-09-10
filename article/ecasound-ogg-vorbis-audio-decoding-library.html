@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Ogg Vorbis Audio Decoding Library - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool that relies on dedicated open-source libraries to handle compressed formats. To decode and encode Ogg Vorbis audio streams natively, Ecasound utilizes the reference libvorbis library de">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-ogg-vorbis-audio-decoding-library">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Ogg Vorbis Audio Decoding Library - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-ogg-vorbis-audio-decoding-library" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool that relies on dedicated open-source libraries to handle compressed formats. To decode and encode Ogg Vorbis audio streams natively, Ecasound utilizes the reference libvorbis library de" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-ogg-vorbis-audio-decoding-library">Ecasound Ogg Vorbis
+Audio Decoding Library</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool
+that relies on dedicated open-source libraries to handle compressed
+formats. To decode and encode Ogg Vorbis audio streams natively,
+Ecasound utilizes the reference <strong>libvorbis</strong> library
+developed by the Xiph.Org Foundation, specifically depending on its
+high-level convenience API component, <strong>libvorbisfile</strong>,
+alongside <strong>libogg</strong>. Additionally, Ecasound can decode Ogg
+Vorbis streams through <strong>libsndfile</strong> depending on the
+compilation configuration.</p>
+<h2 id="the-primary-library-libvorbis-libvorbisfile">The Primary
+Library: libvorbis (libvorbisfile)</h2>
+<p>The primary native engine Ecasound uses for Ogg Vorbis handling is
+<strong>libvorbisfile</strong>, a standard component of the official
+<strong>libvorbis</strong> package provided by Xiph.Org.</p>
+<ul>
+<li><strong>libogg</strong>: Provides container handling, parsing the
+bitstream structure that houses the audio data.</li>
+<li><strong>libvorbis</strong>: Implements the actual Vorbis audio
+decompression algorithm.</li>
+<li><strong>libvorbisfile</strong>: Delivers a high-level, file-like
+interface that Ecasound interfaces with directly. This allows Ecasound
+to open, seek, buffer, and read PCM samples from Ogg Vorbis files
+without having to manually manage low-level bitstream packets and
+framing.</li>
+</ul>
+<p>When processing Ogg Vorbis files natively, Ecasound feeds the
+compressed container through <code>libogg</code> and uses
+<code>libvorbisfile</code> routines to extract linear PCM audio, which
+it then processes through its routing, mixing, or effect chains.</p>
+<h2 id="alternative-decoding-via-libsndfile">Alternative Decoding via
+libsndfile</h2>
+<p>In addition to its native Vorbis subsystem, Ecasound can also decode
+Ogg Vorbis files via <strong>libsndfile</strong>.</p>
+<p>If Ecasound is compiled with <code>libsndfile</code> support, and
+<code>libsndfile</code> itself was built against <code>libvorbis</code>,
+Ecasound can use this abstraction layer to read Ogg Vorbis files
+transparently alongside other PCM audio containers like WAV and
+AIFF.</p>
+<h2 id="build-and-dependency-requirements">Build and Dependency
+Requirements</h2>
+<p>For Ecasound to support Ogg Vorbis decoding during compilation, the
+build environment must detect the development headers for the reference
+Vorbis implementation:</p>
+<ul>
+<li><code>vorbis/vorbisfile.h</code></li>
+<li><code>vorbis/codec.h</code></li>
+<li><code>ogg/ogg.h</code></li>
+</ul>
+<p>Without the <code>libvorbis</code> and <code>libogg</code>
+development libraries present on the host system, native Vorbis
+processing will be disabled in Ecasound's configuration stage.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

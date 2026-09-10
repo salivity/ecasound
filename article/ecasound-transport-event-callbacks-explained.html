@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Transport Event Callbacks Explained - ecasound</title>
+    <meta name="description" content="External programs integrating with the Ecasound multitrack audio processing package often need to monitor transport state changes such as playback start, stop, and repositioning. This article examines whether an external application can directly register">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-transport-event-callbacks-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Transport Event Callbacks Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-transport-event-callbacks-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="External programs integrating with the Ecasound multitrack audio processing package often need to monitor transport state changes such as playback start, stop, and repositioning. This article examines whether an external application can directly register" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-transport-event-callbacks-explained">Ecasound Transport
+Event Callbacks Explained</h1>
+<p>External programs integrating with the Ecasound multitrack audio
+processing package often need to monitor transport state changes such as
+playback start, stop, and repositioning. This article examines whether
+an external application can directly register callback functions for
+Ecasound transport events, explains the structural limitations of the
+Ecasound Control Interface (ECI), and details the standard alternatives
+used to achieve reliable transport synchronization.</p>
+<h3 id="native-eci-and-callback-support">Native ECI and Callback
+Support</h3>
+<p>An external program cannot directly register callback functions for
+transport events using Ecasound's native application programming
+interfaces.</p>
+<p>The primary interface for controlling Ecasound externally is the
+Ecasound Control Interface (ECI), available in C, Python, Perl, and
+other languages. The ECI architecture is designed around a synchronous,
+request-response communication model rather than an asynchronous,
+event-driven model. The control protocol sends commands to the audio
+engine and waits for a response; it does not provide an internal event
+loop or an API hook (such as an observer pattern or function pointer
+registration) that pushes spontaneous transport notifications back to
+the controlling application.</p>
+<h3 id="handling-transport-state-via-polling">Handling Transport State
+via Polling</h3>
+<p>Because native callbacks are unsupported, external programs
+interacting strictly through ECI must use a polling approach to detect
+transport events.</p>
+<p>Developers typically implement a separate monitoring thread or timer
+within their application that periodically queries Ecasound's state. Key
+commands used in this workflow include:</p>
+<ul>
+<li><code>engine-status</code>: Returns the current running state of the
+processing engine (e.g., <code>stopped</code>, <code>running</code>,
+<code>paused</code>, or <code>error</code>).</li>
+<li><code>get-position</code>: Retrieves the current transport position
+in seconds or samples to track playback progress.</li>
+<li><code>cs-is-valid</code>: Verifies that the current chainsetup
+remains active and error-free.</li>
+</ul>
+<p>While polling introduces slight latency and minor CPU overhead,
+keeping polling intervals between 20ms and 100ms generally provides
+sufficient responsiveness for user interfaces and external logic without
+impacting audio performance.</p>
+<h3 id="using-jack-transport-for-event-callbacks">Using JACK Transport
+for Event Callbacks</h3>
+<p>When true, low-latency, asynchronous callback functionality is
+required, the standard solution is to decouple transport management from
+ECI and delegate it to the JACK Audio Connection Kit.</p>
+<p>Ecasound can run as a JACK client and synchronize with the JACK
+transport timeline. Under this configuration:</p>
+<ol type="1">
+<li>Ecasound acts as a JACK transport client or master, synchronizing
+its playback and seeking operations to the shared JACK timeline.</li>
+<li>The external application connects directly to the JACK server using
+<code>libjack</code>.</li>
+<li>The external application uses native JACK API functions, such as
+<code>jack_set_sync_callback()</code> and
+<code>jack_on_timebase_callback()</code>, to receive real-time
+notifications of state transitions, relocations, and tempo changes.</li>
+</ol>
+<p>By delegating transport handling to JACK, external applications
+achieve true callback-driven architecture while still leveraging
+Ecasound for audio routing, effects processing, and multitrack
+playback.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

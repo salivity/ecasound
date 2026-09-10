@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Built-in Delay and Echo Operators in Ecasound - ecasound</title>
+    <meta name="description" content="This article provides an overview of Ecasound's native command-line operators for time-based audio processing. It covers the primary built-in delay operator (-etd) and echo operator (-ete), detailing their specific parameters, how feedback mechanisms are">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/built-in-delay-and-echo-operators-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Built-in Delay and Echo Operators in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/built-in-delay-and-echo-operators-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of Ecasound's native command-line operators for time-based audio processing. It covers the primary built-in delay operator (-etd) and echo operator (-ete), detailing their specific parameters, how feedback mechanisms are" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="built-in-delay-and-echo-operators-in-ecasound">Built-in Delay
+and Echo Operators in Ecasound</h1>
+<p>This article provides an overview of Ecasound's native command-line
+operators for time-based audio processing. It covers the primary
+built-in delay operator (<code>-etd</code>) and echo operator
+(<code>-ete</code>), detailing their specific parameters, how feedback
+mechanisms are implemented, and practical command-line examples for
+processing audio files.</p>
+<h3 id="the-primary-delay-operators--etd-and--ete">The Primary Delay
+Operators: <code>-etd</code> and <code>-ete</code></h3>
+<p>Ecasound provides two primary built-in effect operators for
+generating time-based delays and echoes without requiring external
+LADSPA plugins:</p>
+<ol type="1">
+<li><strong><code>-etd</code> (Delay effect):</strong> Generates
+distinct repetitions of an audio signal across fixed intervals without
+feedback loop decay.</li>
+<li><strong><code>-ete</code> (Echo effect):</strong> Creates repeating,
+decaying repetitions using a feedback loop parameter.</li>
+</ol>
+<hr />
+<h3 id="using-the-delay-operator--etd">Using the Delay Operator
+(<code>-etd</code>)</h3>
+<p>The <code>-etd</code> operator creates a discrete number of delayed
+copies of the input signal. Its syntax requires four parameters:</p>
+<pre class="text"><code>-etd:delay_time_msec,surround_mode,number_of_delays,mix_percent</code></pre>
+<ul>
+<li><strong><code>delay_time_msec</code>:</strong> The interval between
+delays, expressed in milliseconds.</li>
+<li><strong><code>surround_mode</code>:</strong> Spatial placement
+behavior (0 = normal delay, 1 = surround mode where delayed channels are
+inverted or routed to secondary channels).</li>
+<li><strong><code>number_of_delays</code>:</strong> The exact number of
+discrete delayed taps generated (integer).</li>
+<li><strong><code>mix_percent</code>:</strong> The balance of the wet
+(delayed) signal relative to the total output (0 to 100).</li>
+</ul>
+<h4 id="example-command">Example Command:</h4>
+<p>To apply a 300 ms delay with 3 distinct repetitions at a 40% wet
+mix:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-etd:300,0,3,40</span></span></code></pre></div>
+<hr />
+<h3 id="using-the-echo-operator--ete">Using the Echo Operator
+(<code>-ete</code>)</h3>
+<p>For classic echo effects where repetitions fade out gradually,
+Ecasound uses the <code>-ete</code> operator. This operator introduces
+feedback into the delay line. Its syntax is:</p>
+<pre class="text"><code>-ete:delay_time_msec,surround_mode,feedback_percent,mix_percent</code></pre>
+<ul>
+<li><strong><code>delay_time_msec</code>:</strong> The time between each
+repeating echo, in milliseconds.</li>
+<li><strong><code>surround_mode</code>:</strong> Spatial routing (0 for
+normal stereo/mono preservation, 1 for inverted phase surround).</li>
+<li><strong><code>feedback_percent</code>:</strong> The amount of the
+delayed signal fed back into the delay line (0 to 100). Higher values
+produce longer decaying tails.</li>
+<li><strong><code>mix_percent</code>:</strong> The percentage of
+processed wet signal mixed into the final output (0 to 100).</li>
+</ul>
+<h4 id="example-command-1">Example Command:</h4>
+<p>To apply a 250 ms echo with a 50% feedback decay and a 30% wet
+mix:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-ete:250,0,50,30</span></span></code></pre></div>
+<hr />
+<h3 id="choosing-between--etd-and--ete">Choosing Between
+<code>-etd</code> and <code>-ete</code></h3>
+<ul>
+<li>Use <strong><code>-etd</code></strong> when a precise, finite number
+of repetitions is needed (such as doubling an instrument or creating a
+single slapback echo with <code>number_of_delays</code> set to
+<code>1</code>).</li>
+<li>Use <strong><code>-ete</code></strong> when a natural, continuous
+fade-out is desired, mimicking real-world echoes and reverberant spaces
+through feedback regeneration.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

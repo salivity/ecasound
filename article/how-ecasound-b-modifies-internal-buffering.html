@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound -B Modifies Internal Buffering - ecasound</title>
+    <meta name="description" content="The -B parameter in Ecasound controls the audio processing engine's internal buffering mode, determining how the application manages data flow between inputs, signal processing chains, and outputs. By selecting a specific buffering strategy, users can op">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-b-modifies-internal-buffering">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound -B Modifies Internal Buffering - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-b-modifies-internal-buffering" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The -B parameter in Ecasound controls the audio processing engine's internal buffering mode, determining how the application manages data flow between inputs, signal processing chains, and outputs. By selecting a specific buffering strategy, users can op" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound--b-modifies-internal-buffering">How Ecasound -B
+Modifies Internal Buffering</h1>
+<p>The <code>-B</code> parameter in Ecasound controls the audio
+processing engine's internal buffering mode, determining how the
+application manages data flow between inputs, signal processing chains,
+and outputs. By selecting a specific buffering strategy, users can
+optimize Ecasound for high-throughput batch operations where latency
+does not matter, or minimize audio delay during live, real-time
+performance.</p>
+<h3 id="overview-of-the-buffering-strategy">Overview of the Buffering
+Strategy</h3>
+<p>Ecasound processes audio in blocks of samples defined by the engine
+buffer size (often set using the <code>-b</code> option). The
+<code>-B</code> option dictates how aggressively Ecasound coordinates
+these sample blocks across its internal pipelines, threads, and hardware
+device interfaces. It determines queue depths, whether buffering favors
+high-speed processing or drop-free real-time delivery, and how the
+system responds to timing constraints imposed by audio hardware.</p>
+<h3 id="available--b-modes">Available <code>-B</code> Modes</h3>
+<p>The <code>-B</code> option accepts several modes that directly
+reshape the internal buffer pipeline:</p>
+<ul>
+<li><strong><code>-B:auto</code> (Default):</strong> Ecasound inspects
+the connected audio objects. If all inputs and outputs are non-realtime
+objects (such as WAV or FLAC files on disk), it automatically routes
+data through non-realtime buffering. If at least one realtime endpoint
+is detected (such as an ALSA or JACK hardware stream), it switches to a
+realtime buffering model.</li>
+<li><strong><code>-B:nonrt</code> (Non-Realtime):</strong> This mode
+disables strict hardware-clock synchronization and allows the processing
+engine to run as fast as the host CPU and disk storage allow. Buffer
+queues expand to maximize throughput and prevent disk I/O bottlenecks
+from interrupting the pipeline, making it ideal for rendering and
+offline file processing.</li>
+<li><strong><code>-B:rt</code> (Realtime):</strong> Forces the
+processing loop to strictly synchronize with the sample rate of
+real-time audio streams. In this mode, Ecasound sizes and manages
+internal queues to prevent both buffer underruns (xruns) and buffer
+overruns, maintaining a stable balance between system stability and
+latency.</li>
+<li><strong><code>-B:rtlowlatency</code> (Low-Latency
+Realtime):</strong> Configures the internal buffering architecture to
+prioritize the lowest possible input-to-output delay. Buffer queues
+between processing modules and endpoints are kept as small as possible
+to eliminate latency overhead. This configuration requires a well-tuned
+real-time system and adequate CPU headroom, as smaller safety margins
+significantly increase the likelihood of buffer underruns if audio
+processing experiences momentary delays.</li>
+</ul>
+<h3 id="internal-effects-on-engine-mechanics">Internal Effects on Engine
+Mechanics</h3>
+<p>When <code>-B</code> is modified, Ecasound alters several specific
+mechanics inside its processing core:</p>
+<ol type="1">
+<li><strong>Queue Sizing:</strong> In <code>nonrt</code> mode, internal
+ring buffers and device queues are allocated with generous margins to
+absorb disk read/write bursts. In <code>rt</code> and
+<code>rtlowlatency</code>, these queues are clamped to strictly
+constrained depths to prevent old audio data from accumulating.</li>
+<li><strong>Thread Scheduling and Execution:</strong> In real-time
+modes, the processing engine waits for device synchronization triggers
+before advancing sample blocks, aligning audio processing cycles
+directly with hardware interrupts. In non-realtime modes, the engine
+loops continuously without yielding to an external clock.</li>
+<li><strong>Error Handling and Overruns:</strong> Real-time modes track
+and report xruns when the engine fails to deliver a block within the
+hardware deadline. In non-realtime mode, the concept of an underrun is
+suspended, as the engine simply pauses until the next block is read from
+disk.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

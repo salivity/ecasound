@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Maintains Backward Compatibility - ecasound</title>
+    <meta name="description" content="Ecasound maintains backward compatibility across major release versions through a standardized control protocol, persistent command-line syntax, stable configuration file structures, and a decoupled engine architecture. By prioritizing continuity in auto">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-maintains-backward-compatibility">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Maintains Backward Compatibility - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-maintains-backward-compatibility" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound maintains backward compatibility across major release versions through a standardized control protocol, persistent command-line syntax, stable configuration file structures, and a decoupled engine architecture. By prioritizing continuity in auto" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-maintains-backward-compatibility">How Ecasound
+Maintains Backward Compatibility</h1>
+<p>Ecasound maintains backward compatibility across major release
+versions through a standardized control protocol, persistent
+command-line syntax, stable configuration file structures, and a
+decoupled engine architecture. By prioritizing continuity in automated
+audio workflows and long-term production scripts, the software allows
+users to upgrade versions without breaking existing multitrack
+processing chains, third-party wrappers, or custom controller
+scripts.</p>
+<h3 id="the-ecasound-control-interface-eci">The Ecasound Control
+Interface (ECI)</h3>
+<p>The primary mechanism for ensuring compatibility across major
+releases is the Ecasound Control Interface (ECI). ECI functions as a
+consistent, text-based inter-process communication protocol that
+decouples external clients from the internal audio processing
+engine.</p>
+<p>Whether an integration is written in Python, C, C++, Perl, or shell
+script, it interacts with Ecasound by issuing plain-text commands (such
+as <code>engine-start</code>, <code>cs-add</code>, or
+<code>c-add</code>) and parsing uniform string outputs. Because the
+command set and state-machine transitions in ECI remain invariant
+between versions, front-end applications and automation pipelines
+continue to function identically even when the underlying DSP algorithms
+or engine internals are rewritten.</p>
+<h3 id="stable-chainsetup-syntax-and-configuration">Stable Chainsetup
+Syntax and Configuration</h3>
+<p>Ecasound relies on an explicit model consisting of chains,
+chainsetups, inputs, outputs, and operators. The syntax for defining
+these setups via the command-line interface (CLI) or <code>.ecs</code>
+(Ecasound Chainsetup) files has been frozen against breaking
+changes.</p>
+<p>Parameters defining routing (such as <code>-i</code> for audio inputs
+and <code>-o</code> for outputs) and real-time processing (such as
+<code>-ea</code> for amplification or <code>-ef3</code> for resonant
+filters) maintain identical argument formats across releases. When new
+signal processing operators or features are introduced, they are
+assigned new, distinct flags rather than redefining the signatures or
+behavior of established operators. This approach ensures that audio
+routing chains constructed decades ago execute without syntax errors on
+modern releases.</p>
+<h3 id="modular-architecture-and-backend-isolation">Modular Architecture
+and Backend Isolation</h3>
+<p>Ecasound isolates its core routing and DSP logic from underlying
+system audio drivers and external libraries. Subsystems handling
+platforms like ALSA, JACK, OSS, and file format libraries (such as
+libsndfile) are wrapped behind internal abstraction layers.</p>
+<p>When system-level drivers undergo breaking architectural changes—such
+as migrations between ALSA driver interfaces or Linux kernel
+changes—Ecasound limits the modifications strictly to the respective
+audio I/O plugins. The user-facing configuration, chain syntax, and
+programmatic interfaces remain unaffected by shifts in the host
+operating system's audio stack.</p>
+<h3 id="conservative-deprecation-policies">Conservative Deprecation
+Policies</h3>
+<p>Rather than removing deprecated commands or legacy syntax in major
+updates, Ecasound maintains fallback parsers and legacy aliases for
+audio processing functions. If a command or parameter format is
+superseded by a newer implementation, the parser continues to recognize
+the historical variant, preventing production environments from
+experiencing silent failures or broken pipelines.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

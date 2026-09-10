@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bypass Ecasound Chain Operators in Real Time - ecasound</title>
+    <meta name="description" content="Ecasound does not provide a single, dedicated toggle command to bypass chain operators natively during live playback. However, you can effectively achieve real-time bypassing using several practical techniques through the Ecasound Interactive Mode (EIAM)">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/bypass-ecasound-chain-operators-in-real-time">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Bypass Ecasound Chain Operators in Real Time - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/bypass-ecasound-chain-operators-in-real-time" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not provide a single, dedicated toggle command to bypass chain operators natively during live playback. However, you can effectively achieve real-time bypassing using several practical techniques through the Ecasound Interactive Mode (EIAM)" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="bypass-ecasound-chain-operators-in-real-time">Bypass Ecasound
+Chain Operators in Real Time</h1>
+<p>Ecasound does not provide a single, dedicated toggle command to
+bypass chain operators natively during live playback. However, you can
+effectively achieve real-time bypassing using several practical
+techniques through the Ecasound Interactive Mode (EIAM) and the Ecasound
+Control Interface (ECI). These methods include dynamic parameter
+neutralization, parallel dry/wet chain routing, and runtime operator
+removal or replacement.</p>
+<h3 id="method-1-dynamic-parameter-neutralization">Method 1: Dynamic
+Parameter Neutralization</h3>
+<p>The most reliable way to bypass an effect without causing audio
+dropouts or clicks is to dynamically set its parameters to neutral
+values using EIAM commands.</p>
+<ol type="1">
+<li><strong>Dry/Wet Adjustment:</strong> If using LADSPA or LV2 plugins
+that feature a direct wet/dry mix control, use the
+<code>cop-set-parameter</code> command to set the wet level to 0% and
+the dry level to 100%.</li>
+<li><strong>Unity Settings:</strong> For basic internal filters or
+processors, set the parameters to inactive values. For example, change
+an amplifier operator's gain to <code>1.0</code> (0 dB), or shift a
+low-pass filter's cutoff frequency well above the audible human range
+(e.g., 20,000 Hz).</li>
+</ol>
+<p>Commands are issued during playback via the interactive prompt or
+standard input:</p>
+<pre class="text"><code>c-select &lt;chain_name&gt;
+cop-select &lt;operator_index&gt;
+cop-set-parameter &lt;parameter_index&gt; &lt;neutral_value&gt;</code></pre>
+<h3 id="method-2-parallel-drywet-routing-and-chain-muting">Method 2:
+Parallel Dry/Wet Routing and Chain Muting</h3>
+<p>You can create an instantaneous bypass switch by splitting the
+incoming audio across two parallel chains—one dry and one processed—and
+controlling their states dynamically.</p>
+<ul>
+<li><strong>Chain 1 (Wet):</strong> Contains your active chain operators
+(effects, filters).</li>
+<li><strong>Chain 2 (Dry):</strong> Contains no operators, passing the
+raw input directly to the output.</li>
+</ul>
+<p>During live playback, toggle the states using the
+<code>c-muting</code> or <code>c-bypass</code> command structures in
+EIAM:</p>
+<pre class="text"><code># To bypass the effect:
+c-select wet_chain
+c-mute
+
+# To re-enable the effect:
+c-select wet_chain
+c-unmute</code></pre>
+<p>Using muted parallel chains ensures audio processing pipelines stay
+initialized, minimizing the risk of buffer under-runs (xruns) or latency
+shifts during switching.</p>
+<h3 id="method-3-dynamic-operator-removal-and-insertion">Method 3:
+Dynamic Operator Removal and Insertion</h3>
+<p>Ecasound allows you to add and remove chain operators on the fly via
+EIAM, although this method carries a minor risk of audio clicks
+depending on your buffer sizes.</p>
+<p>To remove an operator while audio is playing:</p>
+<pre class="text"><code>c-select &lt;chain_name&gt;
+cop-select &lt;operator_index&gt;
+cop-remove</code></pre>
+<p>To re-enable the operator, re-add it dynamically to the selected
+chain:</p>
+<pre class="text"><code>c-select &lt;chain_name&gt;
+cop-add -el:ladspa_plugin_name</code></pre>
+<h3 id="summary-recommendation">Summary Recommendation</h3>
+<p>For live stage performance or real-time monitoring where audio
+artifacts must be avoided, use <strong>dynamic parameter
+neutralization</strong> or <strong>parallel chain muting</strong>. For
+general control where brief buffer transitions are acceptable, dynamic
+<strong>removal and addition</strong> (<code>cop-remove</code> and
+<code>cop-add</code>) provides a true bypass that completely frees up
+processing cycles.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Handles Dynamic Sample Rate Changes - ecasound</title>
+    <meta name="description" content="This article examines how the Ecasound multitrack audio processing utility responds when an underlying audio interface or soundcard requests dynamic sample rate switching. Due to Ecasound's design, which relies on a unified, static chainsetup configurati">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-handles-dynamic-sample-rate-changes">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Handles Dynamic Sample Rate Changes - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-handles-dynamic-sample-rate-changes" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how the Ecasound multitrack audio processing utility responds when an underlying audio interface or soundcard requests dynamic sample rate switching. Due to Ecasound's design, which relies on a unified, static chainsetup configurati" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-handles-dynamic-sample-rate-changes">How Ecasound
+Handles Dynamic Sample Rate Changes</h1>
+<p>This article examines how the Ecasound multitrack audio processing
+utility responds when an underlying audio interface or soundcard
+requests dynamic sample rate switching. Due to Ecasound's design, which
+relies on a unified, static chainsetup configuration during active
+engine processing, the software does not support seamless on-the-fly
+sample rate switching. Instead, handling such events requires either
+session-level reinitialization, external resampling layers, or manual
+chainsetup reconfiguration.</p>
+<h3 id="static-engine-architecture">Static Engine Architecture</h3>
+<p>Ecasound’s core processing engine requires all audio inputs, outputs,
+and intermediate operators to operate at a fixed, uniform sample rate
+during execution. This parameter is defined globally for a chainsetup,
+typically specified via the audio format option (such as
+<code>-f:sample_format,channels,sample_rate</code>) or inherited from an
+audio server.</p>
+<p>Internal buffer sizes, envelope followers, oscillator states, and
+time-dependent DSP filters are initialized specifically to this fixed
+sampling frequency. Because there is no internal continuous resampling
+layer built directly into the signal chains, the engine cannot adapt to
+a soundcard that suddenly negotiates a new sample rate mid-stream.</p>
+<h3 id="alsa-driver-level-behavior">ALSA Driver Level Behavior</h3>
+<p>When using the Advanced Linux Sound Architecture (ALSA) output or
+input modules directly (<code>alsa</code> or <code>alsahw</code>),
+Ecasound requests hardware access based on its initialized
+parameters.</p>
+<p>If the underlying soundcard attempts to enforce a new sample rate, or
+if an external clock source causes the hardware clock to shift:</p>
+<ul>
+<li><strong>Hardware mismatch:</strong> The ALSA API returns an I/O
+error or device configuration error to Ecasound.</li>
+<li><strong>Engine halt:</strong> Ecasound cannot dynamically
+renegotiate the stream parameters while the engine is running.
+Consequently, the processing loop breaks, leading to an engine stop or a
+fatal stream error.</li>
+</ul>
+<p>To mitigate this at the ALSA level without stopping Ecasound, users
+often rely on ALSA’s <code>plug</code> layer
+(<code>-i:alsaplug:default</code> or <code>-o:alsaplug:default</code>).
+The <code>plug</code> plugin provides a static rate to Ecasound while
+handling software rate conversion against whatever rate the hardware
+accepts, though this still assumes the requested rate from Ecasound’s
+perspective remains constant.</p>
+<h3 id="jack-and-modern-audio-servers">JACK and Modern Audio
+Servers</h3>
+<p>When paired with the JACK Audio Connection Kit, Ecasound relies
+entirely on the JACK graph's global sample rate.</p>
+<ul>
+<li>If the JACK server's sample rate is changed dynamically (for
+instance, via an external master word-clock change or server
+reconfiguration), JACK notifies all connected clients.</li>
+<li>Ecasound does not dynamically rebuild its active DSP objects to
+match this notification mid-run.</li>
+<li>The mismatch typically results in the engine either dropping from
+the JACK graph, throwing buffer processing errors, or outputting
+pitch-shifted/distorted audio due to the unexpected buffer time
+step.</li>
+</ul>
+<p>Modern servers like PipeWire automatically provide transparent,
+high-quality resampling wrappers that emulate ALSA and JACK interfaces.
+When a physical soundcard changes sample rates under PipeWire, PipeWire
+handles the dynamic conversion behind the scenes, presenting a stable,
+unchanged sample rate to the running Ecasound instance.</p>
+<h3 id="programmatic-reconfiguration-via-eci">Programmatic
+Reconfiguration via ECI</h3>
+<p>To accommodate planned or external sample rate changes cleanly, you
+must control Ecasound via the Ecasound Control Interface (ECI) through
+interactive commands or scripting (Python, C, Perl, or Bash):</p>
+<ol type="1">
+<li><strong>Stop the engine:</strong> Issue <code>stop</code> to halt
+audio processing.</li>
+<li><strong>Disconnect the chainsetup:</strong> Use
+<code>cs-disconnect</code> to release the audio device.</li>
+<li><strong>Update parameters:</strong> Re-declare the audio format with
+the new sample rate via format commands (e.g.,
+<code>cs-set-param</code>).</li>
+<li><strong>Reconnect and restart:</strong> Execute
+<code>cs-connect</code> followed by <code>start</code> to reallocate
+internal buffers and resume processing at the new sample rate.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

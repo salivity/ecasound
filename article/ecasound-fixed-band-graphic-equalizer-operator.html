@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Fixed Band Graphic Equalizer Operator - ecasound</title>
+    <meta name="description" content="In Ecasound, graphic equalization with fixed frequency bands is provided by the -el (or -eli) operator, which integrates external LADSPA equalizer plugins. While Ecasound features an internal three-band equalizer operator (-e3), its low and high crossove">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-fixed-band-graphic-equalizer-operator">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Fixed Band Graphic Equalizer Operator - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-fixed-band-graphic-equalizer-operator" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Ecasound, graphic equalization with fixed frequency bands is provided by the -el (or -eli) operator, which integrates external LADSPA equalizer plugins. While Ecasound features an internal three-band equalizer operator (-e3), its low and high crossove" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-fixed-band-graphic-equalizer-operator">Ecasound Fixed
+Band Graphic Equalizer Operator</h1>
+<p>In Ecasound, graphic equalization with fixed frequency bands is
+provided by the <strong><code>-el</code></strong> (or
+<strong><code>-eli</code></strong>) operator, which integrates external
+LADSPA equalizer plugins. While Ecasound features an internal three-band
+equalizer operator (<strong><code>-e3</code></strong>), its low and high
+crossover frequencies are adjustable rather than fixed. Consequently,
+dedicated fixed-band graphic equalization relies on the <code>-el</code>
+operator loading a standardized multi-band plugin such as Steve Harris's
+15-band <code>mbeq</code>.</p>
+<h3 id="the--el-operator-and-fixed-band-graphic-eq">The <code>-el</code>
+Operator and Fixed-Band Graphic EQ</h3>
+<p>Ecasound offloads complex multi-band graphic equalization to the
+LADSPA architecture using two operator formats:</p>
+<ul>
+<li><strong><code>-el:plugin_label,param1,param2,...</code></strong>:
+Loads a plugin using its textual label.</li>
+<li><strong><code>-eli:plugin_unique_id,param1,param2,...</code></strong>:
+Loads a plugin using its unique numerical identifier.</li>
+</ul>
+<p>To achieve standard graphic equalization with fixed frequency
+centers, the most common solution is the LADSPA
+<strong><code>mbeq</code></strong> (Multiband EQ, plugin ID
+<code>1197</code>). This plugin provides 15 fixed frequency bands
+centered at 50Hz, 100Hz, 156Hz, 220Hz, 311Hz, 440Hz, 622Hz, 880Hz,
+1.25kHz, 1.75kHz, 2.5kHz, 3.5kHz, 5kHz, 10kHz, and 20kHz.</p>
+<h4 id="usage-syntax">Usage Syntax</h4>
+<p>To apply a 15-band fixed graphic equalizer in an Ecasound signal
+chain, pass the gains (in dB) for each of the 15 fixed bands:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-el:mbeq_1197,0,0,0,2,4,4,2,0,0,-2,-4,-4,-2,0,0</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-el:mbeq_1197</code> calls the fixed-band equalizer.</li>
+<li>The comma-separated values represent the gain changes applied
+sequentially from the lowest frequency band (50Hz) to the highest
+frequency band (20kHz).</li>
+</ul>
+<h3 id="native-alternative-the--e3-operator">Native Alternative: The
+<code>-e3</code> Operator</h3>
+<p>If external LADSPA plugins are unavailable, Ecasound includes a
+native three-band equalizer operator, <code>-e3</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-e3:gain_low,gain_mid,gain_high,freq_low,freq_high</span></span></code></pre></div>
+<p>While <code>-e3</code> can be treated as a fixed-band equalizer by
+holding <code>freq_low</code> and <code>freq_high</code> constant (e.g.,
+standard points like 200Hz and 2000Hz), it is technically a
+semi-parametric shelving and peaking filter. For comprehensive graphic
+equalization across standard octaves or 1/3-octave fixed intervals, the
+<strong><code>-el</code></strong> LADSPA operator remains the standard
+mechanism in Ecasound.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

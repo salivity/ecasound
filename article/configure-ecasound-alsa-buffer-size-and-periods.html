@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure Ecasound ALSA Buffer Size and Periods - ecasound</title>
+    <meta name="description" content="Ecasound manages ALSA audio driver performance by mapping its internal processing frame sizes directly to ALSA period sizes, while negotiating buffer counts through ALSA's hardware parameter interfaces and user-defined PCM configurations. By adjusting th">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/configure-ecasound-alsa-buffer-size-and-periods">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Configure Ecasound ALSA Buffer Size and Periods - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/configure-ecasound-alsa-buffer-size-and-periods" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound manages ALSA audio driver performance by mapping its internal processing frame sizes directly to ALSA period sizes, while negotiating buffer counts through ALSA's hardware parameter interfaces and user-defined PCM configurations. By adjusting th" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="configure-ecasound-alsa-buffer-size-and-periods">Configure
+Ecasound ALSA Buffer Size and Periods</h1>
+<p>Ecasound manages ALSA audio driver performance by mapping its
+internal processing frame sizes directly to ALSA period sizes, while
+negotiating buffer counts through ALSA's hardware parameter interfaces
+and user-defined PCM configurations. By adjusting the global
+<code>-b</code> processing parameter, disabling internal
+double-buffering, or defining custom hardware slaves in ALSA
+configuration files, users can precisely regulate period size, period
+counts, and total buffer latency to eliminate dropouts and minimize
+roundtrip delay.</p>
+<h2 id="the-role-of-the-internal-buffer-flag--b">The Role of the
+Internal Buffer Flag (-b)</h2>
+<p>Ecasound sets the ALSA driver’s period size using the
+<code>-b:frames</code> command-line option. The value specified after
+<code>-b</code> sets the internal processing chunk size in sample
+frames. During hardware initialization, Ecasound passes this value to
+the ALSA library using
+<code>snd_pcm_hw_params_set_period_size_near()</code>.</p>
+<p>Because ALSA hardware operates in discrete fragments or periods,
+matching Ecasound’s internal buffer size directly to the ALSA period
+size ensures that every write or read cycle corresponds to exactly one
+hardware interrupt. If a sound card cannot support the exact requested
+frame size, ALSA rounds to the nearest supported hardware value, which
+Ecasound then adopts for its processing loop.</p>
+<h2 id="how-ecasound-determines-period-counts">How Ecasound Determines
+Period Counts</h2>
+<p>Ecasound does not feature a dedicated, standalone command-line flag
+specifically named for setting ALSA period counts (fragments). Instead,
+it negotiates the buffer size and period count using ALSA’s runtime
+hardware constraints:</p>
+<ol type="1">
+<li><strong>Automatic Hardware Negotiation:</strong> When Ecasound sets
+the period size via <code>-b</code>, the ALSA driver typically assigns a
+default period count—frequently 2 (double buffering) or 3 (triple
+buffering)—depending on the sound card's architecture and kernel
+driver.</li>
+<li><strong>Total Buffer Allocation:</strong> The driver calculates the
+total hardware buffer size using the formula:<br />
+<code>Total Buffer Size = Period Size × Period Count</code>.<br />
+If the sound card requires a minimum buffer capacity to prevent
+underruns, ALSA will raise the period count automatically to fulfill the
+hardware's requirements.</li>
+</ol>
+<h2 id="explicit-period-and-buffer-configuration-via-alsa">Explicit
+Period and Buffer Configuration via ALSA</h2>
+<p>When exact control over both period size and period count is
+required, the standard approach is to define a custom PCM device in
+<code>~/.asoundrc</code> or <code>/etc/asound.conf</code>, and then
+route Ecasound through that device.</p>
+<p>A custom hardware definition explicitly defines both constraints:</p>
+<pre class="text"><code>pcm.low_latency {
+    type hw
+    card 0
+    device 0
+    subdevice 0
+    mmap_emulation 0
+    period_size 128
+    periods 2
+}</code></pre>
+<p>To use this configuration within Ecasound, supply the custom ALSA PCM
+identifier as the input or output target:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-b:128</span> <span class="at">-i:alsa,low_latency</span> <span class="at">-o:alsa,low_latency</span></span></code></pre></div>
+<p>Setting <code>-b:128</code> ensures Ecasound's processing engine
+works synchronously with the 128-frame period size declared in the ALSA
+profile, while ALSA strictly enforces the 2-period limit.</p>
+<h2 id="optimizing-latency-with-engine-buffering-flags">Optimizing
+Latency with Engine Buffering Flags</h2>
+<p>In addition to ALSA hardware buffers, Ecasound provides engine-level
+buffering flags that influence how data moves into driver buffers:</p>
+<ul>
+<li><strong><code>-z:nodb</code> (Disable Double Buffering):</strong> By
+default, Ecasound maintains an internal queue between its processing
+engine and the ALSA output threads. Supplying <code>-z:nodb</code>
+removes this software buffer, forcing the engine to write directly into
+the ALSA hardware ring buffer. This reduces overall throughput latency,
+but it requires that both the <code>-b</code> period size and CPU
+processing headroom are sufficient to prevent xruns (buffer
+underruns/overruns).</li>
+<li><strong><code>-z:intbuf</code> (Enable Intermediate
+Buffering):</strong> When processing demands vary dynamically,
+intermediate buffering provides additional elasticity between Ecasound’s
+signal chain and the ALSA driver, protecting against dropouts at the
+expense of added latency.</li>
+</ul>
+<h2 id="latency-calculation">Latency Calculation</h2>
+<p>The total hardware latency introduced by ALSA when running under
+Ecasound can be calculated with:</p>
+<p><span class="math display">\[\text{Latency (seconds)} =
+\frac{\text{Period Size} \times \text{Period Count}}{\text{Sampling Rate
+(Hz)}}\]</span></p>
+<p>For example, running Ecasound at 48,000 Hz with <code>-b:256</code>
+and an ALSA device configured for 2 periods produces a hardware latency
+of:</p>
+<p><span class="math display">\[\frac{256 \times 2}{48000} \approx
+0.01066 \text{ seconds (10.66 ms)}\]</span></p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

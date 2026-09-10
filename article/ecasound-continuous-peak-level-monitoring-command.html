@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Continuous Peak Level Monitoring Command - ecasound</title>
+    <meta name="description" content="In Ecasound’s Interactive Mode (EIAM), the primary command used to enable continuous peak and input level monitoring is start-monitoring (shorthand mon). This article explains how the start-monitoring command works, how to configure chain operators lik">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-continuous-peak-level-monitoring-command">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Continuous Peak Level Monitoring Command - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-continuous-peak-level-monitoring-command" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Ecasound’s Interactive Mode (EIAM), the primary command used to enable continuous peak and input level monitoring is start-monitoring (shorthand mon). This article explains how the start-monitoring command works, how to configure chain operators lik" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-continuous-peak-level-monitoring-command">Ecasound
+Continuous Peak Level Monitoring Command</h1>
+<p>In Ecasound’s Interactive Mode (EIAM), the primary command used to
+enable continuous peak and input level monitoring is
+<code>start-monitoring</code> (shorthand <code>mon</code>). This article
+explains how the <code>start-monitoring</code> command works, how to
+configure chain operators like <code>-ev</code> to view real-time peak
+amplitudes, and the exact steps to initiate continuous level metering in
+a terminal session.</p>
+<hr />
+<h3 id="the-monitoring-command-start-monitoring">The Monitoring Command:
+<code>start-monitoring</code></h3>
+<p>In Ecasound Interactive Mode, standard playback or recording is
+started with the <code>start</code> command. However, to monitor
+incoming audio signals and their peak levels continuously without
+committing audio data to disk or write-capable targets, Ecasound
+provides:</p>
+<pre class="text"><code>start-monitoring</code></pre>
+<p>You can also use its shorthand equivalent:</p>
+<pre class="text"><code>mon</code></pre>
+<p>When issued, the engine starts processing audio from all configured
+inputs. Audio flows through the chain setup, calculating dynamic
+statistics such as peak and RMS levels, while disabling recording to
+file-based outputs.</p>
+<hr />
+<h3 id="displaying-peak-levels-with-the--ev-operator">Displaying Peak
+Levels with the <code>-ev</code> Operator</h3>
+<p>While <code>start-monitoring</code> activates the engine, displaying
+peak amplitude data requires attaching a level-analysis operator to the
+active chain. Ecasound uses the <code>-ev</code> (Envelope/Peak Level)
+operator to track peak and average amplitude in decibels (dB) and linear
+percentages.</p>
+<p>To add the peak analyzer directly inside Interactive Mode:</p>
+<pre class="text"><code>c-add -ev</code></pre>
+<p>Alternatively, you can launch Ecasound with the operator already
+assigned from the command line:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-i</span> alsa,default <span class="at">-ev</span></span></code></pre></div>
+<hr />
+<h3 id="step-by-step-workflow-in-interactive-mode">Step-by-Step Workflow
+in Interactive Mode</h3>
+<p>Follow these steps to establish a continuous peak monitoring session
+inside an interactive terminal:</p>
+<ol type="1">
+<li><p><strong>Launch Interactive Mode:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div></li>
+<li><p><strong>Add an Audio Input:</strong> Specify the audio source
+(e.g., an ALSA, JACK, or OSS device):</p>
+<pre class="text"><code>ai-add alsa,default</code></pre></li>
+<li><p><strong>Attach the Peak Level Analyzer:</strong> Add the peak and
+envelope volume analysis operator to the current chain:</p>
+<pre class="text"><code>c-add -ev</code></pre></li>
+<li><p><strong>Start Continuous Monitoring:</strong> Trigger the
+monitoring state:</p>
+<pre class="text"><code>start-monitoring</code></pre>
+<p><em>Or:</em></p>
+<pre class="text"><code>mon</code></pre></li>
+<li><p><strong>Stop Monitoring:</strong> To halt the level monitoring
+session at any time, run:</p>
+<pre class="text"><code>stop</code></pre></li>
+</ol>
+<hr />
+<h3 id="key-commands-summary">Key Commands Summary</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Command</th>
+<th style="text-align: left;">Shorthand</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>start-monitoring</code></td>
+<td style="text-align: left;"><code>mon</code></td>
+<td style="text-align: left;">Starts the engine in non-recording
+monitoring mode.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>c-add -ev</code></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Attaches the peak amplitude analysis
+operator to the chain.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>stop</code></td>
+<td style="text-align: left;"><code>s</code></td>
+<td style="text-align: left;">Stops the engine and halts
+monitoring.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>status</code></td>
+<td style="text-align: left;"><code>st</code></td>
+<td style="text-align: left;">Prints the current state and engine
+statistics.</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

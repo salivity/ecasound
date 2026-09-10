@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound LADSPA Plugin Naming Conflict Resolution - ecasound</title>
+    <meta name="description" content="This article explains how the Ecasound digital audio processing tool resolves plugin naming conflicts when multiple LADSPA libraries share the same textual labels or identifiers. It covers the hierarchy of plugin resolution, the priority defined by direc">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-ladspa-plugin-naming-conflict-resolution">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound LADSPA Plugin Naming Conflict Resolution - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-ladspa-plugin-naming-conflict-resolution" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Ecasound digital audio processing tool resolves plugin naming conflicts when multiple LADSPA libraries share the same textual labels or identifiers. It covers the hierarchy of plugin resolution, the priority defined by direc" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-ladspa-plugin-naming-conflict-resolution">Ecasound
+LADSPA Plugin Naming Conflict Resolution</h1>
+<p>This article explains how the Ecasound digital audio processing tool
+resolves plugin naming conflicts when multiple LADSPA libraries share
+the same textual labels or identifiers. It covers the hierarchy of
+plugin resolution, the priority defined by directory search paths, and
+how relying on unique numerical identifiers allows users to bypass label
+collisions entirely.</p>
+<h3 id="textual-labels-vs-numerical-identifiers">Textual Labels vs.
+Numerical Identifiers</h3>
+<p>The Linux Audio Developer's Simple Plugin API (LADSPA) defines
+plugins using both a textual label (a short, machine-readable string
+like <code>amp</code> or <code>delay</code>) and a unique 32-bit integer
+identifier (<code>UniqueID</code>). While the LADSPA standard intended
+for textual labels to be unique, collisions frequently occur when
+developers fork plugins, distribute different versions of the same
+library, or use generic naming conventions across different
+<code>.so</code> files.</p>
+<p>Ecasound supports two primary operators for invoking LADSPA
+plugins:</p>
+<ul>
+<li><code>-el:plugin_label,param1,param2,...</code> references a plugin
+by its textual label.</li>
+<li><code>-eli:plugin_unique_id,param1,param2,...</code> references a
+plugin strictly by its unique integer identifier.</li>
+</ul>
+<h3 id="resolution-via-ladspa_path-hierarchy">Resolution via LADSPA_PATH
+Hierarchy</h3>
+<p>When a plugin is invoked by its textual label using the
+<code>-el</code> option, Ecasound searches for the plugin binary across
+directories defined in the environment variable <code>LADSPA_PATH</code>
+(or its default system fallback directories, typically
+<code>/usr/lib/ladspa</code> and
+<code>/usr/local/lib/ladspa</code>).</p>
+<p>If two distinct shared object files in different directories contain
+a plugin with identical labels:</p>
+<ol type="1">
+<li>Ecasound parses the colon-separated directories in
+<code>LADSPA_PATH</code> sequentially from left to right.</li>
+<li>The first shared object file encountered containing the requested
+label is used to instantiate the plugin.</li>
+<li>Subsequent libraries containing matching labels found later in the
+search path are ignored for that label lookup.</li>
+</ol>
+<h3 id="same-directory-and-internal-collisions">Same-Directory and
+Internal Collisions</h3>
+<p>If multiple <code>.so</code> files in the exact same directory
+contain duplicate plugin labels, resolution depends on the order in
+which the underlying operating system's dynamic linker loads the
+directory's directory entries. Because this order is non-deterministic
+and can vary across filesystems or system reboots, relying on textual
+labels in conflicting environments can cause unstable routing
+behavior.</p>
+<h3 id="avoiding-conflicts-with-unique-ids">Avoiding Conflicts with
+Unique IDs</h3>
+<p>To definitively prevent ambiguous behavior, Ecasound's design
+offloads conflict resolution to the <code>-eli</code> parameter. The
+LADSPA specification maintains a centralized registry of integer IDs,
+making the <code>UniqueID</code> mathematically deterministic and unique
+across all valid LADSPA plugins.</p>
+<p>By replacing <code>-el:label</code> with <code>-eli:id</code> inside
+Ecasound chains, scripts, or interactive commands, Ecasound ignores
+textual labels entirely. It scans all shared objects until it matches
+the specific, registered integer ID, ensuring that the intended plugin
+is initialized regardless of identical names or directory placement.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

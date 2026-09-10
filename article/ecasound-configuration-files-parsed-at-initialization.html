@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Configuration Files Parsed at Initialization - ecasound</title>
+    <meta name="description" content="During startup, the Ecasound multitrack audio processing utility reads several configuration and preset files to establish its runtime environment, hardware drivers, and default parameters. Ecasound follows a hierarchical approach, loading system-wide de">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-configuration-files-parsed-at-initialization">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Configuration Files Parsed at Initialization - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-configuration-files-parsed-at-initialization" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="During startup, the Ecasound multitrack audio processing utility reads several configuration and preset files to establish its runtime environment, hardware drivers, and default parameters. Ecasound follows a hierarchical approach, loading system-wide de" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-configuration-files-parsed-at-initialization">Ecasound
+Configuration Files Parsed at Initialization</h1>
+<p>During startup, the Ecasound multitrack audio processing utility
+reads several configuration and preset files to establish its runtime
+environment, hardware drivers, and default parameters. Ecasound follows
+a hierarchical approach, loading system-wide defaults first before
+parsing user-specific files that can override those global settings.
+This article outlines the specific configuration files Ecasound parses
+during initialization and explains how they affect the program's
+operation.</p>
+<h2 id="system-wide-configuration-file-ecasoundrc">System-Wide
+Configuration File: ecasoundrc</h2>
+<p>When launched, Ecasound first searches for a global resource file.
+Depending on the installation prefix and distribution settings, this
+file is typically located at:</p>
+<ul>
+<li><code>/etc/ecasound/ecasoundrc</code> or</li>
+<li><code>/usr/share/ecasound/ecasoundrc</code> (or
+<code>/usr/local/share/ecasound/ecasoundrc</code>)</li>
+</ul>
+<p>This global configuration file sets machine-wide defaults, such as
+the default audio subsystem (e.g., ALSA, JACK, OSS), default buffer
+sizes, sampling parameters, and paths to external tools and LADSPA
+plugin directories.</p>
+<h2 id="user-level-configuration-file-ecasoundecasoundrc">User-Level
+Configuration File: ~/.ecasound/ecasoundrc</h2>
+<p>After reading the global configuration, Ecasound inspects the user's
+home directory for a personal configuration file located at:</p>
+<ul>
+<li><code>~/.ecasound/ecasoundrc</code></li>
+</ul>
+<p>If this file exists, it is parsed immediately after the system-wide
+file. Any parameters defined here override the settings specified in the
+global <code>ecasoundrc</code>. If the <code>~/.ecasound/</code>
+directory does not exist, Ecasound can create it automatically on first
+run to store local settings and session data.</p>
+<h2 id="effect-preset-files">Effect Preset Files</h2>
+<p>In addition to standard runtime configurations, Ecasound parses
+preset files during initialization to register predefined audio effect
+chains:</p>
+<ol type="1">
+<li><strong>System Effect Presets</strong>: Located alongside the global
+configuration (usually <code>/usr/share/ecasound/effect_presets</code>
+or <code>/etc/ecasound/effect_presets</code>), this file provides
+standard DSP algorithms, filters, and preset combinations provided by
+the package maintainer.</li>
+<li><strong>User Effect Presets</strong>: Located at
+<code>~/.ecasound/effect_presets</code>, this file allows users to
+define custom effect chains and presets that take priority over or
+extend the system presets.</li>
+</ol>
+<h2 id="initialization-precedence">Initialization Precedence</h2>
+<p>Ecasound applies settings using the following order of
+precedence:</p>
+<ol type="1">
+<li>System-wide <code>ecasoundrc</code> establishes basic defaults.</li>
+<li>System-wide <code>effect_presets</code> registers baseline audio
+presets.</li>
+<li>User <code>~/.ecasound/ecasoundrc</code> overrides global options
+with user preferences.</li>
+<li>User <code>~/.ecasound/effect_presets</code> adds or overrides
+custom effect definitions.</li>
+<li>Command-line options and interactive Ecasound Control Interface
+(ECI) commands take final priority over all configuration files.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Handles Cuesheets and Track Markers - ecasound</title>
+    <meta name="description" content="Ecasound treats audio inputs as continuous audio streams and does not natively parse external cuesheets (.cue files) or embedded track markers automatically. Instead of reading track metadata to divide or navigate files out of the box, Ecasound requires">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-handles-cuesheets-and-track-markers">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Handles Cuesheets and Track Markers - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-handles-cuesheets-and-track-markers" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound treats audio inputs as continuous audio streams and does not natively parse external cuesheets (.cue files) or embedded track markers automatically. Instead of reading track metadata to divide or navigate files out of the box, Ecasound requires" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-handles-cuesheets-and-track-markers">How Ecasound
+Handles Cuesheets and Track Markers</h1>
+<p>Ecasound treats audio inputs as continuous audio streams and does not
+natively parse external cuesheets (.cue files) or embedded track markers
+automatically. Instead of reading track metadata to divide or navigate
+files out of the box, Ecasound requires users to translate cue points
+into internal position offsets, time limits, or transport commands. To
+utilize cue points with Ecasound, timestamps must be mapped directly to
+its command-line positioning switches or automated via scripts and
+interactive mode commands.</p>
+<h3 id="native-format-handling-and-limitations">Native Format Handling
+and Limitations</h3>
+<p>When Ecasound opens an audio file—such as a monolithic WAV, FLAC, or
+APE file accompanied by a cuesheet—it interfaces with the file through
+underlying I/O libraries like <code>libsndfile</code>. Ecasound focuses
+strictly on the raw audio stream and standard header data (such as
+sample rate, bit depth, and channel count). Embedded metadata chunks,
+such as RIFF cue points or ID3 track markers, are bypassed during
+standard processing. Similarly, <code>.cue</code> text files cannot be
+passed directly to the <code>-i</code> (input) parameter, as Ecasound
+expects a playable audio stream or audio device rather than a metadata
+index.</p>
+<h3 id="translating-cues-to-position-parameters">Translating Cues to
+Position Parameters</h3>
+<p>To process specific tracks or segments identified by a cuesheet, you
+must translate the cuesheet’s index points (minutes, seconds, and
+frames) into Ecasound-compatible time parameters. Ecasound accepts time
+offsets using the <code>-pos</code> parameter to seek to a specific
+start time, and duration limits using the <code>-t</code> parameter.</p>
+<p>For example, if a cuesheet indicates a track begins at 03:45 and
+lasts for 4 minutes:</p>
+<ul>
+<li>The start index is converted into seconds (225 seconds) and applied
+using <code>-pos:225</code>.</li>
+<li>The length is applied using <code>-t:240</code> (or <code>-tl</code>
+to enable continuous looping over that segment).</li>
+</ul>
+<p>By passing these parameters alongside the master audio file, Ecasound
+accesses and processes only the defined segment, effectively reproducing
+the behavior of a track marker.</p>
+<h3 id="interactive-transport-and-markers">Interactive Transport and
+Markers</h3>
+<p>Within Ecasound’s interactive mode (<code>ecasound -c</code>), track
+navigation can be handled in real time. While the software still does
+not read the cuesheet directly, its internal transport engine allows you
+to jump to exact cues using position commands:</p>
+<ul>
+<li><code>setpos [seconds]</code>: Moves the playback or processing head
+directly to the timestamp specified by a cue index.</li>
+<li><code>forward [seconds]</code> / <code>rewind [seconds]</code>:
+Shifts playback relative to the current position.</li>
+</ul>
+<p>Operators frequently use this functionality to create interactive
+listening sessions or manual slicing workflows corresponding to a
+cuesheet's index list.</p>
+<h3 id="automating-cue-sheet-processing">Automating Cue Sheet
+Processing</h3>
+<p>Because native cuesheet parsing is absent, standard practice involves
+piping data from external parsing utilities into Ecasound. Command-line
+tools such as <code>cuetools</code> (specifically
+<code>cuebreakpoints</code>) extract the track boundaries from a
+<code>.cue</code> file into seconds. A shell script then iterates over
+these timestamps, invoking separate Ecasound instances using the
+<code>-pos</code> and <code>-t</code> flags to extract, split, or
+process each track individually from the monolithic source audio.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

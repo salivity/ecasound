@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Offline Mixdown Faster Than Real-Time - ecasound</title>
+    <meta name="description" content="Ecasound is fully capable of rendering multitrack projects faster than real-time during an offline mixdown. Because the engine decouples signal processing from audio hardware clocks when reading from and writing to disk, processing speeds are limited onl">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-offline-mixdown-faster-than-real-time">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Offline Mixdown Faster Than Real-Time - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-offline-mixdown-faster-than-real-time" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is fully capable of rendering multitrack projects faster than real-time during an offline mixdown. Because the engine decouples signal processing from audio hardware clocks when reading from and writing to disk, processing speeds are limited onl" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-offline-mixdown-faster-than-real-time">Ecasound Offline
+Mixdown Faster Than Real-Time</h1>
+<p>Ecasound is fully capable of rendering multitrack projects faster
+than real-time during an offline mixdown. Because the engine decouples
+signal processing from audio hardware clocks when reading from and
+writing to disk, processing speeds are limited only by the host system's
+CPU and disk I/O performance. This article explains how Ecasound
+executes offline rendering, how to structure commands for maximum speed,
+and what factors influence render performance.</p>
+<h2 id="how-offline-rendering-works-in-ecasound">How Offline Rendering
+Works in Ecasound</h2>
+<p>Real-time audio constraints exist only when an audio chain interfaces
+directly with physical sound hardware (such as ALSA or OSS drivers) or
+an audio server running on a hardware clock (such as JACK).</p>
+<p>When an Ecasound session routes exclusively from file inputs to a
+file output, the engine does not wait for a DAC clock. Instead, it pulls
+sample blocks through the assigned signal chain as rapidly as the CPU
+can compute them and writes the resulting stream to disk. On modern
+hardware, a project with basic gain staging, panning, and summing will
+typically render at dozens of times real-time speed.</p>
+<h2 id="command-line-structure-for-file-to-file-mixdown">Command-Line
+Structure for File-to-File Mixdown</h2>
+<p>To execute an offline mixdown, ensure all inputs and outputs specify
+standard audio files (such as WAV, FLAC, or raw PCM) rather than audio
+devices.</p>
+<p>An example command mixing two stereo tracks down to a master stereo
+file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:track1.wav</span> <span class="at">-ea:100</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:track2.wav</span> <span class="at">-ea:80</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1,2</span> <span class="at">-o:mixdown.wav</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li>Each <code>-a</code> flag assigns a chain.</li>
+<li>The <code>-i</code> flags specify local audio files as sources.</li>
+<li>The <code>-o</code> flag specifies a target file destination.</li>
+<li>Chain routing (<code>-a:1,2 -o:mixdown.wav</code>) automatically
+sums the streams into the output target.</li>
+</ul>
+<p>Because no device parameters (such as <code>/dev/dsp</code> or
+<code>alsa</code>) are present, Ecasound operates entirely in batch
+mode, processing audio frames sequentially without throttling.</p>
+<h2 id="performance-influences-on-mixdown-speed">Performance Influences
+on Mixdown Speed</h2>
+<p>Several technical factors determine how much faster than real-time a
+render will run:</p>
+<ul>
+<li><strong>Plugin Overhead:</strong> Complex DSP—such as heavy LADSPA
+reverbs, multi-band compressors, or sample-rate conversions—increases
+CPU load per block, lowering overall processing speed. Simple gain
+adjustments, panning, and mixing introduce negligible overhead.</li>
+<li><strong>Storage Throughput:</strong> Projects with dozens of
+uncompressed audio tracks can saturate traditional hard drives. Fast
+NVMe SSDs minimize read and write bottlenecks when pulling
+high-channel-count audio data.</li>
+<li><strong>Buffer Sizing:</strong> You can optimize I/O performance
+during batch processing by increasing the internal buffer size using the
+<code>-b:buffersize</code> option. Larger buffers reduce the frequency
+of system calls when transferring data between disk and processor
+memory.</li>
+</ul>
+<h2 id="avoiding-accidental-real-time-throttling">Avoiding Accidental
+Real-Time Throttling</h2>
+<p>To ensure Ecasound does not fall back to real-time speeds:</p>
+<ol type="1">
+<li>Avoid using real-time connection bridges (such as
+<code>-i:jack</code> or <code>-o:alsa</code>).</li>
+<li>Ensure external plugins invoked through LADSPA do not rely on
+external hardware timers or system clock synchronization.</li>
+<li>If running Ecasound within scripts or automated pipelines, run it
+directly without wrapper utilities that force real-time scheduling locks
+unless explicitly required by your operating environment.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

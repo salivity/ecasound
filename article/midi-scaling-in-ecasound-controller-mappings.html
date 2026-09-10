@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Scaling in Ecasound Controller Mappings - ecasound</title>
+    <meta name="description" content="In Ecasound, continuous MIDI control is configured using the -km controller option, which maps incoming MIDI Continuous Controller (CC) messages to chain operator effect parameters. This article explains how Ecasound handles linear versus exponential sca">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/midi-scaling-in-ecasound-controller-mappings">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MIDI Scaling in Ecasound Controller Mappings - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/midi-scaling-in-ecasound-controller-mappings" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Ecasound, continuous MIDI control is configured using the -km controller option, which maps incoming MIDI Continuous Controller (CC) messages to chain operator effect parameters. This article explains how Ecasound handles linear versus exponential sca" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="midi-scaling-in-ecasound-controller-mappings">MIDI Scaling in
+Ecasound Controller Mappings</h1>
+<p>In Ecasound, continuous MIDI control is configured using the
+<code>-km</code> controller option, which maps incoming MIDI Continuous
+Controller (CC) messages to chain operator effect parameters. This
+article explains how Ecasound handles linear versus exponential scaling
+across controller mappings, detailing the <code>-km</code> command
+syntax, how curve types are determined, and how to achieve non-linear
+parameter control.</p>
+<h3 id="the-midi-controller-mapping-syntax">The MIDI Controller Mapping
+Syntax</h3>
+<p>Ecasound uses a unified syntax for attaching a MIDI Continuous
+Controller to any effect parameter:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:fx_param,low_val,high_val,controller,channel</span></span></code></pre></div>
+<p>The arguments represent:</p>
+<ul>
+<li><strong><code>fx_param</code></strong>: The index of the parameter
+to control within the chain operator (1-based index).</li>
+<li><strong><code>low_val</code></strong>: The lower bound of the target
+value range corresponding to MIDI value <code>0</code>.</li>
+<li><strong><code>high_val</code></strong>: The upper bound of the
+target value range corresponding to MIDI value <code>127</code>.</li>
+<li><strong><code>controller</code></strong>: The MIDI Continuous
+Controller (CC) number (0–127).</li>
+<li><strong><code>channel</code></strong>: The MIDI channel number
+(1–16).</li>
+</ul>
+<h3 id="linear-vs-exponential-scaling-behavior">Linear vs. Exponential
+Scaling Behavior</h3>
+<p>Ecasound does not feature a dedicated syntax argument (such as a
+curve flag or keyword) within the <code>-km</code> option to switch
+manually between linear and exponential curves. Instead, the scaling
+behavior is determined by the underlying parameter definition:</p>
+<h4 id="1-linear-scaling-default-behavior">1. Linear Scaling (Default
+Behavior)</h4>
+<p>For all built-in Ecasound chain operators and linear LADSPA plugin
+parameters, Ecasound applies a straight linear interpolation between
+<code>low_val</code> and <code>high_val</code>:</p>
+<p><span class="math display">\[\text{Parameter Value} = \text{low\_val}
++ \left(\frac{\text{MIDI Value}}{127}\right) \times (\text{high\_val} -
+\text{low\_val})\]</span></p>
+<p>An example of standard linear mapping (e.g., controlling a volume
+parameter on operator 1 with MIDI CC 7 on channel 1):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:1,0,100,7,1</span></span></code></pre></div>
+<h4 id="2-exponential--logarithmic-scaling-ladspa-port-hints">2.
+Exponential / Logarithmic Scaling (LADSPA Port Hints)</h4>
+<p>When controlling parameters of LADSPA plugins, Ecasound queries the
+plugin descriptor's port hints. If a parameter includes the
+<code>LADSPA_HINT_LOGARITHMIC</code> property (common for frequencies,
+resonance, and cutoff values):</p>
+<ul>
+<li>Ecasound automatically maps the linear 7-bit MIDI input (0–127) onto
+an exponential curve across the <code>[low_val, high_val]</code>
+interval.</li>
+<li>The command syntax remains identical:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:2,20,20000,74,1</span></span></code></pre></div>
+<p>Because parameter 2 in this context is flagged logarithmically in the
+plugin's metadata, a MIDI value of 64 will sit at the geometric mean
+rather than the arithmetic midpoint, providing smooth, natural sweeps
+for perceptual audio parameters.</p>
+<h3
+id="implementing-custom-exponential-scaling-on-linear-parameters">Implementing
+Custom Exponential Scaling on Linear Parameters</h3>
+<p>If an exponential response is required on an Ecasound parameter that
+defaults to linear behavior, the scaling must be handled outside the
+<code>-km</code> argument using one of two approaches:</p>
+<ol type="1">
+<li><strong>Pre-scaling MIDI CC Data</strong>: Route incoming MIDI
+through an external MIDI processor (such as <code>mididings</code>)
+before it reaches Ecasound. The processor remaps the linear CC input
+curve to an exponential curve before passing it to Ecasound's virtual
+ALSA MIDI port.</li>
+<li><strong>Intermediate Control Plugins</strong>: Route the MIDI
+controller to a LADSPA control-rate shaping plugin with logarithmic
+input, and route that plugin's output to the target parameter.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

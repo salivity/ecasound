@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parse Multi-Line Responses in Python Ecasound ECI - ecasound</title>
+    <meta name="description" content="This article explains how to retrieve and process multi-line output from Ecasound using the Python Ecasound Control Interface (ECI) wrapper. When querying audio engine status, chain setups, or track configurations, Ecasound frequently returns output span">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/parse-multi-line-responses-in-python-ecasound-eci">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Parse Multi-Line Responses in Python Ecasound ECI - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/parse-multi-line-responses-in-python-ecasound-eci" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to retrieve and process multi-line output from Ecasound using the Python Ecasound Control Interface (ECI) wrapper. When querying audio engine status, chain setups, or track configurations, Ecasound frequently returns output span" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="parse-multi-line-responses-in-python-ecasound-eci">Parse
+Multi-Line Responses in Python Ecasound ECI</h1>
+<p>This article explains how to retrieve and process multi-line output
+from Ecasound using the Python Ecasound Control Interface (ECI) wrapper.
+When querying audio engine status, chain setups, or track
+configurations, Ecasound frequently returns output spanning multiple
+lines. The Python ECI implementation provides a dedicated method
+designed specifically to parse these responses into a native Python data
+structure.</p>
+<h3 id="the-last_string_list-method">The <code>last_string_list()</code>
+Method</h3>
+<p>The Python ECI wrapper provides the
+<strong><code>last_string_list()</code></strong> method to handle
+multi-line string responses from the Ecasound engine.</p>
+<p>While scalar queries that produce a single result can be retrieved
+using <code>last_string()</code>, any command that returns a list of
+items or multiline output stores its result in an internal tokenized
+array. Calling <code>last_string_list()</code> fetches this array and
+automatically converts it into a native Python list of strings
+(<code>list[str]</code>), where each line or item corresponds to an
+individual list element.</p>
+<h3 id="how-to-use-last_string_list">How to Use
+<code>last_string_list()</code></h3>
+<p>To retrieve multi-line output, issue the command via the
+<code>command()</code> method on your ECI instance, and then call
+<code>last_string_list()</code> immediately afterward:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyecasound <span class="im">import</span> ECA_CONTROL_INTERFACE</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize the ECI instance</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>eci <span class="op">=</span> ECA_CONTROL_INTERFACE()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Issue a command that generates multi-line output</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>eci.command(<span class="st">&quot;cs-list&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve the output as a Python list of strings</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>chainsetup_list <span class="op">=</span> eci.last_string_list()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Process each line</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> chainsetup_list:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(item)</span></code></pre></div>
+<h3 id="common-commands-requiring-last_string_list">Common Commands
+Requiring <code>last_string_list()</code></h3>
+<p>You should use <code>last_string_list()</code> with commands that
+query object collections or system state, including:</p>
+<ul>
+<li><code>cs-list</code>: Lists all available chainsetups.</li>
+<li><code>c-list</code>: Lists all chains attached to the currently
+selected chainsetup.</li>
+<li><code>ai-list</code> and <code>ao-list</code>: Lists active audio
+inputs and outputs.</li>
+<li><code>cop-list</code>: Lists chain operators attached to the current
+chain.</li>
+<li><code>engine-status</code>: Returns the current multi-line operating
+state of the audio engine.</li>
+</ul>
+<p>If <code>last_string()</code> is mistakenly called after these
+commands, it will typically return only the first token or empty data,
+making <code>last_string_list()</code> essential for proper output
+parsing.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

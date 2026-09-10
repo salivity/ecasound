@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming Audio Over Network Sockets with Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound is a versatile command-line multitrack audio processor capable of routing, recording, and applying real-time effects to sound. This article explains how Ecasound sends and receives audio across network sockets, detailing the use of standard inpu">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/streaming-audio-over-network-sockets-with-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Streaming Audio Over Network Sockets with Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/streaming-audio-over-network-sockets-with-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a versatile command-line multitrack audio processor capable of routing, recording, and applying real-time effects to sound. This article explains how Ecasound sends and receives audio across network sockets, detailing the use of standard inpu" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="streaming-audio-over-network-sockets-with-ecasound">Streaming
+Audio Over Network Sockets with Ecasound</h1>
+<p>Ecasound is a versatile command-line multitrack audio processor
+capable of routing, recording, and applying real-time effects to sound.
+This article explains how Ecasound sends and receives audio across
+network sockets, detailing the use of standard input/output redirection,
+the native pipe subsystem, and network utilities like Netcat or Socat to
+establish reliable raw TCP and UDP audio streams.</p>
+<h3 id="the-underlying-mechanism-standard-streams-and-pipes">The
+Underlying Mechanism: Standard Streams and Pipes</h3>
+<p>Ecasound handles network audio transmission by treating network
+connections as standard data streams rather than relying on heavy,
+built-in network protocol layers. By combining its flexible audio object
+syntax with POSIX-compliant standard I/O (<code>stdin</code> and
+<code>stdout</code>) or native command pipes (<code>pipe:</code>),
+Ecasound can interface directly with standard networking utilities like
+<code>netcat</code> (<code>nc</code>) or <code>socat</code>.</p>
+<p>Because network streaming via sockets typically passes raw,
+uncompressed Pulse-Code Modulation (PCM) data without container metadata
+(like WAV headers), Ecasound requires explicit parameter definitions.
+Both sending and receiving endpoints must share matching parameters
+specifying the sample format, channel count, and sampling rate using the
+<code>-f</code> flag (e.g., <code>-f:s16_le,2,44100</code>).</p>
+<h3 id="transmitting-audio-to-a-network-socket">Transmitting Audio to a
+Network Socket</h3>
+<p>To stream audio across a network, Ecasound captures sound from a
+local source—such as an ALSA hardware device, a JACK port, or an audio
+file—and routes the processed raw PCM data to a socket client.</p>
+<h4 id="using-standard-output-redirection">Using Standard Output
+Redirection</h4>
+<p>You can pipe Ecasound's standard output directly into a networking
+tool:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> alsahw:0,0 <span class="at">-f:s16_le,2,48000</span> <span class="at">-o</span> stdout <span class="kw">|</span> <span class="ex">nc</span> remote_host 5000</span></code></pre></div>
+<p>In this setup, Ecasound processes input from the ALSA sound card,
+formats the stream as 16-bit little-endian stereo at 48 kHz, and streams
+the raw bytes to standard output. Netcat reads from the pipe and
+forwards the byte stream over a TCP connection to
+<code>remote_host</code> on port <code>5000</code>.</p>
+<h4 id="using-the-internal-pipe-audio-object">Using the Internal Pipe
+Audio Object</h4>
+<p>Ecasound also allows embedding shell commands directly into its
+routing chain using the <code>pipe:</code> audio object:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> audio_source.wav <span class="at">-f:s16_le,2,44100</span> <span class="at">-o</span> pipe:<span class="st">&quot;nc -u remote_host 5000&quot;</span></span></code></pre></div>
+<p>This encapsulates the network transport inside Ecasound, transmitting
+the stream over UDP for low-latency transmission.</p>
+<h3 id="receiving-audio-from-a-network-socket">Receiving Audio from a
+Network Socket</h3>
+<p>Receiving audio over a socket operates symmetrically. A network
+utility listens on an open port and routes the incoming byte stream to
+Ecasound's input system.</p>
+<h4 id="using-standard-input-redirection">Using Standard Input
+Redirection</h4>
+<p>A listening socket utility can forward incoming bytes into Ecasound's
+standard input:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nc</span> <span class="at">-l</span> <span class="at">-p</span> 5000 <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-f:s16_le,2,48000</span> <span class="at">-i</span> stdin <span class="at">-o</span> alsa</span></code></pre></div>
+<p>Netcat listens on TCP port <code>5000</code>. When a sender connects
+and begins transmitting, Netcat pipes the incoming payload to Ecasound.
+Because the input stream lacks file headers, the
+<code>-f:s16_le,2,48000</code> parameter instructs Ecasound how to
+interpret the byte stream before sending it to the ALSA playback
+device.</p>
+<h4 id="using-the-internal-pipe-audio-object-for-input">Using the
+Internal Pipe Audio Object for Input</h4>
+<p>Similarly, Ecasound can launch a listening socket directly as its
+designated input source:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-i</span> pipe:<span class="st">&quot;nc -l -p 5000&quot;</span> <span class="at">-o</span> alsahw:0,0</span></code></pre></div>
+<h3 id="decoupling-streams-with-named-pipes-fifos">Decoupling Streams
+with Named Pipes (FIFOs)</h3>
+<p>For permanent setups or automated scripts, using standard UNIX named
+pipes (<code>FIFOs</code>) offers greater stability than standard shell
+pipelines. A FIFO prevents Ecasound from terminating unexpectedly if a
+network connection briefly drops:</p>
+<ol type="1">
+<li>Create a named pipe on the filesystem:
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkfifo</span> /tmp/audio_stream.fifo</span></code></pre></div></li>
+<li>Launch a network server that continuously writes incoming socket
+data to the pipe:
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">socat</span> TCP-LISTEN:5000,reuseaddr,fork OPEN:/tmp/audio_stream.fifo</span></code></pre></div></li>
+<li>Run Ecasound using the named pipe as its audio input object:
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,48000</span> <span class="at">-i</span> /tmp/audio_stream.fifo <span class="at">-o</span> alsa</span></code></pre></div></li>
+</ol>
+<h3 id="protocol-considerations-tcp-vs-udp">Protocol Considerations: TCP
+vs. UDP</h3>
+<ul>
+<li><strong>TCP:</strong> Provides reliable, in-order delivery. It is
+suitable for streaming pre-recorded audio or non-interactive sound, but
+packet retransmissions can cause audible stuttering or latency
+accumulation on unstable networks.</li>
+<li><strong>UDP:</strong> Eliminates retransmission overhead,
+significantly reducing latency. This makes UDP preferable for real-time
+monitoring or live performance routing, although dropped packets will
+cause minor audio dropouts rather than playback delays.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

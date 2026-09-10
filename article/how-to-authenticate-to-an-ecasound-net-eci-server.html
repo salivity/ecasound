@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Authenticate to an Ecasound Net-ECI Server - ecasound</title>
+    <meta name="description" content="Connecting an application to an Ecasound Net-ECI (Network Ecasound Control Interface) server does not involve a traditional credential-based authentication handshake. Because the Net-ECI protocol lacks a native, built-in authentication mechanism, client">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-authenticate-to-an-ecasound-net-eci-server">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Authenticate to an Ecasound Net-ECI Server - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-authenticate-to-an-ecasound-net-eci-server" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Connecting an application to an Ecasound Net-ECI (Network Ecasound Control Interface) server does not involve a traditional credential-based authentication handshake. Because the Net-ECI protocol lacks a native, built-in authentication mechanism, client" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-authenticate-to-an-ecasound-net-eci-server">How to
+Authenticate to an Ecasound Net-ECI Server</h1>
+<p>Connecting an application to an Ecasound Net-ECI (Network Ecasound
+Control Interface) server does not involve a traditional
+credential-based authentication handshake. Because the Net-ECI protocol
+lacks a native, built-in authentication mechanism, client applications
+gain access directly upon establishing a network socket connection.
+Consequently, authenticating and securing client access relies entirely
+on external network configuration, local system permissions, or secure
+tunneling mechanisms.</p>
+<h3 id="the-native-net-eci-connection-model">The Native Net-ECI
+Connection Model</h3>
+<p>The Net-ECI protocol operates as a lightweight, plain-text command
+interface over TCP/IP or UNIX domain sockets. When an Ecasound process
+is launched in server mode (typically via the <code>--server</code>
+option, listening by default on TCP port 2868), it listens for incoming
+connections and accepts valid ECI commands immediately.</p>
+<p>There is no login prompt, token exchange, or password verification
+phase built into the protocol. Once the client application initiates and
+completes the standard socket handshake, it has full administrative
+control over the audio engine.</p>
+<h3 id="implementing-authentication-and-access-control">Implementing
+Authentication and Access Control</h3>
+<p>Because the server does not verify user identity, administrators and
+developers must enforce authentication at the transport or operating
+system layer.</p>
+<h4 id="1-local-binding-and-unix-socket-permissions">1. Local Binding
+and UNIX Socket Permissions</h4>
+<p>For local multi-user systems, limiting exposure to unauthorized users
+is best achieved through host isolation or UNIX sockets:</p>
+<ul>
+<li><strong>Localhost Restriction:</strong> By default, binding the
+server strictly to the loopback interface (<code>127.0.0.1</code>)
+prevents external network actors from discovering and issuing commands
+to the server.</li>
+<li><strong>UNIX Domain Sockets:</strong> If using local sockets instead
+of network ports, standard operating system file permissions (POSIX
+read/write permissions) dictate which system user or group is allowed to
+open the socket file, providing effective user-level
+authentication.</li>
+</ul>
+<h4 id="2-ssh-port-forwarding-for-remote-clients">2. SSH Port Forwarding
+for Remote Clients</h4>
+<p>When a client application must connect over an untrusted network, SSH
+tunneling provides encrypted transport and credential-based
+authentication:</p>
+<ol type="1">
+<li>The remote Ecasound server is configured to listen only on
+<code>localhost</code>.</li>
+<li>The client system establishes an SSH connection to the server host,
+authenticating using standard SSH credentials (such as public key
+cryptography).</li>
+<li>The SSH client forwards a local port to the remote Net-ECI port
+(e.g., <code>ssh -L 2868:localhost:2868 user@server</code>).</li>
+<li>The client application connects to <code>localhost:2868</code>,
+passing commands securely through the authenticated tunnel.</li>
+</ol>
+<h4 id="3-network-firewalls-and-access-control-lists">3. Network
+Firewalls and Access Control Lists</h4>
+<p>For dedicated production environments where SSH tunneling is
+impractical, network-level authentication can be enforced using
+firewalls (such as <code>iptables</code>, <code>nftables</code>, or
+cloud security groups):</p>
+<ul>
+<li>Restrict incoming traffic on the Net-ECI port exclusively to the
+static IP address of the authorized client application.</li>
+<li>Drop all unauthenticated or unrecognized network packets before they
+reach the Ecasound daemon.</li>
+</ul>
+<h3 id="client-connection-workflow">Client Connection Workflow</h3>
+<p>To interact with the server programmatically, a client library or
+application should follow this sequence:</p>
+<ol type="1">
+<li><strong>Establish the Socket:</strong> Create a TCP stream
+connection to the designated host and port (or connect to the local UNIX
+socket path).</li>
+<li><strong>Handle Connection Errors:</strong> If access is blocked by
+firewall rules or missing permissions, the connection is rejected at the
+OS level.</li>
+<li><strong>Issue Handshake/Test Command:</strong> Once connected, send
+an initial harmless command such as <code>engine-status</code> followed
+by a newline.</li>
+<li><strong>Read Response:</strong> Parse the server's return value to
+verify that the Ecasound engine is ready to receive audio processing
+commands.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

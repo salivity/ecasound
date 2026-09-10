@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Big-Endian vs Little-Endian in Raw Files - ecasound</title>
+    <meta name="description" content="Ecasound handles big-endian and little-endian byte ordering in raw audio files through explicit sample format definitions, host-architecture defaults, and internal sample conversion. Because raw PCM data lacks header metadata to identify byte order, Ecas">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-big-endian-vs-little-endian-in-raw-files">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Big-Endian vs Little-Endian in Raw Files - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-big-endian-vs-little-endian-in-raw-files" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound handles big-endian and little-endian byte ordering in raw audio files through explicit sample format definitions, host-architecture defaults, and internal sample conversion. Because raw PCM data lacks header metadata to identify byte order, Ecas" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-big-endian-vs-little-endian-in-raw-files">Ecasound
+Big-Endian vs Little-Endian in Raw Files</h1>
+<p>Ecasound handles big-endian and little-endian byte ordering in raw
+audio files through explicit sample format definitions,
+host-architecture defaults, and internal sample conversion. Because raw
+PCM data lacks header metadata to identify byte order, Ecasound requires
+users to declare the endianness using specific audio format flags. Once
+ingested, Ecasound normalizes the audio into an internal floating-point
+representation, allowing seamless conversion between different byte
+orders during input, processing, and output.</p>
+<h3 id="the-necessity-of-explicit-format-tags">The Necessity of Explicit
+Format Tags</h3>
+<p>Standard audio formats like WAV (predominantly little-endian) and
+AIFF (predominantly big-endian) store byte order details in their
+container headers. Raw files (such as <code>.raw</code>,
+<code>.pcm</code>, or <code>.cdr</code>) contain only sample data. When
+multi-byte samples (such as 16-bit, 24-bit, or 32-bit audio) are read,
+the system must know whether the most significant byte comes first
+(big-endian, <code>be</code>) or last (little-endian,
+<code>le</code>).</p>
+<p>If raw data is read with the incorrect byte order, the resulting
+audio turns into loud static or noise. Ecasound solves this by making
+audio format parameters mandatory when opening raw files.</p>
+<h3 id="endian-specifiers-in-ecasound">Endian Specifiers in
+Ecasound</h3>
+<p>Ecasound defines audio streams using the format parameter:</p>
+<p><code>-f:sample_format,channels,sample_rate,interleave</code></p>
+<p>Within the <code>sample_format</code> field, endianness is explicitly
+defined using <code>_le</code> (little-endian) or <code>_be</code>
+(big-endian) suffixes:</p>
+<ul>
+<li><strong>16-bit Signed Integer:</strong> <code>s16_le</code>
+(little-endian), <code>s16_be</code> (big-endian)</li>
+<li><strong>24-bit Signed Integer:</strong> <code>s24_le</code>
+(little-endian), <code>s24_be</code> (big-endian)</li>
+<li><strong>32-bit Signed Integer:</strong> <code>s32_le</code>
+(little-endian), <code>s32_be</code> (big-endian)</li>
+<li><strong>32-bit Floating Point:</strong> <code>f32_le</code>
+(little-endian), <code>f32_be</code> (big-endian)</li>
+</ul>
+<p>For 8-bit formats (such as <code>u8</code> or <code>s8</code>),
+endianness is irrelevant because samples consist of only a single
+byte.</p>
+<h3 id="native-endianness-and-fallbacks">Native Endianness and
+Fallbacks</h3>
+<p>If a format string is provided without an endianness suffix (for
+example, <code>s16</code> or <code>s32</code>), Ecasound falls back to
+the native endianness of the host CPU running the software.</p>
+<ul>
+<li>On x86, x86_64, and modern ARM systems, an unadorned
+<code>s16</code> will default to little-endian
+(<code>s16_le</code>).</li>
+<li>On legacy architectures like PowerPC or SPARC, <code>s16</code> will
+default to big-endian (<code>s16_be</code>).</li>
+</ul>
+<p>To maintain portability and avoid processing errors across different
+systems, explicit suffixes (<code>_le</code> or <code>_be</code>) should
+always be declared when working with raw files.</p>
+<h3 id="internal-normalization-and-byte-swapping">Internal Normalization
+and Byte Swapping</h3>
+<p>Ecasound does not perform audio effects or routing directly on raw
+byte arrays. Instead, it converts incoming raw audio data immediately
+upon ingestion into an internal standard format, typically 32-bit or
+64-bit floating-point samples.</p>
+<p>During this conversion phase:</p>
+<ol type="1">
+<li>Ecasound reads the byte stream matching the input format
+specification.</li>
+<li>If the declared input endianness differs from the host processor's
+native order, Ecasound performs byte-swapping operations on the input
+buffer.</li>
+<li>The samples are translated into normalized floating-point
+numbers.</li>
+<li>Any designated signal processing, mixing, or routing occurs.</li>
+<li>If the target output is also a raw file, Ecasound encodes the
+normalized internal float data into the target byte order specified in
+the output format rule, applying reverse byte swapping if
+necessary.</li>
+</ol>
+<h3 id="practical-command-example">Practical Command Example</h3>
+<p>To convert a raw, 16-bit big-endian stereo file recorded at 48kHz
+into a standard 16-bit little-endian raw file, both format
+specifications must be declared:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_be,2,48000</span> <span class="at">-i</span> raw_input.raw <span class="at">-f:s16_le,2,48000</span> <span class="at">-o</span> raw_output.raw</span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-f:s16_be,2,48000</code> informs the parser to read
+<code>raw_input.raw</code> by parsing two bytes at a time in big-endian
+order.</li>
+<li><code>-f:s16_le,2,48000</code> directs the output writer to
+rearrange the bytes into little-endian order before writing to
+<code>raw_output.raw</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

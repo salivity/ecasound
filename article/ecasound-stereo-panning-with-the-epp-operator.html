@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Stereo Panning with the -epp Operator - ecasound</title>
+    <meta name="description" content="This article provides an overview of how to control stereo soundstage positioning in Ecasound using the built-in -epp operator. Readers will learn the mechanics of the -epp (stereo pan) preset, its parameter structure, how it processes audio channels fro">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-stereo-panning-with-the-epp-operator">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Stereo Panning with the -epp Operator - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-stereo-panning-with-the-epp-operator" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how to control stereo soundstage positioning in Ecasound using the built-in -epp operator. Readers will learn the mechanics of the -epp (stereo pan) preset, its parameter structure, how it processes audio channels fro" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-stereo-panning-with-the--epp-operator">Ecasound Stereo
+Panning with the -epp Operator</h1>
+<p>This article provides an overview of how to control stereo soundstage
+positioning in Ecasound using the built-in <code>-epp</code> operator.
+Readers will learn the mechanics of the <code>-epp</code> (stereo pan)
+preset, its parameter structure, how it processes audio channels from
+mono to stereo outputs, and practical command-line examples for both
+static and dynamic spatial placement.</p>
+<h3 id="understanding-the--epp-operator">Understanding the -epp
+Operator</h3>
+<p>In Ecasound, the <code>-epp</code> chain operator stands for "Stereo
+Pan." It is a dedicated audio effect designed to balance and position
+audio streams across two output channels (left and right).</p>
+<p>The operator uses a percentage-based scale to determine channel
+weighting:</p>
+<ul>
+<li><strong>0:</strong> Hard left (full signal to channel 1, channel 2
+silenced)</li>
+<li><strong>50:</strong> Center (equal signal level to both channel 1
+and channel 2)</li>
+<li><strong>100:</strong> Hard right (full signal to channel 2, channel
+1 silenced)</li>
+</ul>
+<h3 id="syntax-and-parameters">Syntax and Parameters</h3>
+<p>The basic syntax for the operator is:</p>
+<pre class="text"><code>-epp:pan_percent</code></pre>
+<p>The <code>pan_percent</code> argument accepts floating-point values
+from <code>0</code> to <code>100</code>. When working with a mono source
+routing into a stereo destination, Ecasound applies the panning
+coefficient by attenuating the complementary channel while boosting or
+preserving the targeted channel's gain level according to standard pan
+laws.</p>
+<h3 id="command-line-examples">Command-Line Examples</h3>
+<h4 id="1-center-panning-a-mono-file-to-stereo">1. Center Panning a Mono
+File to Stereo</h4>
+<p>To route a mono file evenly across a stereo output:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input_mono.wav</span> <span class="at">-epp:50</span> <span class="at">-o:output_stereo.wav</span></span></code></pre></div>
+<h4 id="2-hard-panning-to-the-left-or-right">2. Hard Panning to the Left
+or Right</h4>
+<p>To route the audio entirely to the left speaker:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-epp:0</span> <span class="at">-o:output_left.wav</span></span></code></pre></div>
+<p>To position the audio fully to the right speaker:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-epp:100</span> <span class="at">-o:output_right.wav</span></span></code></pre></div>
+<h4 id="3-real-time-hardware-routing">3. Real-Time Hardware Routing</h4>
+<p>To read from an ALSA input device, place the sound slightly to the
+left (30%), and output directly to the speakers in real time:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:alsahw,0,0</span> <span class="at">-epp:30</span> <span class="at">-o:alsahw,0,0</span></span></code></pre></div>
+<h3 id="dynamic-modulation-with-controllers">Dynamic Modulation with
+Controllers</h3>
+<p>The <code>-epp</code> operator parameter can also be attached to
+dynamic controllers to create automated panning (auto-pan) effects. By
+combining <code>-epp</code> with an oscillator controller such as
+<code>-kos</code>, the stereo position can oscillate continuously
+between the left and right speakers over time:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-kos:1,0,100,0.5,0</span> <span class="at">-epp:50</span> <span class="at">-o:output_autopan.wav</span></span></code></pre></div>
+<p>In this setup, <code>-kos</code> assigns a sine-wave controller to
+parameter <code>1</code> of the subsequent <code>-epp</code> effect,
+cycling between values <code>0</code> and <code>100</code> at a rate of
+<code>0.5</code> Hz, creating a smooth, sweeping stereo field effect
+across the output channels.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

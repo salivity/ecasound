@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automate Crossfades in Ecasound: Ambience and Dialogue - ecasound</title>
+    <meta name="description" content="Automating crossfades between dialogue and background ambience in Ecasound allows you to achieve clean, professional audio ducking and transitions from the command line. This guide demonstrates how to configure multitrack chains, apply the amplify effect">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/automate-crossfades-in-ecasound-ambience-and-dialogue">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Automate Crossfades in Ecasound: Ambience and Dialogue - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/automate-crossfades-in-ecasound-ambience-and-dialogue" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Automating crossfades between dialogue and background ambience in Ecasound allows you to achieve clean, professional audio ducking and transitions from the command line. This guide demonstrates how to configure multitrack chains, apply the amplify effect" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="automate-crossfades-in-ecasound-ambience-and-dialogue">Automate
+Crossfades in Ecasound: Ambience and Dialogue</h1>
+<p>Automating crossfades between dialogue and background ambience in
+Ecasound allows you to achieve clean, professional audio ducking and
+transitions from the command line. This guide demonstrates how to
+configure multitrack chains, apply the amplify effect
+(<code>-ea</code>), and attach linear envelope controllers
+(<code>-kl</code>) or control envelope files (<code>-kos</code>) to
+dynamically automate volume shifts between tracks.</p>
+<h3 id="the-basic-concept">The Basic Concept</h3>
+<p>Ecasound achieves automated level transitions by applying parameter
+controllers to chain operators. Volume adjustment is handled by the
+amplify operator (<code>-ea:gain_percentage</code>). By attaching a
+linear controller (<code>-kl</code>) to this operator, you can instruct
+Ecasound to automatically change the gain from a starting level to an
+ending level over a specific duration.</p>
+<h3 id="step-by-step-chain-setup">Step-by-Step Chain Setup</h3>
+<p>To automate a crossfade, you must run both audio streams
+simultaneously across distinct chains and merge them into a single
+output:</p>
+<ol type="1">
+<li><strong>Assign Chains</strong>: Assign the dialogue track to Chain 1
+(<code>-a:1</code>) and the ambience track to Chain 2
+(<code>-a:2</code>).</li>
+<li><strong>Set Inputs and Output</strong>: Assign the source files via
+<code>-i:file.wav</code> and specify a master output
+(<code>-a:all -o:master.wav</code>).</li>
+<li><strong>Apply Gain Operators</strong>: Add <code>-ea:100</code> to
+provide a baseline gain parameter for automation.</li>
+<li><strong>Attach Controllers</strong>: Attach a linear envelope
+controller to the gain parameter of the ambience track to lower its
+volume when dialogue starts, and raise it when dialogue ends.</li>
+</ol>
+<h3 id="command-line-implementation">Command Line Implementation</h3>
+<p>The <code>-kl</code> option takes the following syntax:
+<code>-kl:fx_param,initial_val,final_val,time_sec</code></p>
+<ul>
+<li><code>fx_param</code>: The parameter index of the target operator
+(for <code>-ea</code>, gain is parameter <code>1</code>).</li>
+<li><code>initial_val</code>: Starting value (e.g., <code>100</code> for
+100% volume).</li>
+<li><code>final_val</code>: Ending value (e.g., <code>20</code> for a
+ducked 20% volume).</li>
+<li><code>time_sec</code>: The transition duration in seconds.</li>
+</ul>
+<h4 id="example-fading-ambience-under-dialogue">Example: Fading Ambience
+Under Dialogue</h4>
+<p>To crossfade background ambience down from 100% to 25% over a
+3-second period as dialogue begins:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:dialogue.wav</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:ambience.wav</span> <span class="at">-ea:100</span> <span class="at">-kl:1,100,25,3</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-o:mixed_output.wav</span></span></code></pre></div>
+<h3 id="complex-crossfading-with-control-envelopes">Complex Crossfading
+with Control Envelopes</h3>
+<p>When working with ongoing dialogue requiring multiple crossfades in
+and out, linear inline controllers can become restrictive. Instead, map
+the gain operator to a time-stamped text file using the sampled
+controller option (<code>-kos</code>).</p>
+<ol type="1">
+<li><p><strong>Create an Automation File</strong>
+(<code>ambience_env.txt</code>): Define timestamps (in seconds) and
+corresponding gain levels:</p>
+<pre class="text"><code>0.0   100
+2.0   100
+4.0   20
+10.0  20
+12.0  100</code></pre></li>
+<li><p><strong>Execute Ecasound with the Envelope File</strong>: Link
+the text file to the amplify operator using <code>-kos</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:dialogue.wav</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:ambience.wav</span> <span class="at">-ea:100</span> <span class="at">-kos:1,ambience_env.txt</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-o:mixed_output.wav</span></span></code></pre></div></li>
+</ol>
+<p>In this setup, the ambience track remains at full volume for the
+first two seconds, crossfades down to 20% over two seconds, remains
+ducked under the dialogue until second 10, and smoothly fades back to
+100% by second 12.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

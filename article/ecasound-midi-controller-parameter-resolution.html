@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound MIDI Controller Parameter Resolution - ecasound</title>
+    <meta name="description" content="Ecasound supports both standard 7-bit and high-resolution 14-bit MIDI Continuous Controllers (CC) for real-time parameter control and automation. When interfacing with external MIDI hardware or software controllers, Ecasound translates discrete 7-bit val">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-midi-controller-parameter-resolution">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound MIDI Controller Parameter Resolution - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-midi-controller-parameter-resolution" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound supports both standard 7-bit and high-resolution 14-bit MIDI Continuous Controllers (CC) for real-time parameter control and automation. When interfacing with external MIDI hardware or software controllers, Ecasound translates discrete 7-bit val" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-midi-controller-parameter-resolution">Ecasound MIDI
+Controller Parameter Resolution</h1>
+<p>Ecasound supports both standard 7-bit and high-resolution 14-bit MIDI
+Continuous Controllers (CC) for real-time parameter control and
+automation. When interfacing with external MIDI hardware or software
+controllers, Ecasound translates discrete 7-bit values (128 steps) and
+combined 14-bit values (16,384 steps) into continuous floating-point
+ranges to adjust internal audio processing parameters smoothly.</p>
+<h3 id="7-bit-midi-controller-resolution">7-Bit MIDI Controller
+Resolution</h3>
+<p>Standard MIDI continuous controller messages operate at a 7-bit
+depth. Ecasound processes these messages using the native standard
+resolution:</p>
+<ul>
+<li><strong>Discrete Steps:</strong> 128 distinct values, ranging from
+integer <code>0</code> to <code>127</code>.</li>
+<li><strong>Step Size:</strong> Approximately 0.787% of the total target
+parameter range per step.</li>
+<li><strong>Application:</strong> Standard volume controls, pan
+positions, standard effect wet/dry mixes, and basic plugin parameters
+that do not require ultra-fine tuning.</li>
+</ul>
+<p>When a 7-bit controller is bound to an Ecasound chain operator
+parameter, the incoming integer value <span class="math inline">\([0,
+127]\)</span> is linearly mapped to the target parameter's defined
+minimum and maximum range (<span class="math inline">\([P_{min},
+P_{max}]\)</span>).</p>
+<h3 id="14-bit-midi-controller-resolution">14-Bit MIDI Controller
+Resolution</h3>
+<p>For parameters requiring higher precision, Ecasound supports 14-bit
+dual-byte MIDI CC pairs. This implementation combines a Most Significant
+Byte (MSB) controller with a Least Significant Byte (LSB)
+controller:</p>
+<ul>
+<li><strong>Discrete Steps:</strong> 16,384 distinct values, ranging
+from integer <code>0</code> to <code>16383</code>.</li>
+<li><strong>Step Size:</strong> Approximately 0.0061% of the target
+range per step.</li>
+<li><strong>Controller Pairing:</strong> Utilizes standard MIDI CC
+pairings, where CC 0 through 31 serve as the MSB (coarse adjustment) and
+CC 32 through 63 provide the matching LSB (fine adjustment).</li>
+<li><strong>Application:</strong> High-precision filter cutoff
+frequencies, wide-band pitch adjustments, and high-dynamic-range gain
+stages where 7-bit mapping can introduce audible stepping or "zipper
+noise."</li>
+</ul>
+<h3 id="internal-processing-resolution">Internal Processing
+Resolution</h3>
+<p>Regardless of whether 7-bit or 14-bit controllers are used, Ecasound
+converts the incoming MIDI integer data into its internal continuous
+parameter format:</p>
+<ul>
+<li><strong>Internal Representation:</strong> Parameters are represented
+internally as single- or double-precision floating-point values
+(<code>float</code> or <code>double</code>).</li>
+<li><strong>Value Normalization:</strong> Incoming controller data is
+normalized to a normalized range <span class="math inline">\([0.0,
+1.0]\)</span> before being scaled to the actual parameter limits defined
+in the chain setup.</li>
+<li><strong>Control Rate:</strong> Updates occur at the audio processing
+buffer boundary (determined by the buffer size and sample rate set via
+the <code>-b</code> command-line option), ensuring synchronization with
+real-time audio playback.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

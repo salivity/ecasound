@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Master Clock Synchronization Explained - ecasound</title>
+    <meta name="description" content="This article examines how Ecasound manages master clock synchronization when processing diverse audio inputs. It details the role of Ecasound's internal processing engine, its dependence on external audio servers such as JACK and ALSA, and the strategies">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-master-clock-synchronization-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Master Clock Synchronization Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-master-clock-synchronization-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how Ecasound manages master clock synchronization when processing diverse audio inputs. It details the role of Ecasound's internal processing engine, its dependence on external audio servers such as JACK and ALSA, and the strategies" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-master-clock-synchronization-explained">Ecasound Master
+Clock Synchronization Explained</h1>
+<p>This article examines how Ecasound manages master clock
+synchronization when processing diverse audio inputs. It details the
+role of Ecasound's internal processing engine, its dependence on
+external audio servers such as JACK and ALSA, and the strategies
+required to prevent clock drift and buffer mismatches across disparate
+hardware and software audio sources.</p>
+<h3 id="the-central-engine-and-primary-clock-source">The Central Engine
+and Primary Clock Source</h3>
+<p>Ecasound relies on an internal processing engine that operates
+strictly in cycles. When executing a signal chain, the engine designates
+a single audio object—typically the real-time output device or the
+primary real-time input—as the master timing driver. For every cycle,
+the engine attempts to process a fixed number of audio frames determined
+by the engine buffer size (<code>-b:buffersize</code>) and the audio
+sample rate (<code>-f:sample_format,channels,sample_rate</code>).</p>
+<p>All processing chains within an active setup must adhere to this
+single nominal sample rate and buffer interval. The timing driver
+dictates the pace at which the loop iterates, pulling or pushing audio
+data across all connected chains in lockstep.</p>
+<h3 id="handling-static-files-vs-real-time-inputs">Handling Static Files
+vs. Real-Time Inputs</h3>
+<p>When mixing pre-recorded files (such as WAV or FLAC) with live
+hardware streams, synchronization is maintained effortlessly.
+Pre-recorded audio objects are passive; Ecasound reads the exact number
+of frames required by the current engine cycle directly from the file
+system. Because non-real-time sources have no independent clocking
+crystal, they naturally conform to the rate demanded by the master
+real-time device without drifting.</p>
+<h3 id="the-challenge-of-multiple-hardware-clock-domains">The Challenge
+of Multiple Hardware Clock Domains</h3>
+<p>Problems arise when connecting multiple physical audio devices
+simultaneously under direct drivers like ALSA or OSS. Each physical
+sound card possesses its own crystal oscillator. Even if two cards are
+set to 48,000 Hz, slight manufacturing variances mean one card will
+inevitably produce or consume samples faster than the other.</p>
+<p>Ecasound’s core architecture does not implement automatic, dynamic
+real-time resampling between independent hardware audio inputs. If
+multiple raw ALSA devices are routed into an Ecasound session without
+external synchronization, the buffers of the secondary devices will
+eventually experience buffer underruns or overruns (xruns), leading to
+audio dropouts or desynchronization. To synchronize multiple hardware
+inputs natively at the hardware level, the physical sound cards must
+share a common hardware word clock or S/PDIF/ADAT sync cable.</p>
+<h3
+id="synchronization-via-the-jack-audio-connection-kit">Synchronization
+via the JACK Audio Connection Kit</h3>
+<p>To overcome multi-device hardware drift without physical word clock
+cables, Ecasound delegates clock management to JACK (JACK Audio
+Connection Kit).</p>
+<p>When Ecasound is configured with JACK inputs and outputs
+(<code>-i:jack</code>, <code>-o:jack</code>), Ecasound relinquishes its
+role as the timing master. Instead, it operates strictly as a JACK
+client. The JACK server controls the hardware audio interface, driving
+the sample rate and buffer intervals through a unified real-time process
+callback:</p>
+<ol type="1">
+<li><strong>Master Timebase:</strong> JACK acts as the absolute master
+clock authority, executing all audio processing within synchronous
+process cycles.</li>
+<li><strong>Unified Buffer Frames:</strong> Ecasound runs its entire
+internal chain network inside the JACK process callback, ensuring that
+incoming frames from JACK audio ports correspond exactly to the outgoing
+frames expected by the engine.</li>
+<li><strong>Adaptive Resampling:</strong> If diverse external hardware
+inputs must be unified into the session, tools such as
+<code>zita-a2j</code> or <code>alsa_in</code> are used within the JACK
+environment. These external bridges resample the secondary hardware
+streams in real-time to match JACK’s master clock before Ecasound
+receives the audio, entirely avoiding xruns.</li>
+</ol>
+<h3 id="sample-rate-normalization">Sample Rate Normalization</h3>
+<p>For diverse inputs operating at different nominal sample rates (for
+instance, a 44.1 kHz input mixed with a 48 kHz stream), Ecasound
+requires all audio streams to be converted to the engine’s operating
+sample rate. Ecasound includes an integrated <code>resample</code> audio
+object that allows an input stream to be converted prior to entering the
+main engine mix. By normalizing sample rates at the input boundary, the
+internal engine maintains phase and timing consistency across all
+combined chains.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapping MIDI Pitch Bend to Resampling in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound does not natively support mapping MIDI pitch bend messages directly to dynamic audio resampling rates out of the box. While Ecasound includes powerful routing, processing, and MIDI control capabilities, its internal resampling engine operates wi">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/mapping-midi-pitch-bend-to-resampling-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mapping MIDI Pitch Bend to Resampling in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/mapping-midi-pitch-bend-to-resampling-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not natively support mapping MIDI pitch bend messages directly to dynamic audio resampling rates out of the box. While Ecasound includes powerful routing, processing, and MIDI control capabilities, its internal resampling engine operates wi" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mapping-midi-pitch-bend-to-resampling-in-ecasound">Mapping MIDI
+Pitch Bend to Resampling in Ecasound</h1>
+<p>Ecasound does not natively support mapping MIDI pitch bend messages
+directly to dynamic audio resampling rates out of the box. While
+Ecasound includes powerful routing, processing, and MIDI control
+capabilities, its internal resampling engine operates with fixed
+sample-rate conversion settings rather than a continuously modulated
+resampler. Achieving real-time resampling or pitch modulation via MIDI
+pitch bend requires utilizing external plugins, MIDI translation
+utilities, or the Ecasound Control Interface (ECI).</p>
+<h3 id="core-limitations-in-ecasound">Core Limitations in Ecasound</h3>
+<p>Two specific architectural factors prevent direct
+pitch-bend-to-resampling control in standard Ecasound setups:</p>
+<ol type="1">
+<li><strong>Fixed Resampling Pipeline:</strong> Ecasound handles sample
+rate conversion automatically between chains, audio inputs, and outputs
+using libraries like <code>libsamplerate</code>. This conversion rate is
+determined during chain setup and remains static throughout the
+processing loop, meaning the core engine does not expose the resampling
+factor as a dynamically automatable parameter.</li>
+<li><strong>MIDI Message Handling:</strong> Ecasound’s dynamic parameter
+mapping argument (<code>-km</code>) is designed primarily for standard
+7-bit MIDI Continuous Controllers (CC 0–127). The MIDI pitch bend wheel
+uses a dedicated 14-bit message format, which is not directly selectable
+as a control source inside Ecasound's built-in controller mapping
+system.</li>
+</ol>
+<h3 id="how-to-implement-the-functionality">How to Implement the
+Functionality</h3>
+<p>To achieve variable-rate resampling or pitch changes driven by pitch
+bend, you must bypass the static resampler and configure an automatable
+processing chain:</p>
+<h4 id="1-translate-pitch-bend-to-midi-cc">1. Translate Pitch Bend to
+MIDI CC</h4>
+<p>Because Ecasound’s <code>-km</code> parameter expects MIDI CC
+messages, use an external MIDI routing tool such as
+<code>mididings</code> or a Pure Data patch. Convert the 14-bit pitch
+bend events coming from your MIDI controller into standard 7-bit MIDI CC
+messages (for example, MIDI CC 20) and forward them to a virtual ALSA or
+JACK MIDI port connected to Ecasound.</p>
+<h4 id="2-use-a-real-time-pitch-or-varispeed-ladspa-plugin">2. Use a
+Real-Time Pitch or Varispeed LADSPA Plugin</h4>
+<p>Instead of altering the global stream resampling rate, insert a
+LADSPA plugin capable of real-time pitch modification or variable-speed
+resampling into your Ecasound chain. Common options include LADSPA
+pitch-shifting plugins (such as TAP Pitch Shifter) or
+time-stretching/resampling plugins.</p>
+<h4 id="3-map-the-control-signal-in-ecasound">3. Map the Control Signal
+in Ecasound</h4>
+<p>Once the plugin is in place and the MIDI messages are formatted as
+CCs, use the <code>-km</code> flag to bind the incoming CC to the
+plugin's frequency or pitch multiplier parameter:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span> <span class="at">-el:tap_pitch,0,0,1</span> <span class="at">-km:1,1,20,0,2,1</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li><code>-el</code> loads the designated plugin with initial
+parameters.</li>
+<li><code>-km</code> binds controller mapping: it takes the controller
+source (MIDI channel 1, CC 20) and scales it across the designated range
+to modulate the plugin parameter in real time.</li>
+</ul>
+<h3 id="programmatic-control-via-eci">Programmatic Control via ECI</h3>
+<p>If LADSPA plugins are insufficient and you need custom dynamic
+resampling logic, use the Ecasound Control Interface (ECI) with a
+language like Python. A script can listen directly to raw ALSA or JACK
+MIDI pitch bend events and dynamically adjust chain or plugin parameters
+using ECI commands, bypassing the limitations of the command-line
+<code>-km</code> syntax.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

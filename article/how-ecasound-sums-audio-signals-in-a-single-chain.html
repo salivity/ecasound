@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Sums Audio Signals in a Single Chain - ecasound</title>
+    <meta name="description" content="This article explains the internal mechanism Ecasound uses to mix multiple audio inputs routed into a single processing chain. It covers the mathematical summation process, internal sample resolution, channel alignment rules, and gain staging techniques">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-sums-audio-signals-in-a-single-chain">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Sums Audio Signals in a Single Chain - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-sums-audio-signals-in-a-single-chain" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the internal mechanism Ecasound uses to mix multiple audio inputs routed into a single processing chain. It covers the mathematical summation process, internal sample resolution, channel alignment rules, and gain staging techniques" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-sums-audio-signals-in-a-single-chain">How Ecasound
+Sums Audio Signals in a Single Chain</h1>
+<p>This article explains the internal mechanism Ecasound uses to mix
+multiple audio inputs routed into a single processing chain. It covers
+the mathematical summation process, internal sample resolution, channel
+alignment rules, and gain staging techniques necessary to avoid digital
+clipping when combining multiple signals.</p>
+<p>When multiple audio inputs are attached to a single chain in Ecasound
+(for example, configuring a chain with
+<code>-a:1 -i:input1.wav -i:input2.wav</code>), the engine combines
+these streams using linear digital summing. During each processing
+cycle, Ecasound reads an identical buffer size of audio frames from each
+specified input source and performs sample-by-sample arithmetic addition
+across corresponding channels before passing the data to any chain
+operators or downstream outputs.</p>
+<p>The mathematical process operates on a direct additive basis:</p>
+<p><code>Sample_Out[channel, frame] = Sample_Input1[channel, frame] + Sample_Input2[channel, frame] + ... + Sample_InputN[channel, frame]</code></p>
+<h3 id="internal-processing-and-bit-depth">Internal Processing and Bit
+Depth</h3>
+<p>Ecasound utilizes high-precision internal representations (typically
+32-bit or 64-bit floating-point, depending on build configuration and
+operating mode) while processing audio data within a chain. Because
+arithmetic addition occurs in this high-headroom space, summing two
+signals that each peak near 0 dBFS will not cause distortion or clipping
+<em>inside</em> the chain's processing buffer.</p>
+<p>However, if the summed signal is subsequently written to an
+integer-based output format—such as a standard 16-bit or 24-bit PCM WAV
+file or a hardware sound card output—any values exceeding the normalized
+full scale range (values greater than +1.0 or less than -1.0) will be
+hard-clipped unless gain reduction is applied.</p>
+<h3 id="channel-alignment-and-matching">Channel Alignment and
+Matching</h3>
+<p>Ecasound matches channels strictly by index during the summing
+operation:</p>
+<ul>
+<li><strong>Channel 1 (Left)</strong> of Input A is added directly to
+<strong>Channel 1 (Left)</strong> of Input B.</li>
+<li><strong>Channel 2 (Right)</strong> of Input A is added directly to
+<strong>Channel 2 (Right)</strong> of Input B.</li>
+</ul>
+<p>If inputs have mismatched channel counts, Ecasound matches existing
+channel indices up to the maximum common channel count. For deliberate
+channel routing, splitting, or mixing individual tracks to specific
+destinations within the chain, you must use channel routing operators
+(such as the <code>-erc</code> copy or <code>-erm</code> mute operators)
+prior to or following the summing stage.</p>
+<h3 id="gain-control-and-headroom-management">Gain Control and Headroom
+Management</h3>
+<p>Because summing signals increases overall acoustic amplitude,
+multiple inputs combined at nominal levels often exceed 0 dBFS. Ecasound
+does not automatically normalize or reduce the level of incoming signals
+when mixing them into a single chain. To prevent clipping on the final
+output, you must explicitly attenuate the combined signal using chain
+operators:</p>
+<ul>
+<li><strong><code>-ea:gain_%</code></strong>: Adjusts the linear gain of
+all channels in the chain (e.g., <code>-ea:50</code> reduces the overall
+summed level by 50%).</li>
+<li><strong><code>-eal:limit_%</code></strong>: Applies a soft limiter
+to catch peaks that breach the threshold after summation.</li>
+</ul>
+<p>By default, summing in Ecasound is transparent, unweighted, and
+linear, leaving total dynamic control and channel distribution to the
+user's explicit parameter definitions.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

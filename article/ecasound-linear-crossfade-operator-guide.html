@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Linear Crossfade Operator Guide - ecasound</title>
+    <meta name="description" content="This article provides a direct overview of how to perform linear crossfading between two audio streams using Ecasound. While Ecasound lacks a single dedicated "crossfade" filter, it achieves precise linear crossfading via the -klg (linear envelope) contr">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-linear-crossfade-operator-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Linear Crossfade Operator Guide - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-linear-crossfade-operator-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a direct overview of how to perform linear crossfading between two audio streams using Ecasound. While Ecasound lacks a single dedicated "crossfade" filter, it achieves precise linear crossfading via the -klg (linear envelope) contr" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-linear-crossfade-operator-guide">Ecasound Linear
+Crossfade Operator Guide</h1>
+<p>This article provides a direct overview of how to perform linear
+crossfading between two audio streams using Ecasound. While Ecasound
+lacks a single dedicated "crossfade" filter, it achieves precise linear
+crossfading via the <strong><code>-klg</code></strong> (linear envelope)
+controller operator applied to the <strong><code>-ea</code></strong>
+(amplify) effect operator across multiple audio chains. Below is a
+breakdown of how the operator works, its syntax, and an implementation
+example.</p>
+<h2 id="the-linear-crossfade-operator--klg">The Linear Crossfade
+Operator: <code>-klg</code></h2>
+<p>In Ecasound, dynamic parameter automation is handled by controller
+operators. The operator responsible for linear changes over time is
+<strong><code>-klg</code></strong>.</p>
+<p>To crossfade between two separate streams, <code>-klg</code> is
+assigned to each stream's chain to dynamically control the amplitude
+parameter of the <code>-ea</code> operator. One chain ramps its volume
+down linearly, while the other ramps its volume up.</p>
+<h3 id="syntax-of-the--klg-operator">Syntax of the <code>-klg</code>
+Operator</h3>
+<pre class="text"><code>-klg:fx_param,start_val,end_val,len,delay</code></pre>
+<p>The operator takes five parameters:</p>
+<ul>
+<li><strong><code>fx_param</code></strong>: The index of the parameter
+being controlled. When attached to <code>-ea</code> (amplify), this
+value is <code>1</code> (representing amplification percentage).</li>
+<li><strong><code>start_val</code></strong>: The starting value of the
+parameter (e.g., <code>100</code> for full volume, <code>0</code> for
+silence).</li>
+<li><strong><code>end_val</code></strong>: The ending value after the
+transition completes (e.g., <code>0</code> for silence, <code>100</code>
+for full volume).</li>
+<li><strong><code>len</code></strong>: The duration of the linear
+transition in seconds.</li>
+<li><strong><code>delay</code></strong>: The delay in seconds before the
+transition starts.</li>
+</ul>
+<h2 id="implementing-a-crossfade-between-two-streams">Implementing a
+Crossfade Between Two Streams</h2>
+<p>To perform a linear crossfade between two input files, configure two
+separate processing chains that mix into a single output.</p>
+<h3 id="command-example">Command Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:stream1.wav</span> <span class="at">-ea:100</span> <span class="at">-klg:1,100,0,5,10</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:stream2.wav</span> <span class="at">-ea:0</span>   <span class="at">-klg:1,0,100,5,10</span> <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1,2</span> <span class="at">-o:mixed_output.wav</span></span></code></pre></div>
+<h3 id="how-the-command-works">How the Command Works</h3>
+<ol type="1">
+<li><strong>Chain Allocation (<code>-a:1</code> and
+<code>-a:2</code>)</strong>: Sets up two parallel processing chains for
+<code>stream1.wav</code> and <code>stream2.wav</code>.</li>
+<li><strong>Stream 1 Fade-Out</strong>:
+<ul>
+<li><code>-ea:100</code> sets the base volume to 100%.</li>
+<li><code>-klg:1,100,0,5,10</code> begins after a 10-second delay,
+linearly decreasing parameter 1 of <code>-ea</code> from 100% to 0% over
+5 seconds.</li>
+</ul></li>
+<li><strong>Stream 2 Fade-In</strong>:
+<ul>
+<li><code>-ea:0</code> sets the base volume to 0% (silence).</li>
+<li><code>-klg:1,0,100,5,10</code> begins after a 10-second delay,
+linearly increasing parameter 1 of <code>-ea</code> from 0% to 100% over
+5 seconds.</li>
+</ul></li>
+<li><strong>Mixed Output
+(<code>-a:1,2 -o:mixed_output.wav</code>)</strong>: Merges both chains
+into a single destination audio file with the linear crossfade
+applied.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

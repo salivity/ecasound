@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Comping Workflow in Ecasound - ecasound</title>
+    <meta name="description" content="Track comping in Ecasound is achieved by assigning multiple takes to individual audio chains, defining playback regions using precise time-based controllers or input offsets, and routing the selected segments into a unified master output. Because Ecasoun">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/track-comping-workflow-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Track Comping Workflow in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/track-comping-workflow-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Track comping in Ecasound is achieved by assigning multiple takes to individual audio chains, defining playback regions using precise time-based controllers or input offsets, and routing the selected segments into a unified master output. Because Ecasoun" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="track-comping-workflow-in-ecasound">Track Comping Workflow in
+Ecasound</h1>
+<p>Track comping in Ecasound is achieved by assigning multiple takes to
+individual audio chains, defining playback regions using precise
+time-based controllers or input offsets, and routing the selected
+segments into a unified master output. Because Ecasound is a
+command-line multitrack processor, comping relies on non-destructive
+chainsetup scripting, gain automation, and crossfading to seamlessly
+merge the strongest performances from distinct takes into a single,
+cohesive track.</p>
+<h3 id="1-prepare-and-align-the-takes">1. Prepare and Align the
+Takes</h3>
+<p>Place all recorded takes into the project directory and verify that
+their sample rates, bit depths, and start offsets match. If the takes do
+not share a common starting point, establish a baseline reference time
+so that every performance aligns with the project tempo or guide
+track.</p>
+<h3 id="2-configure-individual-chains-in-a-chainsetup">2. Configure
+Individual Chains in a Chainsetup</h3>
+<p>Create an Ecasound chainsetup file (<code>comp.ecs</code>) or
+construct an Ecasound command line where each take is routed through its
+own processing chain:</p>
+<ul>
+<li>Assign each file to a dedicated chain ID (e.g.,
+<code>-a:take1 -i:take_01.wav</code>,
+<code>-a:take2 -i:take_02.wav</code>).</li>
+<li>Assign all active comping chains to the same master output file or
+bus (e.g., <code>-a:take1,take2 -o:master_comp.wav</code>).</li>
+</ul>
+<h3 id="3-isolate-the-best-segments-using-gain-envelopes">3. Isolate the
+Best Segments Using Gain Envelopes</h3>
+<p>To assemble the best sections non-destructively, use volume
+automation controllers to unmute only the desired portions of each take
+while muting the rest:</p>
+<ul>
+<li>Apply an amplify effect (<code>-ea:0</code>) by default on each
+chain to silence the track.</li>
+<li>Use Ecasound's linear envelope controller (<code>-kl</code>) to
+raise the volume to 100% (<code>-ea:100</code>) during the selected
+performance window and return it to 0% when another take takes
+over.</li>
+<li>Alternatively, use time-bounded audio object slicing if cutting
+files directly at specific time marks.</li>
+</ul>
+<h3 id="4-apply-crossfades-at-edit-points">4. Apply Crossfades at Edit
+Points</h3>
+<p>Hard cuts between audio takes often introduce audible clicks or phase
+issues. To prevent this:</p>
+<ul>
+<li>Overlap the active regions between outgoing and incoming takes by 5
+to 20 milliseconds.</li>
+<li>Shape the envelope controllers (<code>-kl</code>) so that the
+outgoing chain ramps down from 100 to 0 while the incoming chain ramps
+up from 0 to 100 across the overlapping window.</li>
+</ul>
+<h3 id="5-render-and-verify-the-master-comp">5. Render and Verify the
+Master Comp</h3>
+<p>Execute the chainsetup from the terminal to render the combined
+audio:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-s:comp.ecs</span> <span class="at">-E</span></span></code></pre></div>
+<p>Audition the resulting file (<code>master_comp.wav</code>) alongside
+your reference tracks. If any transitions sound abrupt, adjust the
+timing parameters of the envelope controllers in the setup file and
+re-render until the comp sounds like a continuous, single
+performance.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

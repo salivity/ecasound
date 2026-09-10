@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound -z:intbuf Parameter Explained - ecasound</title>
+    <meta name="description" content="The -z:intbuf parameter in Ecasound defines the size of the internal processing buffer used by the audio engine, measured in sample frames. Configuring this parameter directly influences the balance between system latency and audio processing stability d">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-z-intbuf-parameter-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound -z:intbuf Parameter Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-z-intbuf-parameter-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The -z:intbuf parameter in Ecasound defines the size of the internal processing buffer used by the audio engine, measured in sample frames. Configuring this parameter directly influences the balance between system latency and audio processing stability d" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound--zintbuf-parameter-explained">Ecasound -z:intbuf
+Parameter Explained</h1>
+<p>The <code>-z:intbuf</code> parameter in Ecasound defines the size of
+the internal processing buffer used by the audio engine, measured in
+sample frames. Configuring this parameter directly influences the
+balance between system latency and audio processing stability during
+playback, recording, or effect chaining. This article breaks down the
+technical function of <code>-z:intbuf</code>, how it affects real-time
+audio performance, and how to select the right buffer size for your
+workflow.</p>
+<h3 id="purpose-of--zintbuf">Purpose of <code>-z:intbuf</code></h3>
+<p>In Ecasound, audio is processed in discrete blocks of frames rather
+than individual samples. The <code>-z:intbuf</code> option specifies the
+exact number of sample frames allocated to each internal processing
+cycle.</p>
+<p>The syntax for this option is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-z:intbuf,frames</span></span></code></pre></div>
+<p>For example, running
+<code>ecasound -z:intbuf,512 -i input.wav -o alsa</code> instructs
+Ecasound to handle audio internally in 512-frame chunks.</p>
+<h3 id="latency-vs-stability">Latency vs. Stability</h3>
+<p>The primary purpose of altering the internal buffer size is managing
+latency and system throughput:</p>
+<ul>
+<li><strong>Lower Buffer Sizes (e.g., 64, 128, 256):</strong> Minimizes
+latency, making it ideal for live performance, interactive monitoring,
+or real-time synthesizer control. However, smaller buffers require the
+CPU to handle interrupts more frequently, which increases processing
+overhead and raises the risk of buffer underruns (xruns), audible
+dropouts, and clicks.</li>
+<li><strong>Higher Buffer Sizes (e.g., 1024, 2048, 4096):</strong>
+Increases processing stability and reduces CPU load. Larger buffers are
+well-suited for non-real-time rendering, multitrack mixing, heavy
+digital signal processing (DSP), or running tasks on hardware with
+constrained CPU capabilities. The tradeoff is higher audio latency.</li>
+</ul>
+<h3 id="interaction-with-external-buffers">Interaction with External
+Buffers</h3>
+<p>Ecasound differentiates between internal processing buffers and
+external I/O buffers (configured with <code>-z:extbuf</code>). While
+<code>-z:extbuf</code> sets the buffer size for hardware input/output
+subsystems like ALSA or OSS, <code>-z:intbuf</code> dictates how the
+internal signal chain processes the data between those inputs and
+outputs.</p>
+<p>For the most predictable timing and to prevent unnecessary internal
+queueing, setting <code>-z:intbuf</code> to match or divide evenly with
+your external audio hardware period size is recommended. When integrated
+with JACK audio server routing, Ecasound typically derives timing
+automatically, but manual tuning with <code>-z:intbuf</code> remains
+essential when interacting directly with ALSA devices or disk-based
+workflows.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

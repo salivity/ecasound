@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Note Gating for Audio in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how Ecasound utilizes MIDI note-on and note-off messages to gate audio signals in real time. By routing incoming MIDI events to chain operator parameters—specifically volume and amplification controls—Ecasound can open the audio">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/midi-note-gating-for-audio-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MIDI Note Gating for Audio in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/midi-note-gating-for-audio-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Ecasound utilizes MIDI note-on and note-off messages to gate audio signals in real time. By routing incoming MIDI events to chain operator parameters—specifically volume and amplification controls—Ecasound can open the audio" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="midi-note-gating-for-audio-in-ecasound">MIDI Note Gating for
+Audio in Ecasound</h1>
+<p>This article explains how Ecasound utilizes MIDI note-on and note-off
+messages to gate audio signals in real time. By routing incoming MIDI
+events to chain operator parameters—specifically volume and
+amplification controls—Ecasound can open the audio path upon receiving a
+note-on command and silence it immediately when a corresponding note-off
+command is detected.</p>
+<h3 id="the-underlying-control-mechanism">The Underlying Control
+Mechanism</h3>
+<p>Ecasound treats dynamic signal adjustments through its chain
+controller subsystem. Rather than operating as a full-featured digital
+audio workstation with built-in graphical MIDI routing, Ecasound relies
+on mapping MIDI triggers directly to audio processing parameters using
+command-line arguments or interactive control commands.</p>
+<p>Gating an audio track via MIDI requires binding an amplitude operator
+to a MIDI controller input. This is typically achieved using the
+<code>-ea</code> (amplify) effect coupled with the <code>-km</code>
+(MIDI continuous controller) or note-tracking controller options.</p>
+<h3 id="capturing-midi-events">Capturing MIDI Events</h3>
+<p>To accept MIDI data, Ecasound must be bound to a MIDI driver,
+commonly the ALSA sequencer (<code>alsaseq</code>) or raw MIDI interface
+(<code>rawmidi</code>):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-Md:alsaseq,default</span></span></code></pre></div>
+<p>Once initialized, Ecasound registers an ALSA client port, allowing
+external hardware controllers, software sequencers, or virtual keyboards
+to route events directly into the processing engine.</p>
+<h3 id="mapping-note-on-and-note-off-to-gate-audio">Mapping Note-On and
+Note-Off to Gate Audio</h3>
+<p>A standard gate requires two states: closed (silence) and open
+(pass-through). In Ecasound, this behavior is established using the
+following principles:</p>
+<ol type="1">
+<li><strong>Volume Modulation Operator:</strong> The chain must contain
+an amplify effect, such as <code>-ea:0</code>, which initializes the
+channel in a muted or closed state.</li>
+<li><strong>Controller Attachment (<code>-km</code>):</strong> The
+<code>-km</code> option maps incoming MIDI messages to the target effect
+parameter. The syntax establishes the target parameter, minimum value,
+maximum value, MIDI channel, and controller type.</li>
+<li><strong>Note-On Behavior:</strong> When a MIDI note-on event
+arrives, Ecasound translates the event into a parameter change. If
+velocity sensitivity is enabled, the velocity value (1–127) scales the
+parameter between the minimum (0%) and maximum (e.g., 100% or higher)
+amplitude. If configured as a static gate, any note-on event sets the
+gain directly to the designated upper threshold.</li>
+<li><strong>Note-Off Behavior:</strong> Standard MIDI protocol sends a
+note-off event (or a note-on event with a velocity of 0) when a key is
+released. Ecasound interprets this change by resetting the mapped
+amplitude parameter back to the baseline minimum value (0%),
+instantaneously closing the gate and silencing the track.</li>
+</ol>
+<h3 id="practical-implementation">Practical Implementation</h3>
+<p>In an Ecasound processing chain, the setup typically looks like
+this:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-B:rt</span> <span class="at">-b:128</span> <span class="at">-Md:alsaseq,default</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:audio_track.wav</span> <span class="at">-ea:0</span> <span class="at">-km:1,0,100,1,1</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>In this routing setup:</p>
+<ul>
+<li><code>-ea:0</code> initializes the audio track at 0% gain (gate
+closed).</li>
+<li><code>-km:1,0,100,1,1</code> attaches a MIDI control mapping to
+parameter 1 (amplitude), scaling from 0 (closed) to 100 (open) based on
+incoming MIDI channel 1 messages.</li>
+</ul>
+<h3 id="latency-and-buffer-sizing">Latency and Buffer Sizing</h3>
+<p>Because gating is an amplitude-based envelope operation, gate
+responsiveness depends directly on Ecasound’s internal buffer
+configuration. By reducing the buffer size (using the <code>-b</code>
+flag) and running in real-time mode (<code>-B:rt</code>), you minimize
+the delay between the physical MIDI event and the audio gate opening or
+closing, ensuring tight temporal synchronization between MIDI triggers
+and audio playback.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

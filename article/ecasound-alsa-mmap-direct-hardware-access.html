@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound ALSA MMAP Direct Hardware Access - ecasound</title>
+    <meta name="description" content="This article examines whether Ecasound supports direct hardware access via ALSA memory-mapped (mmap) I/O, explains how Ecasound interacts with ALSA device drivers, and outlines practical solutions for using Ecasound with audio hardware that requires mmap">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-alsa-mmap-direct-hardware-access">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound ALSA MMAP Direct Hardware Access - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-alsa-mmap-direct-hardware-access" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines whether Ecasound supports direct hardware access via ALSA memory-mapped (mmap) I/O, explains how Ecasound interacts with ALSA device drivers, and outlines practical solutions for using Ecasound with audio hardware that requires mmap" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-alsa-mmap-direct-hardware-access">Ecasound ALSA MMAP
+Direct Hardware Access</h1>
+<p>This article examines whether Ecasound supports direct hardware
+access via ALSA memory-mapped (mmap) I/O, explains how Ecasound
+interacts with ALSA device drivers, and outlines practical solutions for
+using Ecasound with audio hardware that requires mmap transfers.</p>
+<h3 id="direct-hardware-access-in-ecasound">Direct Hardware Access in
+Ecasound</h3>
+<p>Ecasound supports direct hardware access under the Advanced Linux
+Sound Architecture (ALSA). By specifying device identifiers such as
+<code>hw:0,0</code> or <code>hw:CARD,DEV</code> with the
+<code>-i:alsa,hw:0,0</code> and <code>-o:alsa,hw:0,0</code> options,
+Ecasound can bypass system-wide software mixers like PulseAudio or
+PipeWire to communicate straight to the ALSA kernel drivers.</p>
+<h3 id="native-alsa-mmap-support-in-ecasound">Native ALSA MMAP Support
+in Ecasound</h3>
+<p>While Ecasound supports direct hardware access via <code>hw:</code>,
+its native ALSA I/O module (<code>audioio_alsa.cpp</code>) does not
+natively implement the ALSA direct memory-mapped
+(<code>snd_pcm_mmap_*</code>) API.</p>
+<p>Instead, Ecasound relies on standard interleaved read/write I/O
+routines (<code>snd_pcm_readi</code> and <code>snd_pcm_writei</code>).
+It requests standard read/write access
+(<code>SND_PCM_ACCESS_RW_INTERLEAVED</code>) from the ALSA driver during
+the hardware parameter configuration phase. As a result, Ecasound cannot
+natively open a direct hardware interface in pure mmap mode on its
+own.</p>
+<h3 id="workarounds-for-mmap-only-hardware">Workarounds for MMAP-Only
+Hardware</h3>
+<p>Certain professional sound cards (such as RME HDSP models) strictly
+require mmap-based transfers at the driver level and reject standard
+read/write operations. When targeting this hardware with Ecasound,
+direct <code>hw:</code> access will fail with parameter errors. You can
+resolve this limitation using the following methods:</p>
+<ol type="1">
+<li><p><strong>The ALSA <code>plughw</code> Layer</strong><br />
+Using <code>plughw:0,0</code> instead of <code>hw:0,0</code> activates
+ALSA’s software plugin layer. The <code>plug</code> plugin automatically
+converts between Ecasound's read/write calls and the memory-mapped
+access expected by the underlying audio card.</p></li>
+<li><p><strong>ALSA <code>mmap_emul</code> Plugin</strong><br />
+You can define a custom PCM device in your <code>~/.asoundrc</code> or
+<code>/etc/asound.conf</code> file utilizing the <code>mmap_emul</code>
+plugin. This exposes a standard read/write interface to Ecasound while
+maintaining memory-mapped I/O directly to the hardware.</p></li>
+<li><p><strong>Routing via JACK Audio Connection Kit</strong><br />
+If zero-copy, direct memory-mapped access is required for strict
+ultra-low-latency performance, run the JACK sound server directly on top
+of the ALSA mmap hardware. Ecasound can then connect to JACK using its
+native JACK input and output endpoints (<code>-i:jack</code> and
+<code>-o:jack</code>), leveraging JACK's full mmap driver
+implementation.</p></li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

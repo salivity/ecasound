@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Wildcards for Chain Names in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to define and use wildcard chain name patterns in Ecasound to efficiently manage multiple audio processing chains simultaneously. By leveraging wildcard matching, you can group chains, assign shared inputs, outputs, and effects,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/using-wildcards-for-chain-names-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Wildcards for Chain Names in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/using-wildcards-for-chain-names-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to define and use wildcard chain name patterns in Ecasound to efficiently manage multiple audio processing chains simultaneously. By leveraging wildcard matching, you can group chains, assign shared inputs, outputs, and effects," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-wildcards-for-chain-names-in-ecasound">Using Wildcards for
+Chain Names in Ecasound</h1>
+<p>This article explains how to define and use wildcard chain name
+patterns in Ecasound to efficiently manage multiple audio processing
+chains simultaneously. By leveraging wildcard matching, you can group
+chains, assign shared inputs, outputs, and effects, and simplify complex
+multi-track session configurations without manually specifying each
+individual chain name.</p>
+<h2 id="understanding-chain-patterns-in-ecasound">Understanding Chain
+Patterns in Ecasound</h2>
+<p>In Ecasound, audio chains are selected and configured using the
+<code>-a</code> option (in command-line mode) or commands like
+<code>c-select</code> (in interactive mode). Instead of applying
+commands to one chain at a time, you can supply a pattern containing
+wildcards to target multiple existing chains in a single operation.</p>
+<p>Ecasound supports standard wildcard characters:</p>
+<ul>
+<li><strong><code>*</code> (Asterisk):</strong> Matches any sequence of
+zero or more characters.</li>
+<li><strong><code>?</code> (Question mark):</strong> Matches any single
+character.</li>
+<li><strong><code>,</code> (Comma):</strong> Acts as a delimiter to
+combine multiple patterns or specific chain names into a single
+list.</li>
+</ul>
+<h2 id="escaping-wildcards-in-the-shell">Escaping Wildcards in the
+Shell</h2>
+<p>When running Ecasound from a Unix-like shell (such as Bash or Zsh),
+wildcards must be quoted or escaped. If unquoted, the shell attempts to
+expand <code>*</code> or <code>?</code> against files in the current
+working directory before passing the argument to Ecasound.</p>
+<p>To ensure Ecasound parses the wildcard pattern directly, wrap the
+argument in quotes:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:</span><span class="st">&quot;track*&quot;</span> <span class="at">-i:sound.wav</span></span></code></pre></div>
+<p>Or escape the special character with a backslash:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:track\*</span> <span class="at">-i:sound.wav</span></span></code></pre></div>
+<h2 id="defining-and-selecting-chains-with-wildcard-examples">Defining
+and Selecting Chains with Wildcard Examples</h2>
+<h3 id="targeting-prefixes-and-suffixes">Targeting Prefixes and
+Suffixes</h3>
+<p>If you organize your session by naming chains with systematic
+prefixes (e.g., <code>vox_lead</code>, <code>vox_backing</code>,
+<code>synth_lead</code>), you can target specific sub-groups using the
+asterisk:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply an input to all vocal chains</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:</span><span class="st">&quot;vox_*&quot;</span> <span class="at">-i:vocals_bus.wav</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply an effect to all lead elements</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:</span><span class="st">&quot;*_lead&quot;</span> <span class="at">-efl:1000</span></span></code></pre></div>
+<h3 id="matching-fixed-length-variations">Matching Fixed-Length
+Variations</h3>
+<p>Use the <code>?</code> wildcard when targeting numbered tracks or
+single-character identifiers:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Matches track1, track2, trackA, but not track10</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:</span><span class="st">&quot;track?&quot;</span> <span class="at">-ea:120</span></span></code></pre></div>
+<h3 id="combining-lists-and-wildcards">Combining Lists and
+Wildcards</h3>
+<p>You can combine wildcards with comma-separated chain names to target
+disparate sets of chains within the same argument:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Targets master, aux, and all chains starting with drum_</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:</span><span class="st">&quot;master,aux,drum_*&quot;</span> <span class="at">-ea:100</span></span></code></pre></div>
+<h3 id="interactive-mode-usage">Interactive Mode Usage</h3>
+<p>In interactive mode (<code>ecasound -c</code>), chain selection
+commands accept the same wildcard patterns:</p>
+<pre class="text"><code>ecasound&gt; c-select track*
+ecasound&gt; cop-add -efl:800</code></pre>
+<p>This selects all chains starting with <code>track</code> and attaches
+a lowpass filter to each matched chain.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

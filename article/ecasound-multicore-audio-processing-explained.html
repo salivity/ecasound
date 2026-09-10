@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Multicore Audio Processing Explained - ecasound</title>
+    <meta name="description" content="This article examines whether Ecasound can utilize multicore parallel processing across separate audio chains during real-time signal routing and processing. In short, a single Ecasound process operates its audio engine on a single thread and processes c">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-multicore-audio-processing-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Multicore Audio Processing Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-multicore-audio-processing-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines whether Ecasound can utilize multicore parallel processing across separate audio chains during real-time signal routing and processing. In short, a single Ecasound process operates its audio engine on a single thread and processes c" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-multicore-audio-processing-explained">Ecasound
+Multicore Audio Processing Explained</h1>
+<p>This article examines whether Ecasound can utilize multicore parallel
+processing across separate audio chains during real-time signal routing
+and processing. In short, a single Ecasound process operates its audio
+engine on a single thread and processes chains sequentially, meaning it
+cannot natively distribute separate chains across multiple CPU cores.
+However, users can achieve multicore performance by decoupling workflows
+into multiple Ecasound instances coordinated through the JACK Audio
+Connection Kit or operating system process managers.</p>
+<h2 id="ecasounds-threading-model">Ecasound’s Threading Model</h2>
+<p>Ecasound is designed as a lightweight, low-latency command-line
+multitrack audio processor. Inside a single running instance, its core
+signal engine executes in a single real-time processing loop.</p>
+<p>When multiple audio chains are configured within a single setup
+(<code>.ecs</code>), Ecasound evaluates these chains sequentially within
+each audio buffer cycle. Even if chains are logically independent—having
+distinct inputs, signal effects, and outputs—the engine processes them
+consecutively on a single CPU core. This architecture ensures
+deterministic timing, eliminates thread synchronization overhead, and
+avoids complex locking mechanisms, but it prevents native multicore
+parallelization.</p>
+<h2 id="cpu-saturation-limits">CPU Saturation Limits</h2>
+<p>Because processing is bound to a single thread:</p>
+<ul>
+<li><strong>Single-Core Bottleneck:</strong> Heavy chains featuring
+complex DSP, LADSPA plugins, or high-order filtering will max out a
+single CPU core, potentially causing buffer underruns (xruns) even if
+remaining system cores are idle.</li>
+<li><strong>No Internal Work-Stealing:</strong> Ecasound contains no
+built-in thread pool or worker-thread mechanism to offload individual
+chains or plugin instances to alternative cores.</li>
+</ul>
+<h2 id="achieving-multicore-parallel-processing-with-ecasound">Achieving
+Multicore Parallel Processing with Ecasound</h2>
+<p>To leverage multicore architectures with Ecasound, parallelization
+must be handled at the operating system or audio server level.</p>
+<h3 id="1-using-jack-audio-connection-kit">1. Using JACK Audio
+Connection Kit</h3>
+<p>The standard method to achieve parallel processing across multiple
+Ecasound chains is utilizing JACK in multithreaded mode:</p>
+<ul>
+<li>Run the JACK daemon (<code>jackd</code>) with multithreaded support
+enabled. JACK builds an internal dependency graph of all active audio
+clients and processes independent graph branches concurrently across
+multiple CPU cores.</li>
+<li>Instead of running one complex Ecasound process with multiple
+internal chains, launch multiple discrete Ecasound instances.</li>
+<li>Configure each Ecasound instance to use <code>jack</code> as its
+input and output subsystems.</li>
+<li>JACK will dynamically distribute these independent Ecasound
+processes across available CPU cores.</li>
+</ul>
+<h3 id="2-os-level-process-pinning">2. OS-Level Process Pinning</h3>
+<p>For predictable performance and dedicated resource distribution:</p>
+<ul>
+<li>Separate audio tasks into standalone shell scripts running separate
+Ecasound processes.</li>
+<li>Use utilities such as Linux <code>taskset</code> or
+<code>numactl</code> to pin specific Ecasound processes directly to
+specific CPU cores (e.g., <code>taskset -c 1 ecasound ...</code> and
+<code>taskset -c 2 ecasound ...</code>).</li>
+<li>Interconnect the streams using named pipes (<code>mkfifo</code>),
+ALSA loopback devices, or JACK ports.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Ecasound cannot natively process separate audio chains across
+multiple CPU cores within a single instance. True multicore parallel
+processing requires running multiple independent Ecasound instances and
+orchestrating them through an external multithreaded audio server like
+JACK or direct operating system process scheduling.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build a Multi-Channel Matrix Mixer with Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool capable of complex signal routing, filtering, and real-time level adjustment on Linux and Unix systems. This guide provides a direct walkthrough of configuring Ecasound as a flexible mu">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/build-a-multi-channel-matrix-mixer-with-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Build a Multi-Channel Matrix Mixer with Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/build-a-multi-channel-matrix-mixer-with-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool capable of complex signal routing, filtering, and real-time level adjustment on Linux and Unix systems. This guide provides a direct walkthrough of configuring Ecasound as a flexible mu" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="build-a-multi-channel-matrix-mixer-with-ecasound">Build a
+Multi-Channel Matrix Mixer with Ecasound</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool
+capable of complex signal routing, filtering, and real-time level
+adjustment on Linux and Unix systems. This guide provides a direct
+walkthrough of configuring Ecasound as a flexible multi-channel matrix
+mixer, allowing you to route any combination of inputs to any
+combination of outputs with independent gain control using native chain
+operators and the Ecasound Control Interface (ECI).</p>
+<h2 id="matrix-mixer-fundamentals-in-ecasound">Matrix Mixer Fundamentals
+in Ecasound</h2>
+<p>A matrix mixer routes <span class="math inline">\(M\)</span> audio
+inputs to <span class="math inline">\(N\)</span> audio outputs, allowing
+variable levels at every intersection point (crosspoint). In Ecasound,
+this is accomplished by using:</p>
+<ul>
+<li><strong>Audio Inputs and Outputs (<code>-i</code> and
+<code>-o</code>)</strong>: Physical soundcards via ALSA, virtual
+endpoints via JACK, or audio files.</li>
+<li><strong>Chains (<code>-a:chain_id</code>)</strong>: Signal flow
+pathways through which audio is passed, mixed, and processed.</li>
+<li><strong>Routing Operators (<code>-erc</code>, <code>-chcopy</code>,
+<code>-chmix</code>)</strong>: Tools to route specific channel indices
+across chains.</li>
+<li><strong>Amplitude Operators (<code>-ea</code> or
+<code>-eadb</code>)</strong>: Controls to adjust the gain of specific
+crosspoints.</li>
+</ul>
+<h2 id="basic-architecture-4x4-matrix-example">Basic Architecture: 4x4
+Matrix Example</h2>
+<p>In this example, we configure a 4-channel input device routed to a
+4-channel output device, creating a fully addressable 4x4 matrix mixer
+using JACK audio connections.</p>
+<h3 id="1-defining-chains-for-crosspoint-control">1. Defining Chains for
+Crosspoint Control</h3>
+<p>To adjust individual crosspoints independently, assign a distinct
+chain for each input-to-output path, or organize chains by target output
+channel. Grouping by output channel allows individual input levels to be
+summed into each output bus.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-f:f32_le,4,48000</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:in</span> <span class="at">-i</span> jack,system:capture_ <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:bus1,bus2,bus3,bus4</span> <span class="at">-i</span> null <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out1</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_1 <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out2</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_2 <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out3</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_3 <span class="dt">\</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out4</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_4</span></code></pre></div>
+<h3 id="2-splitting-and-routing-channels">2. Splitting and Routing
+Channels</h3>
+<p>To construct the matrix within a single command using ALSA or JACK,
+you can use the channel copy/mix routing operator
+<code>-erc:from_channel,to_channel</code> alongside chain-specific gain
+operators:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-B:rt</span> <span class="at">-r:50</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:matrix_in</span> <span class="at">-i</span> alsa,default <span class="at">-f:s16_le,4,44100</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out_ch1,out_ch2,out_ch3,out_ch4</span> <span class="at">-i</span> null <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out_ch1</span> <span class="at">-f:s16_le,1,44100</span> <span class="at">-o</span> alsa,hw:0,0 <span class="dt">\</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out_ch2</span> <span class="at">-f:s16_le,1,44100</span> <span class="at">-o</span> alsa,hw:0,1 <span class="dt">\</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out_ch3</span> <span class="at">-f:s16_le,1,44100</span> <span class="at">-o</span> alsa,hw:0,2 <span class="dt">\</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:out_ch4</span> <span class="at">-f:s16_le,1,44100</span> <span class="at">-o</span> alsa,hw:0,3</span></code></pre></div>
+<p>A more modular approach uses internal looping devices
+(<code>loop,label</code>) to route multi-channel inputs across parallel
+chains:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-B:rt</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:input</span> <span class="at">-i</span> jack,system:capture_ <span class="at">-f:f32_le,4,48000</span> <span class="at">-o</span> loop,input_bus <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix1,mix2,mix3,mix4</span> <span class="at">-i</span> loop,input_bus <span class="dt">\</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix1</span> <span class="at">-chcopy:1,1</span> <span class="at">-ea:100</span> <span class="at">-chcopy:2,1</span> <span class="at">-ea:50</span>  <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_1 <span class="dt">\</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix2</span> <span class="at">-chcopy:1,1</span> <span class="at">-ea:0</span>   <span class="at">-chcopy:2,1</span> <span class="at">-ea:100</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_2 <span class="dt">\</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix3</span> <span class="at">-chcopy:3,1</span> <span class="at">-ea:75</span>  <span class="at">-chcopy:4,1</span> <span class="at">-ea:25</span>  <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_3 <span class="dt">\</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix4</span> <span class="at">-chcopy:1,1</span> <span class="at">-ea:25</span>  <span class="at">-chcopy:4,1</span> <span class="at">-ea:100</span> <span class="at">-f:f32_le,1,48000</span> <span class="at">-o</span> jack,system:playback_4</span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li><code>-chcopy:X,Y</code> copies audio from input channel
+<code>X</code> to destination channel <code>Y</code>.</li>
+<li><code>-ea:Z</code> applies a linear gain percentage (<span
+class="math inline">\(0\)</span> to <span
+class="math inline">\(100+\)</span>) to that channel segment.</li>
+<li>You can substitute <code>-eadb:dB</code> to set gain values in
+decibels directly (e.g., <code>-eadb:-6</code> for a 6 dB cut).</li>
+</ul>
+<h2 id="real-time-matrix-control">Real-Time Matrix Control</h2>
+<p>A static matrix mixer is rarely sufficient; you often need dynamic
+adjustments of crosspoint levels without restarting the audio engine.
+Ecasound accommodates this via its interactive mode or background daemon
+mode.</p>
+<h3 id="interactive-mode">Interactive Mode</h3>
+<p>Run Ecasound with the <code>-c</code> flag to enter interactive
+mode:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-B:rt</span> <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i</span> jack,system:capture_1 <span class="at">-o</span> jack,system:playback_1 <span class="at">-ea:100</span> <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i</span> jack,system:capture_1 <span class="at">-o</span> jack,system:playback_2 <span class="at">-ea:0</span></span></code></pre></div>
+<p>Inside the interactive prompt, you can change gains dynamically:</p>
+<pre class="text"><code>c-select 2
+ea-set 75</code></pre>
+<p>This selects Chain 2 and immediately updates its amplification
+operator to 75%.</p>
+<h3 id="automated-and-remote-control-with-net-eci">Automated and Remote
+Control with Net-ECI</h3>
+<p>For building graphical user interfaces or external hardware
+controllers (such as MIDI or OSC bridges), start Ecasound with a TCP
+control server:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">--daemon</span> <span class="at">--server</span> <span class="at">--server-tcp-port</span><span class="op">=</span>2868</span></code></pre></div>
+<p>You can then send text commands over a TCP socket from any
+programming language:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect using netcat or telnet</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">nc</span> localhost 2868</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Example session commands</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">c-add</span> ch1_to_out2</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">c-select</span> ch1_to_out2</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="ex">ai-add</span> jack,system:capture_1</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ao-add</span> jack,system:playback_2</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">cop-add</span> <span class="at">-ea:0</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">start</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">cop-set</span> 1 1 80</span></code></pre></div>
+<ul>
+<li><code>cop-add -ea:0</code> adds an amplification operator set to
+0%.</li>
+<li><code>cop-set 1 1 80</code> updates operator parameter index 1 on
+chain <code>ch1_to_out2</code> to 80% volume in real time.</li>
+</ul>
+<h2 id="low-latency-tuning">Low Latency Tuning</h2>
+<p>Matrix mixers require minimal processing latency. Ensure your
+Ecasound command includes optimized buffer settings:</p>
+<ul>
+<li><strong><code>-B:rt</code></strong>: Enables real-time buffering
+mode.</li>
+<li><strong><code>-b:128</code></strong>: Sets the internal buffer size
+to 128 frames (adjust according to your audio interface's hardware
+period size).</li>
+<li><strong><code>-r:50</code></strong>: Increases the engine execution
+rate to reduce event handling latency.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

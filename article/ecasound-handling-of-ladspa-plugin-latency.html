@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Handling of LADSPA Plugin Latency - ecasound</title>
+    <meta name="description" content="This article examines how Ecasound processes LADSPA (Linux Audio Developer's Simple Plugin API) plugins that introduce algorithmic delay or require lookahead buffers. Because Ecasound lacks an automatic Plugin Delay Compensation (PDC) engine and LADSPA v">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-handling-of-ladspa-plugin-latency">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Handling of LADSPA Plugin Latency - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-handling-of-ladspa-plugin-latency" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how Ecasound processes LADSPA (Linux Audio Developer's Simple Plugin API) plugins that introduce algorithmic delay or require lookahead buffers. Because Ecasound lacks an automatic Plugin Delay Compensation (PDC) engine and LADSPA v" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-handling-of-ladspa-plugin-latency">Ecasound Handling of
+LADSPA Plugin Latency</h1>
+<p>This article examines how Ecasound processes LADSPA (Linux Audio
+Developer's Simple Plugin API) plugins that introduce algorithmic delay
+or require lookahead buffers. Because Ecasound lacks an automatic Plugin
+Delay Compensation (PDC) engine and LADSPA v1 lacks a standardized
+latency reporting mechanism, users must understand the underlying signal
+flow to manage phase alignment and synchronization manually across
+parallel signal chains.</p>
+<h3 id="the-ladspa-specification-constraint">The LADSPA Specification
+Constraint</h3>
+<p>The core reason Ecasound does not automatically compensate for
+lookahead or high-latency plugins stems from the LADSPA v1 specification
+itself. Unlike modern plugin formats such as LV2 or VST3, the classic
+LADSPA standard does not provide an integrated, standardized control
+port or metadata field for plugins to report algorithmic latency to the
+host application. Without a unified API mechanism to declare required
+lookahead time, host applications cannot programmatically determine how
+many samples of delay a given plugin introduces.</p>
+<h3 id="ecasounds-buffer-processing-model">Ecasound’s Buffer Processing
+Model</h3>
+<p>Ecasound operates using a synchronous, block-based processing engine.
+It reads audio from inputs, processes it through designated chain
+operators (including LADSPA plugins), and delivers it to outputs in
+fixed audio buffers configured by the <code>-b</code> (buffer size)
+parameter.</p>
+<p>When a LADSPA plugin with internal lookahead—such as a lookahead
+limiter or a linear-phase equalizer—is inserted into an Ecasound chain,
+the plugin manages its own internal ring buffer. The plugin delays the
+output stream relative to the input stream to analyze upcoming samples.
+Because Ecasound treats every chain operator as an immediate real-time
+process within each processing cycle, it passes audio through the plugin
+without adjusting the timeline of parallel chains or un-effected
+tracks.</p>
+<h3 id="consequences-on-audio-routing">Consequences on Audio
+Routing</h3>
+<ol type="1">
+<li><strong>Serial Chains (Single Track Processing):</strong> In a
+straightforward serial chain where a complete mix or a single track
+passes entirely through a lookahead plugin, the only side effect is a
+fixed time shift equal to the plugin's latency. In offline processing or
+rendering, this appears as an offset of silence at the beginning of the
+rendered file. In real-time monitoring, it manifests as latency between
+input capture and output monitoring.</li>
+<li><strong>Parallel Chains (Phase Cancellation and Timing
+Drift):</strong> If an audio source is split across multiple chains—for
+example, in parallel compression or when processing individual drum
+tracks alongside an untreated overhead track—a lookahead plugin in one
+chain will push its signal out of phase with the others. Ecasound will
+not automatically delay the dry or untreated chains, leading to comb
+filtering, phase cancellation, or audible timing misalignment.</li>
+</ol>
+<h3 id="managing-latency-and-lookahead-in-ecasound">Managing Latency and
+Lookahead in Ecasound</h3>
+<p>To achieve sample-accurate alignment when using high-latency LADSPA
+plugins in Ecasound, you must apply manual compensation:</p>
+<ul>
+<li><strong>Manual Delay Insertion:</strong> Insert an explicit delay
+operator (such as Ecasound’s built-in delay effect <code>-ead</code> or
+a clean LADSPA sample-delay utility) onto the parallel chains that do
+not use the lookahead plugin. Set the delay duration to match the
+algorithmic latency of the lookahead plugin exactly.</li>
+<li><strong>Track Offset Adjustments:</strong> When processing
+multi-track projects from pre-recorded files, adjust the playback start
+positions of unaffected tracks using Ecasound’s position-shifting
+options (such as the <code>-y</code> parameter or cue points) to align
+the signals before they reach the mix bus.</li>
+<li><strong>Buffer Tuning:</strong> Ensure that Ecasound’s global
+processing buffer (<code>-b</code>) is at least as large as the internal
+buffer requirements of the plugin to prevent buffer underruns or dropped
+frames during real-time processing.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

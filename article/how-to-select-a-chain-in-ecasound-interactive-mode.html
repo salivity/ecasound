@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Select a Chain in Ecasound Interactive Mode - ecasound</title>
+    <meta name="description" content="This guide explains how to designate a specific processing chain as the active operational target within Ecasound’s interactive mode. By understanding chain selection commands, you will be able to isolate individual signal paths, inspect their routing,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-select-a-chain-in-ecasound-interactive-mode">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Select a Chain in Ecasound Interactive Mode - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-select-a-chain-in-ecasound-interactive-mode" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to designate a specific processing chain as the active operational target within Ecasound’s interactive mode. By understanding chain selection commands, you will be able to isolate individual signal paths, inspect their routing," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-select-a-chain-in-ecasound-interactive-mode">How to
+Select a Chain in Ecasound Interactive Mode</h1>
+<p>This guide explains how to designate a specific processing chain as
+the active operational target within Ecasound’s interactive mode. By
+understanding chain selection commands, you will be able to isolate
+individual signal paths, inspect their routing, and apply real-time
+parameter changes or audio effects exclusively to the intended
+channel.</p>
+<h3 id="the-chain-selection-command">The Chain Selection Command</h3>
+<p>In Ecasound interactive mode, commands that modify inputs, outputs,
+operators, or controllers apply only to the currently selected chain. To
+select a specific chain as the active target, use the
+<code>c-select</code> command (or its alias <code>cs</code>):</p>
+<pre class="text"><code>c-select [chain_name]</code></pre>
+<p>Replace <code>[chain_name]</code> with the label assigned to the
+chain when it was created (or the default identifier assigned by
+Ecasound, such as <code>default</code>).</p>
+<h3 id="step-by-step-selection-workflow">Step-by-Step Selection
+Workflow</h3>
+<ol type="1">
+<li><p><strong>List Available Chains</strong><br />
+If you do not know the exact name of the chain you want to modify, list
+all chains in the current setup using:</p>
+<pre class="text"><code>c-list</code></pre></li>
+<li><p><strong>Set the Target Chain</strong><br />
+Execute <code>c-select</code> followed by your target chain's name:</p>
+<pre class="text"><code>c-select chain1</code></pre>
+<p>Any chain-level commands executed after this step will now apply
+solely to <code>chain1</code>.</p></li>
+<li><p><strong>Verify the Selection</strong><br />
+Check which chain is currently targeted and view its configuration by
+running:</p>
+<pre class="text"><code>c-status</code></pre>
+<p>This prints the status, active operators, controllers, and routing
+associated with the currently selected chain.</p></li>
+</ol>
+<h3 id="selecting-multiple-chains">Selecting Multiple Chains</h3>
+<p>Ecasound also allows you to target multiple chains simultaneously if
+you need to apply operations across several tracks at once:</p>
+<ul>
+<li><strong>Select a specific group:</strong> Separate chain names with
+commas.
+<pre class="text"><code>c-select chain1,chain2</code></pre></li>
+<li><strong>Select all chains:</strong> Target every chain in the
+current setup simultaneously.
+<pre class="text"><code>c-select-all</code></pre></li>
+<li><strong>Clear chain selection:</strong> Deselect all currently
+targeted chains.
+<pre class="text"><code>c-deselect</code></pre></li>
+</ul>
+<p>Once your desired chain is selected, you can safely add effects with
+<code>-ea</code>, attach controllers with <code>-n</code>, or change
+audio routing without altering other active tracks in your session.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

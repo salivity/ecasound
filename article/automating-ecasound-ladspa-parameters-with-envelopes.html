@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automating Ecasound LADSPA Parameters with Envelopes - ecasound</title>
+    <meta name="description" content="Ecasound supports dynamic automation of LADSPA plugin parameters using internal envelope controllers, external automation scripts, and parsed data files. This article explains how Ecasound addresses LADSPA parameters, how to attach envelope controllers t">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/automating-ecasound-ladspa-parameters-with-envelopes">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Automating Ecasound LADSPA Parameters with Envelopes - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/automating-ecasound-ladspa-parameters-with-envelopes" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound supports dynamic automation of LADSPA plugin parameters using internal envelope controllers, external automation scripts, and parsed data files. This article explains how Ecasound addresses LADSPA parameters, how to attach envelope controllers t" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="automating-ecasound-ladspa-parameters-with-envelopes">Automating
+Ecasound LADSPA Parameters with Envelopes</h1>
+<p>Ecasound supports dynamic automation of LADSPA plugin parameters
+using internal envelope controllers, external automation scripts, and
+parsed data files. This article explains how Ecasound addresses LADSPA
+parameters, how to attach envelope controllers to them, and the methods
+used to drive these parameters using external envelope data files.</p>
+<h2 id="how-ecasound-targets-ladspa-parameters">How Ecasound Targets
+LADSPA Parameters</h2>
+<p>In Ecasound, audio effects and LADSPA plugins are treated as chain
+operators. A LADSPA plugin is inserted into a chain using the
+<code>-el</code> syntax:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-el:plugin_label,param1,param2,...</span></span></code></pre></div>
+<p>Every parameter in a chain operator has an index starting at 1. When
+applying modulation, Ecasound attaches controllers directly to these
+parameter indices on a specified chain.</p>
+<h2 id="native-envelope-control-the--kl-controller">Native Envelope
+Control: The <code>-kl</code> Controller</h2>
+<p>Ecasound includes a built-in linear envelope controller,
+<code>-kl</code>, which interpolates parameter values over time. Its
+syntax is structured as follows:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-kl:fx_param,initial_val,time1,val1,time2,val2,...</span></span></code></pre></div>
+<ul>
+<li><code>fx_param</code>: The parameter index of the LADSPA plugin you
+wish to automate.</li>
+<li><code>initial_val</code>: The starting value at time 0.</li>
+<li><code>timeN,valN</code>: Pairs of timestamps (in seconds) and target
+values.</li>
+</ul>
+<p>This controller smoothly transitions between points across the
+duration of the audio stream.</p>
+<h2 id="automating-parameters-with-external-envelope-files">Automating
+Parameters with External Envelope Files</h2>
+<p>Ecasound does not directly accept a raw external text file path
+inside the <code>-el</code> operator itself, but you can automate
+parameters using external envelope files through two reliable methods:
+command-line expansion and the Ecasound Control Interface (ECI).</p>
+<h3 id="method-1-injecting-envelope-files-via-shell-expansion">Method 1:
+Injecting Envelope Files via Shell Expansion</h3>
+<p>If you have an external plain text file containing time-value pairs
+formatted for <code>-kl</code> (e.g., <code>1,0.5,2,0.8,4,0.1</code>),
+you can dynamically inject it directly into your Ecasound command using
+standard shell substitution:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-o:output.wav</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:caps_crossover,1000</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-kl:1,500,</span><span class="va">$(</span><span class="fu">cat</span> envelope.txt<span class="va">)</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li><code>-el:caps_crossover,1000</code> loads the plugin with an
+initial cutoff of 1000 Hz.</li>
+<li><code>-kl:1,500,...</code> attaches a linear envelope to parameter
+1, setting the initial value to 500 Hz and reading the remaining
+time-value nodes from <code>envelope.txt</code>.</li>
+</ul>
+<h3
+id="method-2-dynamic-streaming-via-ecasound-control-interface-eci">Method
+2: Dynamic Streaming via Ecasound Control Interface (ECI)</h3>
+<p>For complex, continuous, or generated envelope data, Ecasound can be
+controlled dynamically via its interactive mode or Python/C API
+(ECI).</p>
+<p>Using a named pipe (FIFO) or standard input in interactive mode
+(<code>-c</code>), external programs can read an arbitrary envelope file
+and write real-time parameter update commands:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cop-set</span> <span class="pp">[</span><span class="ss">chain_operator_index</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">parameter_index</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">new_value</span><span class="pp">]</span></span></code></pre></div>
+<p>This method is ideal when envelopes are generated on the fly,
+streamed from external mathematical models, or exported from digital
+audio workstations as high-density automation tracks.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

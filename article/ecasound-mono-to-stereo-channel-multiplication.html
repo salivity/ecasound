@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Mono to Stereo Channel Multiplication - ecasound</title>
+    <meta name="description" content="Ecasound manages multitrack audio processing through a deterministic chain-and-channel architecture where channel multiplication from mono to stereo does not happen implicitly. When a single-channel mono stream feeds a chain configured for stereo output,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-mono-to-stereo-channel-multiplication">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Mono to Stereo Channel Multiplication - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-mono-to-stereo-channel-multiplication" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound manages multitrack audio processing through a deterministic chain-and-channel architecture where channel multiplication from mono to stereo does not happen implicitly. When a single-channel mono stream feeds a chain configured for stereo output," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-mono-to-stereo-channel-multiplication">Ecasound Mono to
+Stereo Channel Multiplication</h1>
+<p>Ecasound manages multitrack audio processing through a deterministic
+chain-and-channel architecture where channel multiplication from mono to
+stereo does not happen implicitly. When a single-channel mono stream
+feeds a chain configured for stereo output, Ecasound applies strict
+one-to-one channel mapping by default, assigning the mono source
+exclusively to the first channel and leaving subsequent channels silent.
+To achieve true channel multiplication—duplicating a mono signal across
+both channels of a stereo field—Ecasound requires explicit format
+definitions and dedicated channel-routing operators.</p>
+<h3 id="the-channel-assignment-architecture">The Channel Assignment
+Architecture</h3>
+<p>Every processing path in Ecasound is governed by chains. A chain
+operates with a specific channel count, typically defined by the global
+or chain-specific audio format flag
+(<code>-f:format,channels,sample_rate</code>) or inherited from the
+connected audio inputs and outputs.</p>
+<p>When an input with one channel (mono) is routed into a stereo output
+without explicit routing commands, Ecasound maintains track
+separation:</p>
+<ul>
+<li>Input Channel 1 maps directly to Chain/Output Channel 1 (Left).</li>
+<li>Channel 2 (Right) receives no audio data and remains completely
+unpopulated.</li>
+</ul>
+<p>If chain formats are strictly enforced and channel counts between
+inputs, intermediate chains, and outputs mismatch without proper
+configuration, Ecasound will halt execution and raise a channel count
+mismatch error.</p>
+<h3 id="explicit-channel-multiplication-using--chcopy-and--erc">Explicit
+Channel Multiplication Using <code>-chcopy</code> and
+<code>-erc</code></h3>
+<p>To duplicate a mono stream across multiple channels within the same
+chain, Ecasound provides built-in channel manipulation operators:</p>
+<ul>
+<li><strong><code>-chcopy:from_channel,to_channel</code></strong>: This
+operator clones the audio buffer from one channel index to another. When
+working with a stereo chain fed by a mono input, applying
+<code>-chcopy:1,2</code> duplicates Channel 1 into Channel 2, resulting
+in a dual-mono stereo output.</li>
+<li><strong><code>-erc:from_channel,to_channel</code></strong>: The
+route/copy channels operator serves a similar functional purpose in
+older or specialized presets, routing the audio data stream from the
+primary channel into the secondary channel position.</li>
+</ul>
+<p>An example of proper in-chain multiplication:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-i:mono_input.wav</span> <span class="at">-chcopy:1,2</span> <span class="at">-o:stereo_output.wav</span></span></code></pre></div>
+<p>In this command, the engine initializes a two-channel pipeline, reads
+the single mono channel into channel slot 1, copies slot 1 into slot 2,
+and renders a fully balanced stereo file.</p>
+<h3 id="multi-chain-routing-and-channel-splitting">Multi-Chain Routing
+and Channel Splitting</h3>
+<p>Channel multiplication can also be handled at the routing stage
+rather than within a single chain. Ecasound allows a single input file
+or audio device to be attached to multiple chains simultaneously:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:mono_input.wav</span> <span class="at">-a:1,2</span> <span class="at">-a:1</span> <span class="at">-chcopy:1,1</span> <span class="at">-a:2</span> <span class="at">-chcopy:1,2</span> <span class="at">-a:1,2</span> <span class="at">-o:stereo_output.wav</span></span></code></pre></div>
+<p>By assigning the input stream across multiple distinct chains
+(<code>-a:1,2 -i:mono_input.wav</code>), the mono stream is cloned at
+the input level. Users can apply independent filters, equalization, or
+delay effects to each chain before routing them into the final stereo
+output stage, facilitating stereo widening and pseudo-stereo processing
+from a single mono capture.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

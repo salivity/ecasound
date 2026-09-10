@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Scrubbing and Varispeed in Ecasound ECI - ecasound</title>
+    <meta name="description" content="The Ecasound Control Interface (ECI) provides a programmatic API that allows developers to control Ecasound's multitrack audio processing engine from external languages like Python, C, C++, and Perl. While Ecasound is natively designed as a real-time rec">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/audio-scrubbing-and-varispeed-in-ecasound-eci">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Audio Scrubbing and Varispeed in Ecasound ECI - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/audio-scrubbing-and-varispeed-in-ecasound-eci" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Ecasound Control Interface (ECI) provides a programmatic API that allows developers to control Ecasound's multitrack audio processing engine from external languages like Python, C, C++, and Perl. While Ecasound is natively designed as a real-time rec" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="audio-scrubbing-and-varispeed-in-ecasound-eci">Audio Scrubbing
+and Varispeed in Ecasound ECI</h1>
+<p>The Ecasound Control Interface (ECI) provides a programmatic API that
+allows developers to control Ecasound's multitrack audio processing
+engine from external languages like Python, C, C++, and Perl. While
+Ecasound is natively designed as a real-time recording and routing
+system, it exposes audio scrubbing and varispeed playback through a
+combination of low-latency transport-repositioning commands and
+real-time chain-operator parameter manipulation. This article outlines
+the architecture and specific ECI command paradigms used to achieve
+smooth directional scrubbing and variable-speed playback.</p>
+<h3 id="audio-scrubbing-architecture-in-eci">Audio Scrubbing
+Architecture in ECI</h3>
+<p>Audio scrubbing requires moving through an audio file backward and
+forward at varying speeds, typically driven by a jog wheel or mouse
+scrub bar, while outputting short bursts of audio to indicate position.
+Because Ecasound relies on an explicit setup and processing loop,
+scrubbing is implemented by controlling the chainsetup transport:</p>
+<ol type="1">
+<li><p><strong>Direct Sample-Level Seeking:</strong> ECI exposes
+transport-positioning routines via commands such as
+<code>setpos [seconds]</code> and <code>setpos-samples [samples]</code>.
+For absolute transport management, <code>cs-set-position</code> or
+<code>cs-set-position-samples</code> can be executed. When an external
+interface captures scrubbing input, it sends high-frequency
+<code>setpos</code> or <code>forward</code>/<code>rewind</code> updates
+directly through <code>eci.command()</code>.</p></li>
+<li><p><strong>Buffer Management for Low Latency:</strong> Default
+buffer sizes designed for multitrack recording produce too much latency
+for responsive scrubbing. To expose responsive scrub audio, the host
+application configures Ecasound's audio buffers to minimal sizes (e.g.,
+via <code>-b:128</code> or <code>-b:256</code>) before launching the
+engine. This ensures that seeking to a new offset flushes previous audio
+immediately and plays the audio localized to the target
+position.</p></li>
+<li><p><strong>Step-by-Step Scrubbing Cycles:</strong> For precision
+scrubbing when the engine is not continuously running, applications use
+the single-iteration command:</p>
+<pre class="text"><code>engine-status
+cs-set-position-samples [sample_count]
+engine-run-slices [slice_count]</code></pre>
+<p>By moving the position and processing a discrete number of slices
+(audio buffers), the engine outputs a small fragment of audio
+corresponding to that location and pauses, providing the classic digital
+audio workstation (DAW) scrubbing feel.</p></li>
+</ol>
+<h3 id="implementing-varispeed-playback">Implementing Varispeed
+Playback</h3>
+<p>In Ecasound, the transport clock is tied directly to the hardware
+audio output device's sample rate. Consequently, varispeed—changing the
+playback speed and pitch continuously in real time—cannot be executed by
+simply telling the master hardware engine to clock faster or slower.
+Instead, ECI exposes varispeed through real-time DSP manipulation and
+resampling operators.</p>
+<ol type="1">
+<li><p><strong>Chain Operator Parameter Modulation
+(<code>copp</code>):</strong> Ecasound allows dynamic adjustment of
+chain operators while the engine runs using dynamic parameter
+controls:</p>
+<ul>
+<li><code>cop-select [operator_index]</code>: Selects the target DSP
+plugin or effect on the current chain.</li>
+<li><code>copp-select [parameter_index]</code>: Selects the specific
+parameter (such as pitch ratio, tempo, or playback rate).</li>
+<li><code>copp-set [value]</code>: Modifies the parameter in real time
+without stopping audio playback.</li>
+</ul></li>
+<li><p><strong>Resampling and Pitch/Time DSP Plugins:</strong> Varispeed
+can be achieved by routing audio through internal or external LADSPA/LV2
+plugins that handle resampling, time-stretching, or pitch-shifting:</p>
+<ul>
+<li><strong>Coupled Pitch and Speed (Tape-style Varispeed):</strong> A
+real-time pitch-resampling LADSPA operator is inserted into the chain.
+As the user alters speed, the external application scales the resampler
+ratio via <code>copp-set</code>. Ecasound processes the incoming audio
+stream through the dynamic resampler, accelerating or decelerating the
+playback speed while shifting the pitch proportionally.</li>
+<li><strong>Decoupled Speed (Time-Stretch):</strong> For tempo changes
+without pitch changes, operators such as those based on phase vocoders
+or granular synthesis (e.g., SoundTouch-based LADSPA plugins) are
+loaded. ECI targets the speed multiplier parameter dynamically,
+maintaining playback continuity.</li>
+</ul></li>
+</ol>
+<h3 id="interaction-flow-via-eci">Interaction Flow via ECI</h3>
+<p>A typical client controlling both behaviors uses an event-driven loop
+communicating with the Ecasound daemon:</p>
+<ul>
+<li>For <strong>Scrubbing</strong>: The client intercepts pointer
+movements, calculates the sample delta, issues
+<code>cs-set-position-samples</code>, and triggers short processing
+slices if playback is stopped.</li>
+<li>For <strong>Varispeed</strong>: The client tracks a slider or
+jog-shuttle velocity, maps that value to a DSP resampling factor, and
+issues <code>cop-set</code> commands to adjust the playback rate
+continuously on active audio chains.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

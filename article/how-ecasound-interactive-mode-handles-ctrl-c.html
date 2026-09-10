@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Interactive Mode Handles Ctrl+C - ecasound</title>
+    <meta name="description" content="Ecasound’s interactive mode intercepts user keyboard interrupts like Ctrl+C to ensure non-destructive session handling and uninterrupted audio control. Instead of killing the application outright as it would in standard terminal operations, interactive">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-interactive-mode-handles-ctrl-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Interactive Mode Handles Ctrl+C - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-interactive-mode-handles-ctrl-c" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound’s interactive mode intercepts user keyboard interrupts like Ctrl+C to ensure non-destructive session handling and uninterrupted audio control. Instead of killing the application outright as it would in standard terminal operations, interactive" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-interactive-mode-handles-ctrlc">How Ecasound
+Interactive Mode Handles Ctrl+C</h1>
+<p>Ecasound’s interactive mode intercepts user keyboard interrupts like
+<code>Ctrl+C</code> to ensure non-destructive session handling and
+uninterrupted audio control. Instead of killing the application outright
+as it would in standard terminal operations, interactive mode traps the
+interrupt signal, halts any active audio processing or playback, and
+safely returns control to the interactive prompt.</p>
+<h3 id="signal-interception-via-sigint">Signal Interception via
+SIGINT</h3>
+<p>When running Ecasound in interactive mode (EIAM), the software
+installs a dedicated signal handler for <code>SIGINT</code> (the POSIX
+signal triggered by <code>Ctrl+C</code>). Under standard command-line
+execution, a <code>SIGINT</code> forces Ecasound to immediately flush
+buffers, close open files, and terminate the process. In interactive
+mode, this signal is caught and repurposed to manage the engine state
+rather than terminating the runtime environment.</p>
+<h3 id="behavior-during-engine-execution">Behavior During Engine
+Execution</h3>
+<p>If an audio chain setup is actively processing, recording, or playing
+back, pressing <code>Ctrl+C</code> executes an engine-stop routine:</p>
+<ul>
+<li><strong>Engine Halting:</strong> Ecasound stops the audio processing
+engine immediately, mimicking the internal <code>stop</code>
+command.</li>
+<li><strong>Driver and Buffer Release:</strong> Real-time audio streams
+are paused or closed cleanly, releasing hardware locks on drivers such
+as ALSA, OSS, or JACK.</li>
+<li><strong>State Preservation:</strong> The active chainsetup,
+connected inputs, outputs, and assigned effect controllers remain loaded
+in memory.</li>
+<li><strong>Prompt Recovery:</strong> Control is returned directly to
+the <code>ecasound ('h' for help) &gt;</code> prompt, allowing the user
+to modify parameters, reposition the playback cursor, or restart
+processing.</li>
+</ul>
+<h3 id="behavior-at-the-idle-prompt">Behavior at the Idle Prompt</h3>
+<p>If the engine is stopped and the user is sitting at the interactive
+prompt:</p>
+<ul>
+<li>Pressing <code>Ctrl+C</code> does not exit the program.</li>
+<li>The current line buffer is cleared, discarding any partially typed
+commands.</li>
+<li>A fresh prompt is displayed on a new line.</li>
+</ul>
+<h3 id="exiting-interactive-mode">Exiting Interactive Mode</h3>
+<p>Because <code>Ctrl+C</code> is reserved for stopping processing and
+clearing input, terminating Ecasound requires intentional exit routines.
+Users must type <code>quit</code>, <code>q</code>, or send an
+End-Of-File signal (<code>Ctrl+D</code>) at an empty prompt. This design
+prevents accidental session loss during complex multi-track
+configurations and live performance scenarios.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create an Ecasound Band-Reject Filter - ecasound</title>
+    <meta name="description" content="This guide explains how to construct an audio band-reject (notch) filter using native Ecasound operators. While Ecasound does not feature a single dedicated band-reject operator, you can build an effective band-reject filter natively by splitting the sig">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-create-an-ecasound-band-reject-filter">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create an Ecasound Band-Reject Filter - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-create-an-ecasound-band-reject-filter" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to construct an audio band-reject (notch) filter using native Ecasound operators. While Ecasound does not feature a single dedicated band-reject operator, you can build an effective band-reject filter natively by splitting the sig" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-create-an-ecasound-band-reject-filter">How to Create an
+Ecasound Band-Reject Filter</h1>
+<p>This guide explains how to construct an audio band-reject (notch)
+filter using native Ecasound operators. While Ecasound does not feature
+a single dedicated band-reject operator, you can build an effective
+band-reject filter natively by splitting the signal into two parallel
+chains—one running a lowpass filter and the other running a highpass
+filter—and summing their outputs. The sections below outline the signal
+architecture, provide the precise command syntax, and detail frequency
+configuration.</p>
+<h2 id="native-signal-routing-concept">Native Signal Routing
+Concept</h2>
+<p>A band-reject filter attenuates frequencies within a specified range
+while leaving frequencies below and above that range intact. Native
+Ecasound processing includes:</p>
+<ul>
+<li><code>-efl:cutoff_frequency</code> (Lowpass filter, 12 dB/octave
+roll-off)</li>
+<li><code>-efh:cutoff_frequency</code> (Highpass filter, 12 dB/octave
+roll-off)</li>
+</ul>
+<p>To configure band rejection, split the audio stream across two
+independent chains (<code>chain1</code> and <code>chain2</code>). Set
+the lowpass operator on <code>chain1</code> to retain audio below the
+lower cutoff frequency, and set the highpass operator on
+<code>chain2</code> to retain audio above the upper cutoff frequency.
+Both chains are then routed to the same output device or file, summing
+them to form the final notched signal.</p>
+<h2 id="command-line-syntax">Command-Line Syntax</h2>
+<p>Run the following command structure in your terminal:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1,2</span> <span class="at">-i:input.wav</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:1</span> <span class="at">-efl:800</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-efh:2000</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:1,2</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<h3 id="parameter-breakdown">Parameter Breakdown</h3>
+<ul>
+<li><code>-a:1,2 -i:input.wav</code>: Assigns chains <code>1</code> and
+<code>2</code> to receive the audio stream from
+<code>input.wav</code>.</li>
+<li><code>-a:1 -efl:800</code>: Applies a native lowpass filter to chain
+<code>1</code>, allowing frequencies below 800 Hz to pass through.</li>
+<li><code>-a:2 -efh:2000</code>: Applies a native highpass filter to
+chain <code>2</code>, allowing frequencies above 2000 Hz to pass
+through.</li>
+<li><code>-a:1,2 -o:output.wav</code>: Mixes the processed signals from
+both chains together into <code>output.wav</code>. The frequency band
+between 800 Hz and 2000 Hz is rejected.</li>
+</ul>
+<h2 id="interactive-eci-configuration">Interactive ECI
+Configuration</h2>
+<p>If configuring this via the Ecasound Control Interface (ECI) or
+inside an <code>.ecs</code> preset file, use the equivalent
+commands:</p>
+<pre class="text"><code>c-add chain_low
+c-add chain_high
+
+cs-set-audio-format s16_le,2,44100
+ai-add input.wav
+ao-add output.wav
+
+c-select chain_low
+cop-add -efl:800
+
+c-select chain_high
+cop-add -efh:2000</code></pre>
+<h2 id="frequency-calibration-considerations">Frequency Calibration
+Considerations</h2>
+<ul>
+<li><strong>Bandwidth Control</strong>: The gap between the
+<code>-efl</code> parameter and the <code>-efh</code> parameter dictates
+the width of the rejected notch.</li>
+<li><strong>Filter Slopes</strong>: Ecasound's native <code>-efl</code>
+and <code>-efh</code> filters operate with a 12 dB/octave slope. For
+steeper notch skirts, cascade multiple filters on the respective chains
+(e.g., <code>-a:1 -efl:800 -efl:800</code> produces a 24 dB/octave
+lowpass response).</li>
+<li><strong>Phase and Crossover</strong>: At narrow notch widths, phase
+interactions around the crossover point can cause mild phase
+cancellation. Ensure your cutoff points leave adequate spacing to
+minimize unintended comb-filtering near the corner frequencies.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

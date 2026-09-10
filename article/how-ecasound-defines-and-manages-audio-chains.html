@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Defines and Manages Audio Chains - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line utility designed for multitrack audio processing, recording, and routing. At the core of its architecture is the "chain" model, an abstraction where audio data flows from inputs through a sequence of processors and con">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-defines-and-manages-audio-chains">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Defines and Manages Audio Chains - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-defines-and-manages-audio-chains" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line utility designed for multitrack audio processing, recording, and routing. At the core of its architecture is the "chain" model, an abstraction where audio data flows from inputs through a sequence of processors and con" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-defines-and-manages-audio-chains">How Ecasound
+Defines and Manages Audio Chains</h1>
+<p>Ecasound is a powerful command-line utility designed for multitrack
+audio processing, recording, and routing. At the core of its
+architecture is the "chain" model, an abstraction where audio data flows
+from inputs through a sequence of processors and controllers to outputs.
+This article explains how Ecasound conceptualizes audio chains, the
+structure of chainsetups, how inputs and outputs are assigned, and how
+dynamic routing and signal processing are managed in real time.</p>
+<h3 id="the-chain-concept">The Chain Concept</h3>
+<p>In Ecasound, a chain represents a single path of audio processing. It
+acts as an intermediary pipeline connecting one or more audio inputs to
+one or more audio outputs. Multiple independent chains can run
+simultaneously, allowing for multitrack recording, mixing, and complex
+signal routing.</p>
+<p>Every chain has an assigned identifier (name or number) and processes
+audio sequentially:</p>
+<ol type="1">
+<li>Audio data is pulled from the assigned input.</li>
+<li>The signal passes through zero or more audio operators (effects,
+filters, plugins).</li>
+<li>Modifiers (controllers such as LFOs or envelopes) alter parameters
+within those operators dynamically.</li>
+<li>The processed signal is routed to the specified output.</li>
+</ol>
+<h3 id="the-chainsetup-container">The Chainsetup Container</h3>
+<p>Chains do not exist in isolation; they are grouped and coordinated
+within a <strong>chainsetup</strong>. A chainsetup serves as the master
+configuration or session file. It manages:</p>
+<ul>
+<li>Global audio parameters: Sampling rate, channel count, and audio
+buffer sizes.</li>
+<li>The collection of active and inactive chains.</li>
+<li>The overall clock and transport state (start, stop, pause,
+rewind).</li>
+</ul>
+<p>Users can define chainsetups via command-line arguments or load them
+from dedicated <code>.ecs</code> configuration files.</p>
+<h3 id="defining-inputs-outputs-and-chains">Defining Inputs, Outputs,
+and Chains</h3>
+<p>Ecasound uses command-line flags to select and assign elements to
+chains. The key selector is <code>-a:chain_name</code>, which directs
+subsequent parameters to the specified chain.</p>
+<ul>
+<li><strong>Chain Assignment:</strong> <code>-a:1,2</code> selects
+chains <code>1</code> and <code>2</code> for subsequent operations.</li>
+<li><strong>Inputs (<code>-i</code>):</strong> Sources can be audio
+files (WAV, FLAC), soundcard interfaces (ALSA, OSS), audio servers
+(JACK), or internal generators (null, tone).</li>
+<li><strong>Outputs (<code>-o</code>):</strong> Destinations share the
+same flexibility as inputs, writing to disk or streaming to physical
+hardware or JACK ports.</li>
+</ul>
+<p>For example, routing an audio file through a chain to an ALSA
+soundcard is defined as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>To route a single input across multiple chains for parallel
+processing:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1,2</span> <span class="at">-i:input.wav</span> <span class="at">-a:1</span> <span class="at">-o:output1.wav</span> <span class="at">-a:2</span> <span class="at">-o:output2.wav</span></span></code></pre></div>
+<h3 id="signal-processing-and-operators">Signal Processing and
+Operators</h3>
+<p>Once audio is routed through a chain, Ecasound allows inline signal
+modification through operators (<code>-e*</code> flags):</p>
+<ul>
+<li><strong>Internal Effects:</strong> Built-in tools such as volume
+amplification (<code>-ea</code>), lowpass/highpass filters
+(<code>-ef1</code>, <code>-efl</code>), delays, and reverbs.</li>
+<li><strong>External Plugins:</strong> Ecasound natively supports LADSPA
+and LV2 plugins via specific host flags (e.g.,
+<code>-el:plugin_name</code>).</li>
+<li><strong>Controllers (<code>-k*</code>):</strong> Used to automate
+operator parameters over time using sources such as linear ramps,
+sinusoidal LFOs, or MIDI continuous controllers.</li>
+</ul>
+<p>Operators are executed strictly in the order they are attached to the
+chain, creating a deterministic processing sequence.</p>
+<h3 id="real-time-management-via-interactive-mode">Real-Time Management
+via Interactive Mode</h3>
+<p>Ecasound provides the Ecasound Interactive Mode (EIAM) for managing
+chains during runtime. Through standard input or a control socket (using
+Net-ECI), users can manipulate the processing graph dynamically without
+interrupting the audio stream.</p>
+<p>Common runtime commands include:</p>
+<ul>
+<li><code>c-add &lt;name&gt;</code> and <code>c-remove</code>: Create or
+delete chains on the fly.</li>
+<li><code>c-select &lt;name&gt;</code>: Switch focus to a specific chain
+to inspect or alter it.</li>
+<li><code>cop-add</code> / <code>cop-set</code>: Add operators or alter
+parameters (such as filter cutoffs or gain levels) in real time.</li>
+<li><code>c-mute</code> and <code>c-bypass</code>: Dynamically mute a
+chain or bypass its processing chain.</li>
+</ul>
+<p>By decoupling the audio graph configuration from runtime execution,
+Ecasound provides a lightweight, scriptable, and modular system for
+complex audio management.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

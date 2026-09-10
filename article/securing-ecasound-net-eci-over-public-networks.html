@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Securing Ecasound Net-ECI Over Public Networks - ecasound</title>
+    <meta name="description" content="Exposing Ecasound's Network Control Interface (Net-ECI) to a public network introduces critical security risks due to its lack of native encryption and authentication. This article outlines the primary vulnerabilities inherent to the Net-ECI protocol, th">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/securing-ecasound-net-eci-over-public-networks">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Securing Ecasound Net-ECI Over Public Networks - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/securing-ecasound-net-eci-over-public-networks" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Exposing Ecasound's Network Control Interface (Net-ECI) to a public network introduces critical security risks due to its lack of native encryption and authentication. This article outlines the primary vulnerabilities inherent to the Net-ECI protocol, th" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="securing-ecasound-net-eci-over-public-networks">Securing
+Ecasound Net-ECI Over Public Networks</h1>
+<p>Exposing Ecasound's Network Control Interface (Net-ECI) to a public
+network introduces critical security risks due to its lack of native
+encryption and authentication. This article outlines the primary
+vulnerabilities inherent to the Net-ECI protocol, the consequences of
+exposing it to untrusted traffic, and standard mitigation strategies
+required to secure an Ecasound deployment.</p>
+<h3 id="core-security-risks-of-net-eci">Core Security Risks of
+Net-ECI</h3>
+<p>Ecasound was primarily designed as a local command-line multitrack
+audio processing tool. Its Net-ECI protocol provides a simple TCP-based
+interface that enables external programs to control audio routing,
+playback, recording, and processing chains remotely. However, the
+protocol lacks modern network security controls:</p>
+<ul>
+<li><strong>Absence of Authentication:</strong> The Net-ECI protocol
+does not feature built-in authentication or access control lists (ACLs).
+Any client that can establish a TCP connection to the Net-ECI port can
+issue commands to stop processing, alter chain setups, or reconfigure
+audio parameters.</li>
+<li><strong>Unencrypted Communications:</strong> Net-ECI transmits all
+commands and responses as plaintext over raw TCP sockets. Over a public
+network, this traffic is vulnerable to eavesdropping, packet sniffing,
+and man-in-the-middle (MitM) attacks.</li>
+<li><strong>Filesystem and Resource Manipulation:</strong> Net-ECI
+commands allow users to specify input and output audio files, assign
+file paths, and execute external scripts or preset files depending on
+the host configuration. An attacker can map local directory structures,
+overwrite existing files, or consume all available disk space by
+triggering arbitrary recordings.</li>
+<li><strong>Denial of Service (DoS):</strong> Because the service has no
+native rate limiting or connection throttling, malicious actors can
+easily overwhelm the listening daemon with bogus connections or complex
+command bursts, crashing the audio engine or disrupting time-critical
+audio streams.</li>
+</ul>
+<h3 id="recommended-mitigation-strategies">Recommended Mitigation
+Strategies</h3>
+<p>Direct exposure of the Net-ECI port to the internet must be avoided
+entirely. Implement the following safeguards to protect the host
+environment:</p>
+<h4 id="1-bind-exclusively-to-the-loopback-interface">1. Bind
+Exclusively to the Loopback Interface</h4>
+<p>Never bind Net-ECI to <code>0.0.0.0</code> or a public-facing IP
+address. Configure Ecasound to listen strictly on <code>127.0.0.1</code>
+so that the port is accessible only to local processes:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">--daemon</span> <span class="at">--server</span> <span class="at">--server-tcp-port</span><span class="op">=</span>2868</span></code></pre></div>
+<p>Ensure local network configuration or wrapper scripts enforce
+loopback binding.</p>
+<h4 id="2-encapsulate-traffic-with-ssh-tunneling">2. Encapsulate Traffic
+with SSH Tunneling</h4>
+<p>For remote administration, use an SSH tunnel to encrypt traffic and
+require key-based authentication before Net-ECI commands can be
+sent:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-N</span> <span class="at">-L</span> 2868:127.0.0.1:2868 user@remote-audio-server</span></code></pre></div>
+<p>This allows the client software on the local machine to connect to
+<code>localhost:2868</code> while the connection to the remote server
+remains fully encrypted and authenticated.</p>
+<h4 id="3-use-a-virtual-private-network-vpn">3. Use a Virtual Private
+Network (VPN)</h4>
+<p>For persistent multi-node deployments, place all Ecasound hosts
+inside an encrypted private network such as WireGuard, OpenVPN, or an
+overlay mesh (e.g., Tailscale). The Net-ECI port should only listen on
+the assigned private VPN interface.</p>
+<h4 id="4-restrict-host-privileges">4. Restrict Host Privileges</h4>
+<p>Run Ecasound under a dedicated, unprivileged system account (e.g.,
+<code>ecasound</code>) rather than <code>root</code>. Restrict the
+account's write permissions strictly to designated media directories to
+limit the blast radius if an unauthorized user manages to issue
+recording commands.</p>
+<h4 id="5-enforce-firewall-rules">5. Enforce Firewall Rules</h4>
+<p>If Net-ECI must listen on an internal network interface, configure
+host-based firewalls (such as <code>nftables</code> or
+<code>iptables</code>) to drop all inbound traffic to the port from
+outside explicitly allowed IP addresses.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

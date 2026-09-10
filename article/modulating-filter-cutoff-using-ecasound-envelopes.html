@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulating Filter Cutoff Using Ecasound Envelopes - ecasound</title>
+    <meta name="description" content="This article explains how to automate and modulate filter cutoff frequencies over time using control envelopes in Ecasound. By connecting Ecasound's dynamic controller operators to specific filter parameters, users can create time-varying audio effects s">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/modulating-filter-cutoff-using-ecasound-envelopes">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Modulating Filter Cutoff Using Ecasound Envelopes - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/modulating-filter-cutoff-using-ecasound-envelopes" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to automate and modulate filter cutoff frequencies over time using control envelopes in Ecasound. By connecting Ecasound's dynamic controller operators to specific filter parameters, users can create time-varying audio effects s" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="modulating-filter-cutoff-using-ecasound-envelopes">Modulating
+Filter Cutoff Using Ecasound Envelopes</h1>
+<p>This article explains how to automate and modulate filter cutoff
+frequencies over time using control envelopes in Ecasound. By connecting
+Ecasound's dynamic controller operators to specific filter parameters,
+users can create time-varying audio effects such as sweeps, wobbles, and
+evolving textures directly from the command line or within chainsetup
+scripts.</p>
+<h3 id="understanding-ecasound-control-architecture">Understanding
+Ecasound Control Architecture</h3>
+<p>Ecasound applies audio processing using chain operators
+(<code>-e*</code>), where each operator has numbered parameters that
+govern its behavior. To modulate a parameter dynamically instead of
+keeping it static, Ecasound provides controllers (<code>-k*</code>).
+Controllers run parallel to the audio stream and continuously update
+target parameter values at a specified control rate.</p>
+<p>When modulating a filter's cutoff frequency, two components work
+together:</p>
+<ol type="1">
+<li><strong>The Filter Operator</strong>: The effect processing the
+audio (such as a low-pass or resonant filter).</li>
+<li><strong>The Controller Operator</strong>: The envelope or modulation
+source that alters the filter's cutoff parameter index over time.</li>
+</ol>
+<h3 id="identifying-filter-parameters">Identifying Filter
+Parameters</h3>
+<p>Before attaching a controller, you must identify the index of the
+parameter you wish to automate. For example:</p>
+<ul>
+<li><strong><code>-efl:cutoff</code></strong> (Low-pass filter): Cutoff
+frequency in Hz is parameter <code>1</code>.</li>
+<li><strong><code>-ef3:cutoff:resonance:gain</code></strong> (Resonant
+low-pass filter): Cutoff frequency in Hz is parameter <code>1</code>,
+resonance is parameter <code>2</code>.</li>
+<li><strong><code>-efh:cutoff</code></strong> (High-pass filter): Cutoff
+frequency in Hz is parameter <code>1</code>.</li>
+</ul>
+<h3 id="modulating-with-linear-envelope-controllers--klg">Modulating
+with Linear Envelope Controllers (<code>-klg</code>)</h3>
+<p>To sweep a cutoff frequency linearly from a start value to an end
+value over a specific duration, use the linear envelope controller
+<code>-klg</code>.</p>
+<p>The syntax is:</p>
+<pre class="text"><code>-klg:fx_param:channel:start_value:end_value:duration</code></pre>
+<ul>
+<li><strong><code>fx_param</code></strong>: The index of the parameter
+being controlled (usually <code>1</code> for cutoff).</li>
+<li><strong><code>channel</code></strong>: The audio channel to apply
+modulation to (typically <code>1</code> for mono or all channels
+depending on setup).</li>
+<li><strong><code>start_value</code></strong>: The initial cutoff
+frequency in Hz.</li>
+<li><strong><code>end_value</code></strong>: The final cutoff frequency
+in Hz.</li>
+<li><strong><code>duration</code></strong>: The time in seconds over
+which the transition occurs.</li>
+</ul>
+<h4 id="example-command-linear-cutoff-sweep">Example Command: Linear
+Cutoff Sweep</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-efl:500</span> <span class="at">-klg:1:1:200:5000:10</span></span></code></pre></div>
+<p>In this command, <code>-efl:500</code> initializes a low-pass filter,
+and <code>-klg:1:1:200:5000:10</code> overrides parameter 1, smoothly
+raising the cutoff frequency from 200 Hz to 5000 Hz over the first 10
+seconds of playback.</p>
+<h3 id="continuous-envelopes-via-external-control-files--km">Continuous
+Envelopes via External Control Files (<code>-km</code>)</h3>
+<p>For complex, multi-stage envelope shapes (such as attack-decay curves
+or rhythmic patterns), Ecasound supports reading control values from
+text files using the continuous controller operator
+<code>-km</code>.</p>
+<p>The syntax is:</p>
+<pre class="text"><code>-km:fx_param:channel:file:control_rate</code></pre>
+<ul>
+<li><strong><code>file</code></strong>: Path to a plain text file
+containing space- or newline-separated floating-point values
+representing the desired cutoff frequencies over time.</li>
+<li><strong><code>control_rate</code></strong>: The frequency (in
+updates per second / Hz) at which Ecasound reads the next value from the
+file.</li>
+</ul>
+<p>If a file named <code>cutoff_curve.txt</code> contains envelope
+values sampled at 50 Hz, it can be assigned to the filter like this:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-ef3:1000:0.8:1.0</span> <span class="at">-km:1:1:cutoff_curve.txt:50</span></span></code></pre></div>
+<h3 id="cyclic-envelope-modulation-using-oscillators--kos">Cyclic
+Envelope Modulation Using Oscillators (<code>-kos</code>)</h3>
+<p>When periodic modulation (such as an LFO envelope) is required rather
+than a one-shot ramp, the sine-wave controller <code>-kos</code> or
+logarithmic sine controller <code>-kos2</code> can be used:</p>
+<pre class="text"><code>-kos:fx_param:channel:freq:min_value:max_value:initial_phase</code></pre>
+<h4 id="example-command-lfo-filter-sweep">Example Command: LFO Filter
+Sweep</h4>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-efl:1000</span> <span class="at">-kos:1:1:0.5:300:3000:0</span></span></code></pre></div>
+<p>This applies a low-pass filter where parameter <code>1</code>
+(cutoff) oscillates continuously between 300 Hz and 3000 Hz at a rate of
+0.5 Hz (one complete cycle every two seconds).</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

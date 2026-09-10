@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Bind MIDI Controllers in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound enables real-time parameter manipulation using external hardware via MIDI continuous controller (CC) messages. This guide covers the exact command-line syntax used to connect an external MIDI input device and bind specific MIDI CC knobs, sliders">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-bind-midi-controllers-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Bind MIDI Controllers in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-bind-midi-controllers-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound enables real-time parameter manipulation using external hardware via MIDI continuous controller (CC) messages. This guide covers the exact command-line syntax used to connect an external MIDI input device and bind specific MIDI CC knobs, sliders" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-bind-midi-controllers-in-ecasound">How to Bind MIDI
+Controllers in Ecasound</h1>
+<p>Ecasound enables real-time parameter manipulation using external
+hardware via MIDI continuous controller (CC) messages. This guide covers
+the exact command-line syntax used to connect an external MIDI input
+device and bind specific MIDI CC knobs, sliders, or pedals to chain
+operator parameters within an Ecasound processing session.</p>
+<h3 id="the-midi-binding-syntax--km">The MIDI Binding Syntax:
+<code>-km</code></h3>
+<p>In Ecasound, continuous parameter controllers are attached to the
+preceding chain operator using the <code>-km</code> option. The basic
+syntax is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:param_id,midi-channel,controller-id,lower-bound,upper-bound</span></span></code></pre></div>
+<p>The parameters are defined as follows:</p>
+<ul>
+<li><strong><code>param_id</code></strong>: The numeric index of the
+effect parameter you want to automate. For example, in an amplify
+operator (<code>-ea:100</code>), parameter <code>1</code> corresponds to
+the amplification percentage.</li>
+<li><strong><code>midi-channel</code></strong>: The MIDI channel to
+listen on (typically <code>1</code> to <code>16</code>).</li>
+<li><strong><code>controller-id</code></strong>: The continuous
+controller number (CC <code>0</code> to <code>127</code>) transmitted by
+your hardware (e.g., CC 7 for volume, CC 1 for modulation wheel).</li>
+<li><strong><code>lower-bound</code></strong>: The minimum value
+assigned to the target parameter when the MIDI controller sends its
+minimum value (<code>0</code>).</li>
+<li><strong><code>upper-bound</code></strong>: The maximum value
+assigned to the target parameter when the MIDI controller sends its
+maximum value (<code>127</code>).</li>
+</ul>
+<h3 id="defining-the-midi-input-device--md">Defining the MIDI Input
+Device: <code>-Md</code></h3>
+<p>Before Ecasound can read continuous controller messages, you must
+register your hardware device using the global MIDI device flag
+<code>-Md</code>.</p>
+<p>For ALSA sequencer connections:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-Md:alsaseq,default</span></span></code></pre></div>
+<p>For raw MIDI devices:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-Md:rawmidi,/dev/midi00</span></span></code></pre></div>
+<h3 id="complete-command-line-example">Complete Command-Line
+Example</h3>
+<p>The following command routes audio from an ALSA input to an ALSA
+output across a chain named <code>main</code>, adds an amplification
+operator (<code>-ea</code>), and maps MIDI CC 7 on channel 1 to control
+the volume level between 0% and 200%:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-Md:alsaseq,default</span> <span class="at">-a:main</span> <span class="at">-i:alsa,default</span> <span class="at">-o:alsa,default</span> <span class="at">-ea:100</span> <span class="at">-km:1,1,7,0,200</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-Md:alsaseq,default</code> opens the ALSA sequencer MIDI
+subsystem.</li>
+<li><code>-a:main</code> creates and selects chain
+<code>main</code>.</li>
+<li><code>-i:alsa,default -o:alsa,default</code> assigns the audio input
+and output.</li>
+<li><code>-ea:100</code> applies an amplifier operator initialized at
+100%.</li>
+<li><code>-km:1,1,7,0,200</code> binds parameter 1 of <code>-ea</code>
+to MIDI Channel 1, CC 7, scaling values from 0 to 200.</li>
+</ul>
+<p>After launching, you can use ALSA utilities like
+<code>aconnect</code> to connect your physical MIDI controller port to
+Ecasound's sequencer port if it is not routed automatically.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

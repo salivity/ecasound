@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Channel Mapping: 8-Channel to 2-Channel - ecasound</title>
+    <meta name="description" content="Ecasound manages multi-channel audio routing by decoupling hardware input/output objects from internal processing chains, allowing flexible mapping between an 8-channel soundcard and 2-channel (stereo) chains. Because an audio interface exposes all 8 cha">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-channel-mapping-8-channel-to-2-channel">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Channel Mapping: 8-Channel to 2-Channel - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-channel-mapping-8-channel-to-2-channel" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound manages multi-channel audio routing by decoupling hardware input/output objects from internal processing chains, allowing flexible mapping between an 8-channel soundcard and 2-channel (stereo) chains. Because an audio interface exposes all 8 cha" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-channel-mapping-8-channel-to-2-channel">Ecasound
+Channel Mapping: 8-Channel to 2-Channel</h1>
+<p>Ecasound manages multi-channel audio routing by decoupling hardware
+input/output objects from internal processing chains, allowing flexible
+mapping between an 8-channel soundcard and 2-channel (stereo) chains.
+Because an audio interface exposes all 8 channels simultaneously while
+processing chains often operate on stereo pairs, Ecasound relies on
+explicit channel count declarations, routing operators
+(<code>-erc</code> and <code>-erm</code>), channel selection filters
+(<code>-chorder</code>), or internal loop devices to distribute and
+combine channels accurately.</p>
+<h2 id="the-chain-architecture-model">The Chain Architecture Model</h2>
+<p>In Ecasound, processing paths are designated as chains using the
+<code>-a:chain_name</code> flag. Each chain operates with a specific
+format defined by the <code>-f</code> flag (e.g.,
+<code>-f:s32_le,2,48000</code> for a 2-channel chain).</p>
+<p>When communicating with an 8-channel soundcard via ALSA or JACK, the
+soundcard object itself requires an 8-channel format:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-f:s32_le,8,48000</span> <span class="at">-i:alsa,hw:0</span></span></code></pre></div>
+<p>Because a 2-channel chain cannot directly ingest an 8-channel stream
+without an explicit mapping instruction, Ecasound offers distinct
+methods to bridge the gap.</p>
+<h2 id="method-1-using-the-channel-order-operator--chorder">Method 1:
+Using the Channel Order Operator (<code>-chorder</code>)</h2>
+<p>The <code>-chorder</code> operator isolates specific channels from a
+multi-channel stream and maps them sequentially to the active chain. If
+a chain is configured for 2 channels, applying <code>-chorder</code>
+limits the chain's input to the specified indices.</p>
+<p>To capture physical inputs 3 and 4 of an 8-channel interface into a
+stereo chain:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:alsa,hw:0</span> <span class="at">-f:s32_le,2,48000</span> <span class="at">-chorder:3,4</span> <span class="at">-o:stereo_output.wav</span></span></code></pre></div>
+<p>In this command:</p>
+<ol type="1">
+<li>The hardware input enters chain <code>1</code> as an 8-channel
+stream.</li>
+<li>The format is reassigned to 2 channels.</li>
+<li><code>-chorder:3,4</code> maps hardware channel 3 to chain channel
+1, and hardware channel 4 to chain channel 2.</li>
+</ol>
+<h2 id="method-2-channel-copy-and-move-operators--erc-and--erm">Method
+2: Channel Copy and Move Operators (<code>-erc</code> and
+<code>-erm</code>)</h2>
+<p>When routing from a 2-channel chain to specific outputs on an
+8-channel device, running the chain in full 8-channel mode and
+manipulating internal channels is often the most direct approach.</p>
+<ul>
+<li><strong><code>-erc:from,to</code></strong>: Copies audio from one
+channel index to another.</li>
+<li><strong><code>-erm:from,to</code></strong>: Moves audio from one
+channel index to another, muting the source.</li>
+</ul>
+<p>To route a stereo file to physical outputs 5 and 6 of an 8-channel
+card:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:stereo.wav</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-erc:2,6</span> <span class="at">-erm:1,5</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-o:alsa,hw:0</span></span></code></pre></div>
+<p>Here, the chain's channel width is expanded to 8. The second input
+channel is copied to output channel 6, and the first input channel is
+moved to output channel 5, leaving all other outputs silent.</p>
+<h2 id="method-3-intermediate-loop-devices">Method 3: Intermediate Loop
+Devices</h2>
+<p>To run multiple independent 2-channel chains that share a single
+8-channel soundcard, Ecasound provides internal virtual buses via loop
+devices (<code>loop,label</code>). This prevents resource conflicts
+where multiple chains compete for the same physical soundcard.</p>
+<h3
+id="splitting-an-8-channel-input-into-multiple-stereo-chains">Splitting
+an 8-Channel Input into Multiple Stereo Chains</h3>
+<p>An 8-channel master chain reads from the card and sends the stream to
+a loop device. Multiple 2-channel chains then consume specific channels
+from that loop:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain 1 captures 8 channels into loop &#39;capture&#39;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:master_in</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:alsa,hw:0</span> <span class="at">-o:loop,capture</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain A processes channels 1 and 2</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:pair1</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:loop,capture</span> <span class="at">-f:s32_le,2,48000</span> <span class="at">-chorder:1,2</span> <span class="at">-o:out1.wav</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain B processes channels 3 and 4</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:pair2</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:loop,capture</span> <span class="at">-f:s32_le,2,48000</span> <span class="at">-chorder:3,4</span> <span class="at">-o:out2.wav</span></span></code></pre></div>
+<h3 id="merging-multiple-stereo-chains-into-an-8-channel-output">Merging
+Multiple Stereo Chains into an 8-Channel Output</h3>
+<p>To multiplex multiple stereo sources into specific channels of a
+single 8-channel output device:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain A routes stereo audio to channels 1 and 2 of an 8-channel loop</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:pair1</span> <span class="at">-i:file1.wav</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-o:loop,playback</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain B routes stereo audio to channels 3 and 4 of the same 8-channel loop</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:pair2</span> <span class="at">-i:file2.wav</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-erc:2,4</span> <span class="at">-erm:1,3</span> <span class="at">-o:loop,playback</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Master Chain takes the consolidated 8-channel loop and sends it to the soundcard</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">-a:master_out</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-i:loop,playback</span> <span class="at">-o:alsa,hw:0</span></span></code></pre></div>
+<p>By combining <code>-chorder</code> for channel extraction,
+<code>-erc</code>/<code>-erm</code> for channel positioning, and loop
+devices for submixing, Ecasound provides complete control over routing
+stereo chains through multi-channel interfaces.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

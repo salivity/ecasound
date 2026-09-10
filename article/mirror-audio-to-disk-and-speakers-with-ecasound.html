@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirror Audio to Disk and Speakers with Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound is fully capable of mirroring an incoming audio stream directly to disk while simultaneously routing it to physical speakers in real time. This article explains how Ecasound's multitrack architecture enables audio duplication across multiple end">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/mirror-audio-to-disk-and-speakers-with-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mirror Audio to Disk and Speakers with Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/mirror-audio-to-disk-and-speakers-with-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is fully capable of mirroring an incoming audio stream directly to disk while simultaneously routing it to physical speakers in real time. This article explains how Ecasound's multitrack architecture enables audio duplication across multiple end" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mirror-audio-to-disk-and-speakers-with-ecasound">Mirror Audio to
+Disk and Speakers with Ecasound</h1>
+<p>Ecasound is fully capable of mirroring an incoming audio stream
+directly to disk while simultaneously routing it to physical speakers in
+real time. This article explains how Ecasound's multitrack architecture
+enables audio duplication across multiple endpoints, provides the exact
+command-line syntax required to implement this routing, and covers
+essential settings for sample formats and buffer management.</p>
+<h3 id="how-audio-duplication-works-in-ecasound">How Audio Duplication
+Works in Ecasound</h3>
+<p>Ecasound handles signal flow using "chains." A chain is a signal path
+that connects inputs, audio effects, and outputs. To mirror an incoming
+signal to two separate destinations, Ecasound assigns a single audio
+input to multiple chains at the same time. One chain is configured to
+direct the stream to an audio file on disk, while the second chain
+directs the stream to a hardware audio device connected to physical
+speakers.</p>
+<h3 id="the-command-structure">The Command Structure</h3>
+<p>The core mechanism relies on the chain assignment flag
+(<code>-a</code>). By defining multiple chain identifiers
+simultaneously, you can map one input to both chains before splitting
+their outputs.</p>
+<p>A standard command using the ALSA sound subsystem follows this
+structure:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1,2</span> <span class="at">-i:alsahw:1,0</span> <span class="at">-a:1</span> <span class="at">-o:recording.wav</span> <span class="at">-a:2</span> <span class="at">-o:alsahw:0,0</span></span></code></pre></div>
+<h3 id="command-breakdown">Command Breakdown</h3>
+<ul>
+<li><code>-a:1,2 -i:alsahw:1,0</code>: Creates Chain 1 and Chain 2,
+assigning the input audio stream from the specified capture device
+(<code>alsahw:1,0</code>) to both chains concurrently.</li>
+<li><code>-a:1 -o:recording.wav</code>: Selects Chain 1 and routes the
+stream to a local WAV file on the disk.</li>
+<li><code>-a:2 -o:alsahw:0,0</code>: Selects Chain 2 and routes the
+stream to the specified audio output device (<code>alsahw:0,0</code>),
+delivering sound to your physical speakers.</li>
+</ul>
+<p>If using generic ALSA device aliases instead of specific hardware
+numbers, <code>alsa</code> or <code>default</code> can be used:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1,2</span> <span class="at">-i:alsa</span> <span class="at">-a:1</span> <span class="at">-o:output.wav</span> <span class="at">-a:2</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<h3 id="format-and-buffer-configuration">Format and Buffer
+Configuration</h3>
+<p>To ensure audio fidelity and prevent underruns or buffer overruns
+(xruns) during simultaneous disk writes and speaker playback, specify
+the audio parameters explicitly using the <code>-f</code> flag:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-a:1,2</span> <span class="at">-i:alsahw:1,0</span> <span class="at">-a:1</span> <span class="at">-o:recording.wav</span> <span class="at">-a:2</span> <span class="at">-o:alsahw:0,0</span></span></code></pre></div>
+<p>This configuration locks the format to signed 16-bit little-endian
+(<code>s16_le</code>), stereo (<code>2</code>), and a 44.1 kHz sample
+rate (<code>44100</code>).</p>
+<p>To optimize performance and minimize monitoring latency through the
+speakers, adjust the global audio buffer size using the <code>-b</code>
+option (specifying the buffer size in samples):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-b:256</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-a:1,2</span> <span class="at">-i:alsahw:1,0</span> <span class="at">-a:1</span> <span class="at">-o:recording.wav</span> <span class="at">-a:2</span> <span class="at">-o:alsahw:0,0</span></span></code></pre></div>
+<p>A smaller buffer reduces monitoring latency to the speakers, while a
+larger buffer provides higher stability against buffer dropouts on
+slower storage media.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

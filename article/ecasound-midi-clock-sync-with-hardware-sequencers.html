@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound MIDI Clock Sync with Hardware Sequencers - ecasound</title>
+    <meta name="description" content="Ecasound coordinates playback and recording with external hardware sequencers primarily through MIDI Machine Control (MMC), MIDI Time Code (MTC), and the JACK Audio Connection Kit ecosystem. While Ecasound is engineered fundamentally as a multitrack digi">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-midi-clock-sync-with-hardware-sequencers">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound MIDI Clock Sync with Hardware Sequencers - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-midi-clock-sync-with-hardware-sequencers" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound coordinates playback and recording with external hardware sequencers primarily through MIDI Machine Control (MMC), MIDI Time Code (MTC), and the JACK Audio Connection Kit ecosystem. While Ecasound is engineered fundamentally as a multitrack digi" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-midi-clock-sync-with-hardware-sequencers">Ecasound MIDI
+Clock Sync with Hardware Sequencers</h1>
+<p>Ecasound coordinates playback and recording with external hardware
+sequencers primarily through MIDI Machine Control (MMC), MIDI Time Code
+(MTC), and the JACK Audio Connection Kit ecosystem. While Ecasound is
+engineered fundamentally as a multitrack digital audio processor rather
+than a dedicated MIDI sequencer, it provides specialized input and
+output interfaces that allow users to align audio playback precisely
+with external hardware tempo and transport commands.</p>
+<h3 id="midi-clock-vs-transport-control">MIDI Clock vs. Transport
+Control</h3>
+<p>To understand synchronization in Ecasound, it is necessary to
+distinguish between transport control and tempo-based clock
+synchronization:</p>
+<ul>
+<li><strong>MIDI Beat Clock:</strong> Consists of 24 timing tick
+messages per quarter note (PPQN) designed to keep tempo and tempo
+changes in lockstep.</li>
+<li><strong>MIDI Machine Control (MMC) and MIDI Time Code
+(MTC):</strong> Used for absolute positioning (hours, minutes, seconds,
+frames) and basic transport states (play, pause, stop, locate).</li>
+</ul>
+<p>Ecasound natively excels at absolute time tracking (MTC/MMC) and
+external audio clocking rather than generating continuous 24 PPQN MIDI
+Beat Clock streams directly. Consequently, synchronization with external
+hardware sequencers is generally achieved using one of two primary
+approaches: direct ALSA MIDI transport integration or the JACK Audio
+Connection Kit.</p>
+<h3 id="method-1-using-the-jack-audio-connection-kit">Method 1: Using
+the JACK Audio Connection Kit</h3>
+<p>The most robust and timing-accurate way to synchronize Ecasound with
+external hardware sequencers is through JACK Transport. In this setup,
+JACK functions as the master or slave clock authority, while an
+intermediary tool handles the generation of 24 PPQN MIDI clock
+pulses.</p>
+<ol type="1">
+<li><strong>Routing Audio via JACK:</strong> Launch Ecasound configured
+to use the JACK audio subsystem for input and output:
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:jack</span> <span class="at">-o:alsa</span> <span class="at">-c</span></span></code></pre></div></li>
+<li><strong>Synchronizing Transport:</strong> Ecasound automatically
+links its internal engine position to JACK Transport when using JACK
+inputs or outputs, allowing it to start, stop, and relocate
+synchronously.</li>
+<li><strong>Generating MIDI Clock:</strong> Use a specialized bridge
+utility, such as <code>jack_midi_clock</code> or a lightweight sequencer
+like <code>seq24</code>, to translate JACK Transport position and tempo
+into hardware-compliant MIDI Clock pulses sent directly to your external
+hardware's physical MIDI DIN or USB port.</li>
+</ol>
+<h3 id="method-2-alsa-midi-machine-control-mmc">Method 2: ALSA MIDI
+Machine Control (MMC)</h3>
+<p>If your external hardware sequencer supports MMC, Ecasound can listen
+for incoming transport commands directly through the ALSA sequencer
+subsystem without third-party translation tools.</p>
+<ul>
+<li><strong>Controller Flag:</strong> Use the <code>-M</code> option
+within Ecasound to designate an ALSA MIDI port for control.</li>
+<li><strong>Syntax Example:</strong>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-M:alsaseq,128:0</span> <span class="at">-i:audio.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+In this mode, Ecasound binds to an ALSA sequencer port (e.g.,
+<code>128:0</code>). When the external hardware sequencer transmits
+start, stop, or locate messages via MMC, Ecasound intercepts these
+events and synchronizes its audio stream playback accordingly.</li>
+</ul>
+<h3 id="latency-and-drift-compensation">Latency and Drift
+Compensation</h3>
+<p>Audio buffers and hardware MIDI interfaces introduce processing
+latency. When locking Ecasound with an external sequencer:</p>
+<ul>
+<li><strong>Buffer Tuning:</strong> Keep Ecasound's buffer size minimal
+using the <code>-b:buffersize</code> option to reduce audio playback
+start latency.</li>
+<li><strong>Position Offsets:</strong> Use Ecasound’s interactive mode
+(<code>cs-set-position</code>) or preset positioning flags to fine-tune
+alignment between the analog audio and the hardware sequencer's
+output.</li>
+<li><strong>Sample Rate Stability:</strong> Ensure that the audio
+interface running Ecasound shares a common clock reference with any
+digital audio streams originating from the external hardware synth or
+sequencer to prevent drift over extended recording sessions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

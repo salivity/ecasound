@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preventing Phase Cancellation in Ecasound - ecasound</title>
+    <meta name="description" content="When summing multiple microphone signals in a digital audio workstation or command-line processing tool, phase cancellation can thin the combined frequency response through comb filtering. Ecasound, a modular and headless multitrack audio processor for U">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/preventing-phase-cancellation-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Preventing Phase Cancellation in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/preventing-phase-cancellation-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When summing multiple microphone signals in a digital audio workstation or command-line processing tool, phase cancellation can thin the combined frequency response through comb filtering. Ecasound, a modular and headless multitrack audio processor for U" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="preventing-phase-cancellation-in-ecasound">Preventing Phase
+Cancellation in Ecasound</h1>
+<p>When summing multiple microphone signals in a digital audio
+workstation or command-line processing tool, phase cancellation can thin
+the combined frequency response through comb filtering. Ecasound, a
+modular and headless multitrack audio processor for Unix-like systems,
+prevents phase cancellation through a deterministic strategy combining
+polarity inversion, sample-accurate delay compensation, frequency
+filtering, and isolated chain routing. Rather than utilizing automated
+black-box alignment algorithms, Ecasound provides direct control over
+time and polarity across individual audio chains before summing.</p>
+<h3 id="polarity-inversion-180-degree-phase-flipping">Polarity Inversion
+(180-Degree Phase Flipping)</h3>
+<p>The most immediate strategy for handling opposing diaphragms—such as
+dual-mic setups on a snare drum or front and back guitar cabinets—is
+polarity inversion. Ecasound accomplishes this using its native
+amplitude manipulation operators.</p>
+<p>By applying a negative multiplier via the linear gain operator
+(<code>-ea</code>), Ecasound reverses the waveform's phase by 180
+degrees:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:mic1.wav</span> <span class="at">-ea:100</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:mic2.wav</span> <span class="at">-ea:-100</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-o:master_mix.wav</span></span></code></pre></div>
+<p>Inverting chain 2 ensures that waveforms moving in opposite
+directions reinforce each other rather than canceling out when summed at
+<code>master_mix.wav</code>.</p>
+<h3 id="sample-accurate-delay-compensation">Sample-Accurate Delay
+Compensation</h3>
+<p>When multiple microphones capture the same sound source at varying
+distances, physical latency causes comb filtering. Ecasound corrects
+this acoustic time-of-arrival discrepancy using micro-delay compensation
+via integrated delay operators or LADSPA (Linux Audio Developer's Simple
+Plugin API) plugins.</p>
+<p>By routing each microphone to a unique chain
+(<code>-a:chain_id</code>), you can insert fractional or sample-level
+delay operators on the closer microphone:</p>
+<ul>
+<li><strong>Internal Time Delay (<code>-etd</code>):</strong> Adjusts
+arrival time in milliseconds to match the physically further
+microphone.</li>
+<li><strong>LADSPA Micro-Delays:</strong> Using plugins such as
+<code>delay_0.01s</code> or swh-plugins, Ecasound can delay signals by
+individual samples for precise transient alignment.</li>
+</ul>
+<p>Aligning the initial transients ensures that high-frequency waves sum
+in phase without hollow or nasal artifacts.</p>
+<h3 id="spectral-isolation-via-filtering">Spectral Isolation via
+Filtering</h3>
+<p>Phase cancellation is particularly destructive in low-frequency bands
+where wave cycles are longer and more uniform. Ecasound combats low-end
+phase smearing using its built-in frequency filter operators:</p>
+<ul>
+<li><strong>High-Pass / Low-Cut Filters (<code>-ef1</code> /
+<code>-ef4</code>):</strong> Removing redundant sub-bass frequencies
+from auxiliary or room microphones prevents low-end cancellation against
+the direct close-mic signal.</li>
+<li><strong>Band-Pass Filtering:</strong> Isolating specific frequency
+bands per mic chain ensures that two capsules only sum together in
+frequency areas where their arrival times are aligned.</li>
+</ul>
+<h3 id="isolated-chain-routing-and-gain-staging">Isolated Chain Routing
+and Gain Staging</h3>
+<p>Ecasound’s architectural foundation relies on signal chains. Each
+input is isolated in its own chain before it reaches the global summing
+bus. This routing structure prevents premature summing, allowing you
+to:</p>
+<ol type="1">
+<li>Solo individual chain combinations (<code>-a:1,2</code>) to aurally
+check phase coherence.</li>
+<li>Trim relative chain gain (<code>-ea:value</code>) to lessen the
+dominance of a phase-conflicted bleed mic.</li>
+<li>Route pre-aligned chains into intermediate loop devices
+(<code>-o:loop,1</code>) for grouped phase management prior to final
+master output summing.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

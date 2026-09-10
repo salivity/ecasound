@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forward Playhead in Ecasound Interactive Mode - ecasound</title>
+    <meta name="description" content="Controlling the transport dynamically in Ecasound allows you to navigate audio files during playback or recording without stopping the engine. This guide explains how to incrementally advance the playhead position in real time using Ecasound’s interact">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/forward-playhead-in-ecasound-interactive-mode">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Forward Playhead in Ecasound Interactive Mode - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/forward-playhead-in-ecasound-interactive-mode" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Controlling the transport dynamically in Ecasound allows you to navigate audio files during playback or recording without stopping the engine. This guide explains how to incrementally advance the playhead position in real time using Ecasound’s interact" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="forward-playhead-in-ecasound-interactive-mode">Forward Playhead
+in Ecasound Interactive Mode</h1>
+<p>Controlling the transport dynamically in Ecasound allows you to
+navigate audio files during playback or recording without stopping the
+engine. This guide explains how to incrementally advance the playhead
+position in real time using Ecasound’s interactive mode (EIAM)
+commands.</p>
+<h3 id="starting-interactive-mode">Starting Interactive Mode</h3>
+<p>Launch Ecasound in interactive mode by providing the <code>-c</code>
+flag along with your audio setup:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa</span></code></pre></div>
+<p>Once loaded, type <code>start</code> to begin playback.</p>
+<h3 id="using-the-forward-command">Using the Forward Command</h3>
+<p>To jump forward incrementally from the current playhead position, use
+the <code>forward</code> command (or its shorthand <code>fw</code>)
+followed by the number of seconds:</p>
+<pre class="text"><code>forward [seconds]</code></pre>
+<p>or:</p>
+<pre class="text"><code>fw [seconds]</code></pre>
+<h4 id="examples">Examples:</h4>
+<ul>
+<li><strong>Advance by 5 seconds:</strong>
+<pre class="text"><code>forward 5</code></pre>
+or
+<pre class="text"><code>fw 5</code></pre></li>
+<li><strong>Advance by fractional seconds (e.g., half a
+second):</strong>
+<pre class="text"><code>fw 0.5</code></pre></li>
+<li><strong>Advance by several minutes (e.g., 2 minutes / 120
+seconds):</strong>
+<pre class="text"><code>fw 120</code></pre></li>
+</ul>
+<h3 id="chainsetup-forwarding">Chainsetup Forwarding</h3>
+<p>If you are managing multiple chainsetups or need explicit chain-level
+control, use the <code>cs-forward</code> command:</p>
+<pre class="text"><code>cs-forward 10</code></pre>
+<p>This advances the active chainsetup playhead by 10 seconds.</p>
+<h3 id="verifying-the-current-position">Verifying the Current
+Position</h3>
+<p>To check the updated playhead position after forwarding, run:</p>
+<pre class="text"><code>get-position</code></pre>
+<p>or for the chainsetup:</p>
+<pre class="text"><code>cs-get-position</code></pre>
+<p>Both commands return the current transport position in seconds.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

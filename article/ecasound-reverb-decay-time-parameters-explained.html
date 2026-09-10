@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Reverb Decay Time Parameters Explained - ecasound</title>
+    <meta name="description" content="In Ecasound, reverberation decay is primarily controlled by the built-in Freeverb operator (-efv), which simulates acoustic spaces using physical modeling. This article explains the exact parameters governing reverb decay time within Ecasound, detailing">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-reverb-decay-time-parameters-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Reverb Decay Time Parameters Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-reverb-decay-time-parameters-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Ecasound, reverberation decay is primarily controlled by the built-in Freeverb operator (-efv), which simulates acoustic spaces using physical modeling. This article explains the exact parameters governing reverb decay time within Ecasound, detailing" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-reverb-decay-time-parameters-explained">Ecasound Reverb
+Decay Time Parameters Explained</h1>
+<p>In Ecasound, reverberation decay is primarily controlled by the
+built-in Freeverb operator (<code>-efv</code>), which simulates acoustic
+spaces using physical modeling. This article explains the exact
+parameters governing reverb decay time within Ecasound, detailing how
+room size and damping interact to dictate the overall length, tone, and
+tail of the effect.</p>
+<h3 id="the-built-in-reverb-operator--efv">The Built-In Reverb Operator
+(<code>-efv</code>)</h3>
+<p>Ecasound's native reverb processing is powered by an integrated
+Freeverb implementation invoked with the <code>-efv</code> chain
+operator. The full syntax for this operator is:</p>
+<pre class="text"><code>-efv:roomsize,damping,wet,dry,width,mode</code></pre>
+<p>While parameters such as <code>wet</code>, <code>dry</code>, and
+<code>width</code> govern the mix balance and stereo image, decay time
+is strictly governed by two parameters:
+<strong><code>roomsize</code></strong> and
+<strong><code>damping</code></strong>.</p>
+<h3 id="1-room-size-roomsize">1. Room Size (<code>roomsize</code>)</h3>
+<p>The <code>roomsize</code> parameter is the primary control for
+overall decay time (RT60).</p>
+<ul>
+<li><strong>Value Range:</strong> <code>0.0</code> to <code>1.0</code>
+(typical values range between <code>0.7</code> and
+<code>0.95</code>).</li>
+<li><strong>Function:</strong> In Freeverb's comb filter network,
+<code>roomsize</code> scales the internal feedback coefficients.
+Increasing this value keeps the audio recirculating longer through the
+delay buffers, which directly lengthens the decay tail.</li>
+<li><strong>Impact on Decay:</strong> Setting <code>roomsize</code>
+close to <code>0.0</code> produces an extremely short, metallic decay
+akin to a tiny resonant enclosure. Setting it closer to <code>1.0</code>
+dramatically extends decay time, producing a long, sustained wash
+characteristic of a cathedral or large hall. Values above
+<code>1.0</code> will result in feedback instability and infinite
+decay.</li>
+</ul>
+<h3 id="2-damping-damping">2. Damping (<code>damping</code>)</h3>
+<p>The <code>damping</code> parameter governs frequency-dependent decay,
+simulating the absorption of acoustic energy by walls, air, and soft
+surfaces.</p>
+<ul>
+<li><strong>Value Range:</strong> <code>0.0</code> to
+<code>1.0</code>.</li>
+<li><strong>Function:</strong> Damping controls low-pass filters placed
+inside the feedback loops. Higher values cause high frequencies to decay
+faster than lower frequencies on each recirculation cycle.</li>
+<li><strong>Impact on Decay:</strong>
+<ul>
+<li>A damping value of <code>0.0</code> allows high frequencies to
+sustain as long as low frequencies, resulting in a bright, prolonged
+reverberant tail.</li>
+<li>A higher damping value (e.g., <code>0.5</code> to <code>0.8</code>)
+rolls off the highs rapidly, causing the perceived decay time of top-end
+frequencies to shorten while preserving lower-mid resonance.</li>
+</ul></li>
+</ul>
+<h3 id="practical-application">Practical Application</h3>
+<p>To configure a long, ambient decay with natural high-frequency loss,
+set a high <code>roomsize</code> and a moderate <code>damping</code>
+level:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-efv:0.85,0.4,0.3,0.7,1.0,0</span> <span class="at">-o</span> output.wav</span></code></pre></div>
+<p>To configure a tight, snappy decay resembling a tiled room:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-efv:0.25,0.1,0.2,0.8,1.0,0</span> <span class="at">-o</span> output.wav</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

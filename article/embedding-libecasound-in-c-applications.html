@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding libecasound in C++ Applications - ecasound</title>
+    <meta name="description" content="Yes, C++ applications can directly embed libecasound without spawning or interacting with an external Ecasound process. Ecasound is architected with a strict separation between its processing engine and user interfaces, exposing its core multitrack audio">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/embedding-libecasound-in-c-applications">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Embedding libecasound in C++ Applications - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/embedding-libecasound-in-c-applications" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Yes, C++ applications can directly embed libecasound without spawning or interacting with an external Ecasound process. Ecasound is architected with a strict separation between its processing engine and user interfaces, exposing its core multitrack audio" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="embedding-libecasound-in-c-applications">Embedding libecasound
+in C++ Applications</h1>
+<p>Yes, C++ applications can directly embed <code>libecasound</code>
+without spawning or interacting with an external Ecasound process.
+Ecasound is architected with a strict separation between its processing
+engine and user interfaces, exposing its core multitrack audio
+processing capabilities as a shared C++ library. By linking directly
+against <code>libecasound</code> or its C-language binding
+<code>libecasoundc</code>, developers can initialize, configure, and
+control the entire audio processing chain within the same memory space
+and process thread hierarchy as their main application.</p>
+<h3 id="the-architecture-behind-libecasound">The Architecture Behind
+libecasound</h3>
+<p>The standalone <code>ecasound</code> executable is essentially an
+interface wrapper around the core processing framework. All routing,
+effects processing, multitrack recording, and playback capabilities
+exist natively inside <code>libecasound</code>.</p>
+<p>When integrating Ecasound into a C++ project, you do not need to rely
+on external process management, standard I/O redirection, or local
+socket communication. Instead, your binary links directly to the engine,
+providing:</p>
+<ul>
+<li><strong>Zero Process Overhead:</strong> Eliminates the need to spawn
+child processes or maintain inter-process communication (IPC)
+channels.</li>
+<li><strong>Synchronous Control:</strong> Enables direct function calls
+to the control engine, simplifying error handling and state tracking
+compared to parsing text output from standard streams.</li>
+<li><strong>Low Latency:</strong> Removes IPC serialization barriers
+when sending operational commands to the audio subsystem.</li>
+</ul>
+<h3 id="integration-options-native-c-vs-c-bindings">Integration Options:
+Native C++ vs. C Bindings</h3>
+<p>Developers have two primary methods for embedding the library:</p>
+<ol type="1">
+<li><strong>Native C++ Control Interface
+(<code>ECA_CONTROL_INTERFACE</code>):</strong> Included via
+<code>&lt;libecasound/eca-control-interface.h&gt;</code>, this class
+allows native C++ code to instantiate the Ecasound engine directly.
+Commands are issued programmatically using standard string-based ECI
+(Ecasound Control Interface) commands, maintaining full access to the
+underlying engine objects.</li>
+<li><strong>Plain C Interface (<code>libecasoundc</code>):</strong> This
+is a procedural wrapper around the C++ engine. It can be easily used in
+C++ code using <code>#include &lt;libecasoundc/ecasoundc.h&gt;</code>
+and provides functions such as <code>eci_init()</code>,
+<code>eci_command()</code>, and <code>eci_cleanup()</code>.</li>
+</ol>
+<h3 id="implementation-workflow">Implementation Workflow</h3>
+<p>Embedding <code>libecasound</code> involves three core steps:</p>
+<h4 id="1-linking-the-library">1. Linking the Library</h4>
+<p>Your build system (such as CMake, Make, or Meson) must locate and
+link against <code>libecasound</code>. Using <code>pkg-config</code>,
+compile and link flags can be retrieved via:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pkg-config</span> <span class="at">--cflags</span> <span class="at">--libs</span> libecasound</span></code></pre></div>
+<p>Alternatively, direct linker flags such as <code>-lecasound</code>
+(or <code>-lecasoundc</code>) should be added to your compiler
+invocation.</p>
+<h4 id="2-instantiating-the-control-interface">2. Instantiating the
+Control Interface</h4>
+<p>Using the native C++ class, you instantiate
+<code>ECA_CONTROL_INTERFACE</code> to manage the audio session:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;libecasound/eca-control-interface.h&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Instantiate the engine directly within the C++ process</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    ECA_CONTROL_INTERFACE eci<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Issue setup commands</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;cs-add my_session&quot;</span><span class="op">);</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;c-add my_chain&quot;</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;ai-add input.wav&quot;</span><span class="op">);</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;ao-add default&quot;</span><span class="op">);</span> <span class="co">// Route to system output (e.g., ALSA/JACK)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Start processing</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;start&quot;</span><span class="op">);</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Engine runs within the application context</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(!</span>eci<span class="op">.</span>command_float_arg<span class="op">(</span><span class="st">&quot;engine-status&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Application loop or sleep</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    eci<span class="op">.</span>command<span class="op">(</span><span class="st">&quot;stop&quot;</span><span class="op">);</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="3-managing-engine-state-and-real-time-threads">3. Managing
+Engine State and Real-Time Threads</h4>
+<p>Once initialized, <code>libecasound</code> spawns internal real-time
+processing threads according to the selected audio subsystem (such as
+ALSA, JACK, or OSS). The hosting C++ application maintains control via
+the instanced interface object, with real-time audio threads running
+concurrently within the application's process space.</p>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Licensing:</strong> The core <code>libecasound</code>
+library is licensed under the GNU Lesser General Public License (LGPL),
+while certain plugins and interface wrappers are covered by the GNU
+General Public License (GPL). Ensure your target project respects the
+corresponding licensing model when statically or dynamically
+linking.</li>
+<li><strong>Thread Safety:</strong> The ECI command interface executes
+deterministically, but calls to configure chain setups should be
+coordinated outside the real-time audio thread to avoid audio buffer
+underruns.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

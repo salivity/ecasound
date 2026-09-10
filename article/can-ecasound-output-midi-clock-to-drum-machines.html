@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can Ecasound Output MIDI Clock to Drum Machines? - ecasound</title>
+    <meta name="description" content="This article examines whether the command-line audio processor Ecasound can output standard MIDI clock signals to synchronize external drum machines. While Ecasound includes versatile audio processing and basic MIDI control mechanisms, it cannot natively">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/can-ecasound-output-midi-clock-to-drum-machines">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Can Ecasound Output MIDI Clock to Drum Machines? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/can-ecasound-output-midi-clock-to-drum-machines" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines whether the command-line audio processor Ecasound can output standard MIDI clock signals to synchronize external drum machines. While Ecasound includes versatile audio processing and basic MIDI control mechanisms, it cannot natively" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="can-ecasound-output-midi-clock-to-drum-machines">Can Ecasound
+Output MIDI Clock to Drum Machines?</h1>
+<p>This article examines whether the command-line audio processor
+Ecasound can output standard MIDI clock signals to synchronize external
+drum machines. While Ecasound includes versatile audio processing and
+basic MIDI control mechanisms, it cannot natively generate the MIDI Beat
+Clock required by drum hardware. The sections below break down
+Ecasound’s specific MIDI limitations and detail the standard method for
+syncing external hardware drum machines using the JACK audio
+subsystem.</p>
+<h3 id="understanding-ecasounds-midi-capabilities">Understanding
+Ecasound's MIDI Capabilities</h3>
+<p>Ecasound is designed primarily as a multitrack audio recorder and
+effect processor. Its MIDI architecture focuses on controlling audio
+parameters and transport behavior rather than sequencing or musical
+timing.</p>
+<p>Natively, Ecasound supports:</p>
+<ul>
+<li><strong>MIDI Continuous Controller (CC) Messages:</strong> Mapping
+external MIDI knobs and faders to internal audio parameters (e.g.,
+volume, pan, filter cutoff).</li>
+<li><strong>MIDI Machine Control (MMC):</strong> Sending and receiving
+transport commands such as Play, Stop, and Locate to synchronize
+positioning with supported devices and software.</li>
+</ul>
+<p>Ecasound lacks an internal MIDI tempo generator. It does not output
+standard MIDI Beat Clock—the 24-pulses-per-quarter-note (PPQN) real-time
+timing messages (status byte <code>0xF8</code>) that drum machines and
+hardware sequencers require to advance steps in musical time.</p>
+<h3 id="why-mmc-does-not-drive-drum-machines">Why MMC Does Not Drive
+Drum Machines</h3>
+<p>Users often confuse MIDI Machine Control (MMC) with MIDI Beat
+Clock:</p>
+<ul>
+<li><strong>MMC</strong> handles position and state. When you start
+Ecasound, it can broadcast an MMC "Deferred Play" or "Play" command.
+While some drum machines can start playback upon receiving an MMC
+command, their internal sequencers will run entirely on their own
+internal tempo clocks, quickly drifting out of phase with Ecasound's
+audio.</li>
+<li><strong>MIDI Beat Clock</strong> continuously dictates the tempo and
+step progression. To keep a drum machine in tempo-accurate sync with
+audio tracks, the drum machine must be slaved to this continuous pulse
+stream.</li>
+</ul>
+<p>Because Ecasound only operates in linear audio time (samples,
+seconds) and does not maintain a musical tempo map (beats per minute),
+it cannot output this pulse.</p>
+<h3 id="solution-bridging-with-jack-transport">Solution: Bridging with
+JACK Transport</h3>
+<p>To drive an external drum machine while using Ecasound, Ecasound must
+be coupled with the JACK Audio Connection Kit and a dedicated MIDI clock
+utility.</p>
+<ol type="1">
+<li><p><strong>Run Ecasound as a JACK Transport Client:</strong> Launch
+Ecasound with JACK support enabled, slaved to JACK transport using the
+<code>-G:jack</code> command-line option. This ensures that starting or
+stopping Ecasound starts or stops the global JACK timeline.</p></li>
+<li><p><strong>Deploy a Dedicated MIDI Clock Daemon:</strong> Run a
+standalone bridge utility designed to translate JACK Transport position
+and tempo into hardware MIDI clock signals. Common utilities
+include:</p>
+<ul>
+<li><code>jack_midi_clock</code>: Listens to JACK Transport and
+broadcasts standard MIDI Beat Clock pulses through a JACK MIDI
+port.</li>
+<li><code>kmidimon</code> or <code>qjackctl</code>: Tools to configure
+JACK's master tempo settings.</li>
+</ul></li>
+<li><p><strong>Route to Hardware:</strong> Route the output of the MIDI
+clock daemon to the ALSA or JACK hardware output port connected to your
+external drum machine. Set the drum machine to slave mode (MIDI Clock /
+External Sync).</p></li>
+</ol>
+<p>By delegating timing and tempo generation to JACK and dedicated
+utilities, you achieve frame-accurate synchronization between Ecasound's
+audio processing and your external drum machine.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

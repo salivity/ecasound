@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Does Ecasound Support Native LV2 Plugins? - ecasound</title>
+    <meta name="description" content="Ecasound does not natively support LV2 plugins and requires a LADSPA wrapper to host them. While Ecasound includes native support for the older LADSPA (Linux Audio Developer's Simple Plugin API) architecture, it does not have a built-in LV2 hosting engin">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/does-ecasound-support-native-lv2-plugins">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Does Ecasound Support Native LV2 Plugins? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/does-ecasound-support-native-lv2-plugins" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not natively support LV2 plugins and requires a LADSPA wrapper to host them. While Ecasound includes native support for the older LADSPA (Linux Audio Developer's Simple Plugin API) architecture, it does not have a built-in LV2 hosting engin" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="does-ecasound-support-native-lv2-plugins">Does Ecasound Support
+Native LV2 Plugins?</h1>
+<p>Ecasound does not natively support LV2 plugins and requires a LADSPA
+wrapper to host them. While Ecasound includes native support for the
+older LADSPA (Linux Audio Developer's Simple Plugin API) architecture,
+it does not have a built-in LV2 hosting engine. To use LV2 effects or
+processors inside an Ecasound signal chain, you must bridge the LV2
+plugins through a translation layer that exposes them as standard LADSPA
+plugins.</p>
+<h3 id="ecasounds-native-plugin-architecture">Ecasound’s Native Plugin
+Architecture</h3>
+<p>Ecasound's design relies on LADSPA for dynamic audio processing
+plugins. In Ecasound commands and chain setups, LADSPA plugins are
+called using the <code>-el</code> operator followed by the plugin name
+and its parameters. Because development on Ecasound prioritized
+lightweight CLI operation and stability within the LADSPA framework,
+native parsing for LV2 manifests, Turtle/RDF metadata, and LV2 atom
+ports was never directly integrated into the core codebase.</p>
+<h3 id="running-lv2-plugins-via-ladspa-wrappers">Running LV2 Plugins via
+LADSPA Wrappers</h3>
+<p>To execute LV2 plugins in Ecasound, you must use a wrapper such as an
+LV2-to-LADSPA bridge. These bridges scan your system's LV2 directory,
+read the plugin specifications, and generate LADSPA-compatible
+descriptor binaries or aliases.</p>
+<p>Once wrapped, the plugin is accessed just like any other LADSPA
+plugin:</p>
+<ol type="1">
+<li>The wrapper exposes the LV2 plugin's audio inputs, audio outputs,
+and control ports.</li>
+<li>Ecasound identifies the bridged plugin within the standard LADSPA
+search path (<code>LADSPA_PATH</code>).</li>
+<li>You instantiate the plugin in Ecasound using the standard
+<code>-el:plugin_name,param1,param2...</code> syntax.</li>
+</ol>
+<h3 id="limitations-of-the-wrapper-approach">Limitations of the Wrapper
+Approach</h3>
+<p>Using an LV2 plugin through a LADSPA wrapper in Ecasound introduces
+several functional limitations:</p>
+<ul>
+<li><strong>Control and MIDI Data:</strong> LV2 supports complex event
+types, MIDI event transport, and atom-based messaging. Standard LADSPA
+only supports floating-point control rates. Advanced MIDI-driven LV2
+instruments and synths generally cannot be controlled properly through a
+LADSPA bridge.</li>
+<li><strong>Graphical Interfaces:</strong> LV2 supports external and
+embedded user interfaces. LADSPA wrappers strip GUI components, meaning
+parameters must be set entirely via command-line arguments, text
+configuration files, or basic controller mappings.</li>
+<li><strong>Dynamic Ports and State Saving:</strong> LV2 features such
+as dynamic port allocation, custom presets, and persistent file states
+are not fully mapped to the LADSPA specification and are lost in
+translation.</li>
+</ul>
+<p>For pure audio processing tasks such as filtering, equalization,
+dynamic range compression, and standard delays, an LV2-to-LADSPA wrapper
+allows Ecasound to run modern LV2 DSP algorithms effectively.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

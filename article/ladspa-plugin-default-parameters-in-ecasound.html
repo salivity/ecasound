@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LADSPA Plugin Default Parameters in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how the Ecasound digital audio workstation determines and assigns default control parameter values when instantiating LADSPA (Linux Audio Developer's Simple Plugin API) plugins. When operators are initialized without explicit user-d">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ladspa-plugin-default-parameters-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LADSPA Plugin Default Parameters in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ladspa-plugin-default-parameters-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Ecasound digital audio workstation determines and assigns default control parameter values when instantiating LADSPA (Linux Audio Developer's Simple Plugin API) plugins. When operators are initialized without explicit user-d" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ladspa-plugin-default-parameters-in-ecasound">LADSPA Plugin
+Default Parameters in Ecasound</h1>
+<p>This article explains how the Ecasound digital audio workstation
+determines and assigns default control parameter values when
+instantiating LADSPA (Linux Audio Developer's Simple Plugin API)
+plugins. When operators are initialized without explicit user-defined
+values, Ecasound queries the plugin’s binary metadata, evaluates defined
+port range hints, calculates bounded or sample-rate-dependent values,
+and falls back to safe primitives where metadata is absent.</p>
+<h3 id="the-ladspa-metadata-system">The LADSPA Metadata System</h3>
+<p>LADSPA plugins are distributed as compiled shared libraries
+(<code>.so</code> files) that expose a descriptor function returning a
+<code>LADSPA_Descriptor</code> structure for each plugin type. Control
+parameters are represented as input control ports.</p>
+<p>Because the LADSPA specification avoids runtime configuration
+dialogues, all parameter boundaries and default guidelines are embedded
+directly into the descriptor metadata via the
+<code>LADSPA_PortRangeHint</code> structure. Each control port contains
+a <code>HintDescriptor</code> bitmask alongside <code>LowerBound</code>
+and <code>UpperBound</code> floating-point numbers.</p>
+<h3 id="port-range-hints-evaluation">Port Range Hints Evaluation</h3>
+<p>When Ecasound instantiates an effect using the <code>-el</code>
+(enable LADSPA) or <code>-eli</code> (enable LADSPA by index) chain
+operators, it parses any parameters passed on the command line or via
+the Ecasound Control Interface (ECI). If a user specifies fewer
+parameters than the plugin requires, Ecasound consults the
+<code>LADSPA_PortRangeHint</code> for each missing control input.</p>
+<p>The API specifies several explicit default flags within the
+<code>HintDescriptor</code> bitmask. Ecasound resolves defaults by
+checking these flags:</p>
+<ul>
+<li><strong>Fixed Constant Defaults:</strong> Flags such as
+<code>LADSPA_HINT_DEFAULT_0</code>, <code>LADSPA_HINT_DEFAULT_1</code>,
+<code>LADSPA_HINT_DEFAULT_100</code>, and
+<code>LADSPA_HINT_DEFAULT_440</code> instruct Ecasound to assign the
+literal values <code>0.0</code>, <code>1.0</code>, <code>100.0</code>,
+or <code>440.0</code> (standard concert pitch).</li>
+<li><strong>Bound-Relative Defaults:</strong> Flags like
+<code>LADSPA_HINT_DEFAULT_MINIMUM</code> or
+<code>LADSPA_HINT_DEFAULT_MAXIMUM</code> resolve directly to the port's
+declared <code>LowerBound</code> or <code>UpperBound</code>.</li>
+<li><strong>Calculated Midpoints:</strong> The flags
+<code>LADSPA_HINT_DEFAULT_LOW</code>,
+<code>LADSPA_HINT_DEFAULT_MIDDLE</code>, and
+<code>LADSPA_HINT_DEFAULT_HIGH</code> represent values positioned at
+25%, 50%, and 75% between the lower and upper bounds.</li>
+</ul>
+<h3 id="linear-vs-logarithmic-calculation">Linear vs. Logarithmic
+Calculation</h3>
+<p>When calculating low, middle, and high defaults, Ecasound accounts
+for the scale of the parameter:</p>
+<ul>
+<li><strong>Linear Ports:</strong> If
+<code>LADSPA_HINT_LOGARITHMIC</code> is not set, Ecasound applies linear
+interpolation between the lower and upper bounds. For example,
+<code>LADSPA_HINT_DEFAULT_MIDDLE</code> is calculated as
+<code>LowerBound + 0.5 * (UpperBound - LowerBound)</code>.</li>
+<li><strong>Logarithmic Ports:</strong> If the
+<code>LADSPA_HINT_LOGARITHMIC</code> flag is active (common for
+frequency and decibel controls), Ecasound evaluates the values
+exponentially: <span
+class="math inline">\(\text{exp}(\text{ln}(\text{LowerBound}) + 0.5
+\times (\text{ln}(\text{UpperBound}) -
+\text{ln}(\text{LowerBound})))\)</span>.</li>
+</ul>
+<h3 id="sample-rate-dependency">Sample-Rate Dependency</h3>
+<p>If a port includes the <code>LADSPA_HINT_SAMPLE_RATE</code> flag, its
+boundaries are treated as multipliers of the current processing sample
+rate (e.g., cutoff frequencies). Ecasound multiplies the declared bounds
+by the active chainsetup's sample rate before computing bound-relative
+defaults or midpoints.</p>
+<h3 id="missing-hints-and-fallbacks">Missing Hints and Fallbacks</h3>
+<p>If a plugin author sets the default hint to
+<code>LADSPA_HINT_DEFAULT_NONE</code>, or fails to provide valid hint
+flags for a control port, Ecasound applies a standard fallback strategy.
+In these cases, Ecasound generally falls back to the port's
+<code>LowerBound</code>, or to <code>0.0</code> if the bounds are
+indeterminate, ensuring that unassigned memory does not lead to
+unpredictable floating-point values during processing.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

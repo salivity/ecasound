@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Interactive Mode Help Command Guide - ecasound</title>
+    <meta name="description" content="Ecasound's Interactive Mode (EIAM) includes an integrated help subsystem that allows users to query documentation for individual commands directly from the terminal prompt. This guide explains how to access, read, and utilize the built-in documentation i">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-interactive-mode-help-command-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Interactive Mode Help Command Guide - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-interactive-mode-help-command-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound's Interactive Mode (EIAM) includes an integrated help subsystem that allows users to query documentation for individual commands directly from the terminal prompt. This guide explains how to access, read, and utilize the built-in documentation i" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-interactive-mode-help-command-guide">Ecasound
+Interactive Mode Help Command Guide</h1>
+<p>Ecasound's Interactive Mode (EIAM) includes an integrated help
+subsystem that allows users to query documentation for individual
+commands directly from the terminal prompt. This guide explains how to
+access, read, and utilize the built-in documentation in Ecasound without
+needing to consult external manual pages during an active session.</p>
+<h3 id="accessing-interactive-mode">Accessing Interactive Mode</h3>
+<p>To access the help system, you must first start Ecasound in
+interactive mode by appending the <code>-c</code> flag to the command
+line:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<p>Once launched, you are presented with the interactive prompt
+(<code>ecasound ('h' for help) &gt;</code>), where you can enter help
+queries directly.</p>
+<h3 id="querying-help-for-specific-commands">Querying Help for Specific
+Commands</h3>
+<p>To view detailed documentation for any specific command, pass the
+command name as an argument to the <code>help</code> or <code>h</code>
+command:</p>
+<pre class="text"><code>help &lt;command-name&gt;</code></pre>
+<p>or using the shorthand:</p>
+<pre class="text"><code>h &lt;command-name&gt;</code></pre>
+<p>For example, to view the syntax and operational details of the chain
+setup command <code>cs-add</code>, enter:</p>
+<pre class="text"><code>help cs-add</code></pre>
+<h3 id="understanding-the-command-help-output">Understanding the Command
+Help Output</h3>
+<p>When you request help for a specific command, Ecasound returns a
+concise reference block containing three main elements:</p>
+<ol type="1">
+<li><strong>Command Signature</strong>: Shows the exact command name and
+shorthand alias (if available).</li>
+<li><strong>Parameters and Types</strong>: Lists any required or
+optional arguments alongside their expected data types (such as strings,
+integers, or floating-point values).</li>
+<li><strong>Description</strong>: Provides a brief summary of what the
+command does, how it affects the audio engine or chain setup, and
+relevant return values.</li>
+</ol>
+<p>For example, querying an engine command such as
+<code>engine-status</code> outputs:</p>
+<pre class="text"><code>- &#39;engine-status&#39;, &#39;es&#39;:
+    Returns current engine status.
+    Format: &#39;engine-status&#39;</code></pre>
+<h3 id="discovering-available-commands">Discovering Available
+Commands</h3>
+<p>If you do not know the exact command name to query, Ecasound provides
+two methods to discover valid keywords:</p>
+<ul>
+<li><strong>General Help (<code>help</code> or <code>h</code>)</strong>:
+Entering <code>help</code> with no arguments prints general usage
+guidelines, command-line syntax rules, and an overview of command
+categories.</li>
+<li><strong>Help Register (<code>help-register</code> or
+<code>hr</code>)</strong>: Running <code>help-register</code> displays a
+categorized registry of every command supported by the interactive
+interpreter, including setup commands, chain management, transport
+controls, and audio object controllers. You can then select any command
+name from this list and pass it to
+<code>help &lt;command-name&gt;</code> for specific syntax
+instructions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Registers JACK Input and Output Ports - ecasound</title>
+    <meta name="description" content="Ecasound integrates directly with the JACK Audio Connection Kit by acting as a native JACK client that creates, names, and connects audio ports based on its chainsetup parameters. This article explains how Ecasound establishes its presence in the JACK gr">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-registers-jack-input-and-output-ports">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Registers JACK Input and Output Ports - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-registers-jack-input-and-output-ports" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound integrates directly with the JACK Audio Connection Kit by acting as a native JACK client that creates, names, and connects audio ports based on its chainsetup parameters. This article explains how Ecasound establishes its presence in the JACK gr" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-registers-jack-input-and-output-ports">How Ecasound
+Registers JACK Input and Output Ports</h1>
+<p>Ecasound integrates directly with the JACK Audio Connection Kit by
+acting as a native JACK client that creates, names, and connects audio
+ports based on its chainsetup parameters. This article explains how
+Ecasound establishes its presence in the JACK graph, how input and
+output ports are named and allocated across audio channels, and how to
+manage automatic versus manual port connections.</p>
+<h3 id="client-registration-and-initialization">Client Registration and
+Initialization</h3>
+<p>When Ecasound starts an engine configured to use JACK, it registers
+itself with the running JACK server as a new client. By default,
+Ecasound uses the client name <code>ecasound</code>. If multiple
+instances run simultaneously or custom naming is required, the client
+name can be set globally using the <code>-G:jack,client_name</code>
+option. Once the client is registered, all subsequent ports created by
+Ecasound will appear in the graph prefixed by this client name (for
+example, <code>ecasound:in_1</code> or
+<code>my_client:out_1</code>).</p>
+<h3 id="output-port-creation">Output Port Creation</h3>
+<p>Ecasound creates output ports within the JACK graph using the
+<code>-o</code> parameter targeting a JACK device object. When you
+specify <code>-o jack</code>, Ecasound evaluates the channel count
+defined for the active chain (set with <code>-c:channels</code>).</p>
+<p>It then registers a corresponding number of playback/output ports in
+the graph:</p>
+<ul>
+<li>For a mono chain (<code>-c:1</code>), it registers
+<code>ecasound:out_1</code>.</li>
+<li>For a stereo chain (<code>-c:2</code>), it registers
+<code>ecasound:out_1</code> and <code>ecasound:out_2</code>.</li>
+</ul>
+<p>These registered ports act as sources in the JACK graph, allowing
+other JACK applications or system playback devices to receive audio
+routed out of Ecasound.</p>
+<h3 id="input-port-creation">Input Port Creation</h3>
+<p>Input ports are registered in the same manner using the
+<code>-i</code> parameter. Defining an input with <code>-i jack</code>
+instructs Ecasound to register writable destination ports in the JACK
+graph corresponding to the channel count of the chain:</p>
+<ul>
+<li>A stereo input configuration creates <code>ecasound:in_1</code> and
+<code>ecasound:in_2</code>.</li>
+</ul>
+<p>Other JACK clients, such as synthesizers or system audio capture
+sources, can connect to these ports to stream audio into Ecasound's
+processing chains.</p>
+<h3 id="explicit-routing-vs-floating-ports">Explicit Routing vs.
+Floating Ports</h3>
+<p>Ecasound allows you to control whether registered ports float
+disconnected in the graph or automatically connect to target ports:</p>
+<ol type="1">
+<li><p><strong>Floating Ports (<code>-i jack</code>,
+<code>-o jack</code>)</strong>: When no sub-arguments are provided,
+Ecasound simply registers the input or output ports and leaves them
+unconnected in the graph. This allows external patchbays, such as
+QjackCtl, Patchage, or WirePlumber, to handle connections manually or
+via automated session rules.</p></li>
+<li><p><strong>Automatic Connections (<code>-i jack,client:port</code>,
+<code>-o jack,client:port</code>)</strong>: If target port identifiers
+are appended to the JACK object declaration, Ecasound registers its
+internal ports and immediately requests the JACK graph to connect them
+to the specified external ports. For example,
+<code>-o jack,system:playback_1,system:playback_2</code> creates the
+Ecasound output ports and wires them directly to the system's primary
+outputs.</p></li>
+<li><p><strong>Multiple Port Mapping (<code>jack_multi</code>)</strong>:
+For complex routings, the <code>jack_multi</code> object type allows
+explicit channel-to-port mapping across disparate clients. Declaring
+<code>-o jack_multi,clientA:in_1,clientB:in_1</code> creates two output
+channels within Ecasound and automatically patches each channel to a
+different target port in the JACK matrix.</p></li>
+</ol>
+<h3 id="port-lifecycle">Port Lifecycle</h3>
+<p>Ecasound registers its ports during the chainsetup configuration
+phase, right before the processing engine starts. The ports remain
+active and visible in the JACK graph throughout the processing loop.
+When the engine stops, or when the Ecasound process terminates, the
+client unregisters all associated ports cleanly, notifying the JACK
+server to remove them and sever any existing connections in the
+graph.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

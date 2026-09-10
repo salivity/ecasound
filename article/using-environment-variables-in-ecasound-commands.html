@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Environment Variables in Ecasound Commands - ecasound</title>
+    <meta name="description" content="Ecasound does not natively evaluate shell environment variables inside its internal command engine, interactive mode, or preset configurations. Because Ecasound's parser treats command strings as literal text, it does not expand syntax like $VARIABLE or">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/using-environment-variables-in-ecasound-commands">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Environment Variables in Ecasound Commands - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/using-environment-variables-in-ecasound-commands" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not natively evaluate shell environment variables inside its internal command engine, interactive mode, or preset configurations. Because Ecasound's parser treats command strings as literal text, it does not expand syntax like $VARIABLE or" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-environment-variables-in-ecasound-commands">Using
+Environment Variables in Ecasound Commands</h1>
+<p>Ecasound does not natively evaluate shell environment variables
+inside its internal command engine, interactive mode, or preset
+configurations. Because Ecasound's parser treats command strings as
+literal text, it does not expand syntax like <code>$VARIABLE</code> or
+<code>${VARIABLE}</code> on its own. However, you can seamlessly use
+environment variables in Ecasound workflows by relying on shell
+expansion, input redirection, or external templating tools before the
+commands reach the Ecasound engine.</p>
+<h2 id="native-parsing-limitations">Native Parsing Limitations</h2>
+<p>When running Ecasound in interactive mode (<code>ecasound -c</code>)
+or executing commands from an Ecasound script file (such as with the
+<code>-s:script.eca</code> option), the internal command parser does not
+consult system environment variables.</p>
+<p>If you issue a command containing a variable directly inside the
+interactive prompt:</p>
+<pre class="text"><code>-i:$AUDIO_DIR/input.wav</code></pre>
+<p>Ecasound treats <code>$AUDIO_DIR/input.wav</code> as a literal file
+path, which causes a "file not found" error.</p>
+<h2 id="method-1-standard-command-line-expansion">Method 1: Standard
+Command-Line Expansion</h2>
+<p>When executing Ecasound directly from a terminal shell (such as Bash,
+Zsh, or Dash), the shell evaluates any environment variables before
+passing the final arguments to the Ecasound binary.</p>
+<p>For standard batch processing, define your variables in the
+shell:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">INPUT_FILE</span><span class="op">=</span><span class="st">&quot;track1.wav&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">OUTPUT_FILE</span><span class="op">=</span><span class="st">&quot;master.wav&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> <span class="st">&quot;</span><span class="va">$INPUT_FILE</span><span class="st">&quot;</span> <span class="at">-o</span> <span class="st">&quot;</span><span class="va">$OUTPUT_FILE</span><span class="st">&quot;</span></span></code></pre></div>
+<p>Because the shell expands <code>$INPUT_FILE</code> and
+<code>$OUTPUT_FILE</code> prior to execution, Ecasound receives the
+resolved strings.</p>
+<h2 id="method-2-dynamic-interactive-commands-via-here-strings">Method
+2: Dynamic Interactive Commands via Here-Strings</h2>
+<p>If you need to use interactive mode or control Ecasound via standard
+input while utilizing environment variables, use shell evaluation
+combined with pipes or here-strings:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">GAIN_VAL</span><span class="op">=</span><span class="st">&quot;5.0&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">TARGET_FILE</span><span class="op">=</span><span class="st">&quot;output.wav&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="op">&lt;&lt;EOF</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">cs-add play_chain</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">c-add 1</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">ai-add input.wav</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">ao-add </span><span class="va">$TARGET_FILE</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">cop-add -ea:</span><span class="va">$GAIN_VAL</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">start</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+<p>The shell evaluates the variables inside the <code>&lt;&lt;EOF</code>
+block before feeding the resulting text stream directly into Ecasound's
+standard input.</p>
+<h2 id="method-3-script-templating-with-envsubst">Method 3: Script
+Templating with <code>envsubst</code></h2>
+<p>For workflows that rely on static <code>.eca</code> preset scripts
+where hardcoded paths are undesirable, use <code>envsubst</code> from
+the <code>gettext</code> package to preprocess files before passing them
+to Ecasound.</p>
+<ol type="1">
+<li>Create a script template (<code>session.eca.template</code>):</li>
+</ol>
+<pre class="text"><code>-a:1 -i:$SAMPLE_DIR/drums.wav -ea:$DRUM_VOL
+-a:2 -i:$SAMPLE_DIR/synth.wav -ea:$SYNTH_VOL
+-a:all -o:alsa</code></pre>
+<ol start="2" type="1">
+<li>Evaluate the variables and pass the generated commands to
+Ecasound:</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">SAMPLE_DIR</span><span class="op">=</span><span class="st">&quot;/home/user/audio&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">DRUM_VOL</span><span class="op">=</span><span class="st">&quot;80&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">SYNTH_VOL</span><span class="op">=</span><span class="st">&quot;65&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">envsubst</span> <span class="op">&lt;</span> session.eca.template <span class="op">&gt;</span> session.eca</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-s:session.eca</span></span></code></pre></div>
+<p>Alternatively, eliminate temporary files entirely by streaming the
+expanded configuration directly into Ecasound's standard input:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">envsubst</span> <span class="op">&lt;</span> session.eca.template <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<p>While Ecasound lacks a built-in variable expansion engine, these
+shell-level approaches provide full dynamic evaluation across both batch
+and real-time operations.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

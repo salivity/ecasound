@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Behavior When Audio Interface Disconnects - ecasound</title>
+    <meta name="description" content="When an external audio interface is disconnected while Ecasound is actively processing audio, the underlying audio subsystem abruptly loses its communication endpoint. This unexpected removal triggers low-level I/O errors, causes Ecasound to immediately">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-behavior-when-audio-interface-disconnects">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Behavior When Audio Interface Disconnects - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-behavior-when-audio-interface-disconnects" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When an external audio interface is disconnected while Ecasound is actively processing audio, the underlying audio subsystem abruptly loses its communication endpoint. This unexpected removal triggers low-level I/O errors, causes Ecasound to immediately" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-behavior-when-audio-interface-disconnects">Ecasound
+Behavior When Audio Interface Disconnects</h1>
+<p>When an external audio interface is disconnected while Ecasound is
+actively processing audio, the underlying audio subsystem abruptly loses
+its communication endpoint. This unexpected removal triggers low-level
+I/O errors, causes Ecasound to immediately halt its processing engine,
+and can leave recording files with incomplete headers. Because Ecasound
+cannot dynamically hot-swap or re-attach hardware devices during an
+active chainsetup, the processing session terminates in a failure
+state.</p>
+<h3 id="driver-level-failure-detection">Driver-Level Failure
+Detection</h3>
+<p>Ecasound relies on audio backends such as ALSA (Advanced Linux Sound
+Architecture) or JACK to communicate with hardware. When a USB or
+FireWire audio interface is unplugged, the operating system removes the
+associated device node.</p>
+<ul>
+<li><strong>Direct ALSA Mode:</strong> If Ecasound is accessing the
+hardware directly via ALSA (<code>-i:alsa</code> or
+<code>-o:alsa</code>), the ALSA subsystem immediately returns an
+input/output error—typically <code>ENODEV</code> (No such device) or
+<code>EIO</code> (I/O error)—upon the next read or write attempt.</li>
+<li><strong>JACK Mode:</strong> If Ecasound routes through a JACK audio
+server (<code>-i:jack</code> or <code>-o:jack</code>), the failure
+impacts JACK first. The JACK daemon loses its hardware device, often
+causing <code>jackd</code> to crash, enter an unrecoverable error loop,
+or trigger a shutdown callback to all attached clients.</li>
+</ul>
+<h3 id="engine-reaction-and-process-state">Engine Reaction and Process
+State</h3>
+<p>Once the low-level failure is returned to Ecasound's processing loop,
+the engine's real-time thread breaks:</p>
+<ol type="1">
+<li><strong>Error Logging:</strong> Ecasound emits critical error
+messages to standard error (<code>stderr</code>), identifying broken
+pipes, buffer underruns/overruns, or failure to read/write from the
+specified audio object.</li>
+<li><strong>Engine Halt:</strong> The internal processing loop halts.
+Ecasound does not hang indefinitely; it terminates the active chain
+execution to avoid runaway CPU loops.</li>
+<li><strong>Execution Mode Outcome:</strong> In non-interactive batch
+mode, Ecasound exits back to the terminal shell with a non-zero exit
+status. In interactive mode (Ecasound CLI), the engine stops running,
+returning control to the interactive prompt where the chainsetup is
+marked as stopped or invalid.</li>
+</ol>
+<h3 id="file-integrity-and-unfinalized-containers">File Integrity and
+Unfinalized Containers</h3>
+<p>If Ecasound was routing input from the disconnected interface
+directly to disk, the interruption impacts file integrity:</p>
+<ul>
+<li><strong>Headered Formats (e.g., WAV):</strong> File formats that
+require container headers to declare the total length of the audio chunk
+will not be updated properly. While the captured raw PCM data remains on
+disk up to the point of disconnection, the WAV header will typically
+show a file size of zero or an incorrect sample count. These files often
+require repair tools (such as <code>sox</code> or <code>ffmpeg</code>)
+to reconstruct the headers before standard media players can read
+them.</li>
+<li><strong>Raw Formats:</strong> Headerless formats (like raw PCM)
+retain all audio written up to the final buffered block prior to the
+disconnect.</li>
+</ul>
+<h3 id="recovery-and-session-restarting">Recovery and Session
+Restarting</h3>
+<p>Ecasound lacks automatic reconnect or hot-plug recovery capabilities.
+Re-plugging the interface while Ecasound is running will not resume
+processing.</p>
+<p>To restore operation, the user must wait for the operating system to
+re-enumerate the device, restart any intermediary servers (such as
+<code>jackd</code> or PipeWire) if they crashed, and manually
+re-initialize the Ecasound chainsetup from the terminal or interactive
+interface.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

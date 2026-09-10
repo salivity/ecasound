@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Handles Integer Bit Depths - ecasound</title>
+    <meta name="description" content="This article provides an overview of how the Ecasound command-line digital audio workstation handles integer sample bit depths, specifically 16-bit, 24-bit, and 32-bit formats. It explores Ecasound's internal processing pipeline, the conversion mechanism">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-handles-integer-bit-depths">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Handles Integer Bit Depths - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-handles-integer-bit-depths" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how the Ecasound command-line digital audio workstation handles integer sample bit depths, specifically 16-bit, 24-bit, and 32-bit formats. It explores Ecasound's internal processing pipeline, the conversion mechanism" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-handles-integer-bit-depths">How Ecasound Handles
+Integer Bit Depths</h1>
+<p>This article provides an overview of how the Ecasound command-line
+digital audio workstation handles integer sample bit depths,
+specifically 16-bit, 24-bit, and 32-bit formats. It explores Ecasound's
+internal processing pipeline, the conversion mechanisms used when
+reading and writing integer streams, format configuration syntax, and
+important considerations regarding quantization and clipping.</p>
+<h3 id="internal-floating-point-architecture">Internal Floating-Point
+Architecture</h3>
+<p>Regardless of the input or output format, Ecasound does not process
+audio using integer arithmetic. Internally, Ecasound converts all
+incoming audio streams into single-precision 32-bit floating-point
+samples (represented as the <code>sample_t</code> type). This internal
+pipeline ensures that mixing, level adjustments, filtering, and effects
+processing maintain high precision and avoid the dynamic range
+limitations, truncation noise, and headroom issues associated with
+fixed-point integer calculations.</p>
+<h3 id="ingestion-converting-integers-to-floats">Ingestion: Converting
+Integers to Floats</h3>
+<p>When an audio source with an integer format is ingested—whether from
+a file, an ALSA/JACK device, or standard input—Ecasound unpacks the
+integer data and normalizes it to a normalized floating-point range of
+<code>[-1.0, 1.0]</code>:</p>
+<ul>
+<li><strong>16-bit Integer (<code>s16_le</code> /
+<code>s16_be</code>):</strong> The 16-bit signed integer values (ranging
+from -32,768 to +32,767) are divided by 32,768.0 to map them into the
+floating-point domain.</li>
+<li><strong>24-bit Integer (<code>s24_le</code> /
+<code>s24_3le</code>):</strong> Ecasound supports both packed 3-byte
+formats (<code>s24_3le</code>) and 4-byte aligned formats
+(<code>s24_le</code>). The 24-bit range is scaled down to
+<code>[-1.0, 1.0]</code> with no loss of precision.</li>
+<li><strong>32-bit Integer (<code>s32_le</code> /
+<code>s32_be</code>):</strong> 32-bit signed integers are mapped
+directly to the float domain, though slight rounding can occur due to
+the 24-bit mantissa of 32-bit single-precision floats.</li>
+</ul>
+<h3 id="format-specification-syntax">Format Specification Syntax</h3>
+<p>Ecasound uses the <code>-f</code> flag to define format parameters
+for inputs and outputs that do not contain explicit header information
+(such as raw PCM streams, soundcard devices, or headerless files). The
+syntax follows this order:</p>
+<p><code>-f:sample_format,channels,sample_rate,interleaving</code></p>
+<p>Common integer format identifiers include:</p>
+<ul>
+<li><code>s16_le</code>: Signed 16-bit, little-endian</li>
+<li><code>s24_le</code>: Signed 24-bit in 32-bit containers,
+little-endian</li>
+<li><code>s24_3le</code>: Packed signed 24-bit (3 bytes per sample),
+little-endian</li>
+<li><code>s32_le</code>: Signed 32-bit, little-endian</li>
+</ul>
+<p>For standard container formats like WAV or AIFF, Ecasound reads the
+bit depth directly from the file header, converting the designated
+integer type to floating-point automatically upon import.</p>
+<h3 id="output-quantization-and-clamping">Output: Quantization and
+Clamping</h3>
+<p>When routing internal audio to an integer output target (such as
+writing a 16-bit or 24-bit WAV file, or sending a stream to a hardware
+soundcard), Ecasound performs the reverse conversion:</p>
+<ol type="1">
+<li><strong>Clamping:</strong> Because floating-point operations can
+exceed <code>+1.0</code> or <code>-1.0</code> during mixing or
+amplification, the audio engine clips any values outside this boundary
+before converting to integer formats. If internal signals peak above 0
+dBFS, digital clipping will occur in the integer output.</li>
+<li><strong>Quantization:</strong> The float values within
+<code>[-1.0, 1.0]</code> are multiplied back into the integer range of
+the target bit depth and rounded. For example, rendering to 16-bit
+integer multiplies the float values by 32,767.0 and casts them to signed
+16-bit integers.</li>
+<li><strong>Dithering Considerations:</strong> Ecasound focuses
+primarily on fast, real-time routing and processing. Direct
+sample-format downsampling (such as converting internal floats to 16-bit
+outputs) relies on standard truncation and rounding unless explicitly
+routed through a dedicated dithering plugin or external processor. For
+high-resolution mastering, processing at 24-bit or 32-bit float output
+preserves resolution and minimizes quantization distortion.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

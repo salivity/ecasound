@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Ecasound with Cron for Radio Playout - ecasound</title>
+    <meta name="description" content="Ecasound can be reliably scheduled via cron jobs to automate both playout and recording for a radio station. Because Ecasound is a lightweight, command-line multi-track audio processor, it integrates cleanly with standard Linux automation tools without t">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/schedule-ecasound-with-cron-for-radio-playout">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Schedule Ecasound with Cron for Radio Playout - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/schedule-ecasound-with-cron-for-radio-playout" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound can be reliably scheduled via cron jobs to automate both playout and recording for a radio station. Because Ecasound is a lightweight, command-line multi-track audio processor, it integrates cleanly with standard Linux automation tools without t" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="schedule-ecasound-with-cron-for-radio-playout">Schedule Ecasound
+with Cron for Radio Playout</h1>
+<p>Ecasound can be reliably scheduled via cron jobs to automate both
+playout and recording for a radio station. Because Ecasound is a
+lightweight, command-line multi-track audio processor, it integrates
+cleanly with standard Linux automation tools without the overhead of a
+graphical interface. This article explains how to configure shell
+scripts, manage audio server connections, and set up crontab entries to
+schedule automated broadcasts and scheduled aircheck recordings.</p>
+<h2 id="why-use-ecasound-and-cron">Why Use Ecasound and Cron?</h2>
+<p>Ecasound is designed for low-latency recording, playback, and routing
+directly from the terminal. When paired with <code>cron</code>, the
+standard Linux task scheduler, it serves as a minimalist, headless radio
+automation engine. This approach avoids the resource consumption and
+instability that can occur with complex graphical radio playout
+software, making it ideal for dedicated broadcast appliances or remote
+transmitter sites.</p>
+<h2 id="preparing-the-audio-environment-for-cron">Preparing the Audio
+Environment for Cron</h2>
+<p>Cron executes jobs in a restricted, non-interactive shell with
+minimal environment variables. To ensure Ecasound can communicate with
+the system's sound architecture (such as ALSA, JACK, or PipeWire), these
+variables must be defined inside your scripts:</p>
+<ul>
+<li><strong>ALSA:</strong> Direct hardware access generally requires
+specifying the device name (e.g.,
+<code>alsa -i default -o hw:0,0</code>) and ensuring the cron user
+belongs to the <code>audio</code> group.</li>
+<li><strong>JACK / PipeWire:</strong> You must declare the correct
+runtime path and server name, such as
+<code>export XDG_RUNTIME_DIR="/run/user/$(id -u)"</code> and
+<code>export JACK_DEFAULT_SERVER="default"</code>.</li>
+</ul>
+<h2 id="automating-scheduled-playout">Automating Scheduled Playout</h2>
+<p>To play pre-recorded shows, station IDs, or syndicated content,
+create a shell script that wraps the Ecasound command.</p>
+<p>Create a script named <code>/usr/local/bin/play_show.sh</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">XDG_RUNTIME_DIR</span><span class="op">=</span><span class="st">&quot;/run/user/1000&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Path to audio file passed as the first argument</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">AUDIO_FILE</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Play audio via ALSA or JACK</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:</span><span class="st">&quot;</span><span class="va">$AUDIO_FILE</span><span class="st">&quot;</span> <span class="at">-o:alsa,default</span></span></code></pre></div>
+<p>Make the script executable:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x /usr/local/bin/play_show.sh</span></code></pre></div>
+<p>Next, schedule the show in your user crontab using
+<code>crontab -e</code>:</p>
+<pre class="cron"><code># Play the morning show every weekday at 06:00
+0 6 * * 1-5 /usr/local/bin/play_show.sh /srv/audio/morning_show.wav &gt;&gt; /var/log/ecasound_playout.log 2&gt;&amp;1</code></pre>
+<h2 id="automating-scheduled-recording-airchecks-and-logging">Automating
+Scheduled Recording (Airchecks and Logging)</h2>
+<p>Legal broadcast logs or rebroadcast recordings can be captured by
+setting a fixed duration with Ecasound's <code>-t</code> option, which
+dictates the running time in seconds.</p>
+<p>Create a script named <code>/usr/local/bin/record_show.sh</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="va">OUTPUT_DIR</span><span class="op">=</span><span class="st">&quot;/srv/recordings&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="va">TIMESTAMP</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> +<span class="st">&quot;%Y%m%d_%H%M&quot;</span><span class="va">)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="va">FILENAME</span><span class="op">=</span><span class="st">&quot;</span><span class="va">${OUTPUT_DIR}</span><span class="st">/aircheck_</span><span class="va">${TIMESTAMP}</span><span class="st">.wav&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="va">DURATION</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span> <span class="co"># Duration in seconds</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Record from default input device for specified duration</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:alsa,default</span> <span class="at">-o:</span><span class="st">&quot;</span><span class="va">$FILENAME</span><span class="st">&quot;</span> <span class="at">-t:</span><span class="st">&quot;</span><span class="va">$DURATION</span><span class="st">&quot;</span></span></code></pre></div>
+<p>Make the script executable:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x /usr/local/bin/record_show.sh</span></code></pre></div>
+<p>To schedule a one-hour recording (3600 seconds) every Sunday evening
+at 20:00:</p>
+<pre class="cron"><code>0 20 * * 0 /usr/local/bin/record_show.sh 3600 &gt;&gt; /var/log/ecasound_record.log 2&gt;&amp;1</code></pre>
+<h2 id="managing-overlaps-and-ensuring-reliability">Managing Overlaps
+and Ensuring Reliability</h2>
+<p>Automating audio tasks via cron introduces potential edge cases that
+should be handled directly in your scripts:</p>
+<ul>
+<li><strong>Preventing Process Collisions:</strong> Use
+<code>flock</code> in your cron entries to ensure a previous playback or
+recording run finishes before a new one starts:
+<pre class="cron"><code>0 12 * * * /usr/bin/flock -n /tmp/playout.lock /usr/local/bin/play_show.sh /srv/audio/midday.wav</code></pre></li>
+<li><strong>Format Flexibility:</strong> Ecasound relies on standard
+audio libraries to read inputs. It handles uncompressed WAV natively,
+while formats like MP3 or Ogg Vorbis require proper codec libraries
+installed (such as <code>lame</code> or <code>libvorbis</code>).</li>
+<li><strong>Detailed Logging:</strong> Always redirect standard output
+and standard error (<code>&gt;&gt; /path/to/log 2&gt;&amp;1</code>) in
+your crontab lines to diagnose missing files or disconnected sound
+cards.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

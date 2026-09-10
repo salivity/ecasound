@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound ALSA MIDI Sequencer Capabilities - ecasound</title>
+    <meta name="description" content="This article provides an overview of how Ecasound natively interacts with the Advanced Linux Sound Architecture (ALSA) MIDI sequencer subsystem. Ecasound is a command-line multitrack audio processing tool that includes built-in integration with ALSA MIDI">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-alsa-midi-sequencer-capabilities">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound ALSA MIDI Sequencer Capabilities - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-alsa-midi-sequencer-capabilities" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Ecasound natively interacts with the Advanced Linux Sound Architecture (ALSA) MIDI sequencer subsystem. Ecasound is a command-line multitrack audio processing tool that includes built-in integration with ALSA MIDI" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-alsa-midi-sequencer-capabilities">Ecasound ALSA MIDI
+Sequencer Capabilities</h1>
+<p>This article provides an overview of how Ecasound natively interacts
+with the Advanced Linux Sound Architecture (ALSA) MIDI sequencer
+subsystem. Ecasound is a command-line multitrack audio processing tool
+that includes built-in integration with ALSA MIDI, allowing users to
+route MIDI streams, synchronize audio transport using standard timing
+protocols, and control audio processing parameters in real time via
+external MIDI hardware or software.</p>
+<h3 id="alsa-sequencer-client-and-port-integration">ALSA Sequencer
+Client and Port Integration</h3>
+<p>Ecasound natively functions as both an ALSA sequencer client and an
+ALSA MIDI target. When invoked with ALSA sequencer options, Ecasound
+registers its own input and output ports within the ALSA sequencer
+framework.</p>
+<ul>
+<li><strong>Port Addressing:</strong> Users can specify MIDI inputs and
+outputs using the native syntax <code>alsa,client:port</code> or simply
+<code>alsa</code> to let Ecasound open dynamic ALSA sequencer
+subscription ports.</li>
+<li><strong>Routing and Patching:</strong> Because Ecasound registers
+directly with the ALSA sequencer subsystem, its ports appear in standard
+ALSA connection utilities, such as <code>aconnect</code>,
+<code>jack_midi</code>, and graphical patchbays like QjackCtl. This
+enables direct, low-latency inter-application MIDI routing without
+requiring third-party translation bridges.</li>
+</ul>
+<h3 id="real-time-parameter-control-via-midi-cc">Real-Time Parameter
+Control via MIDI CC</h3>
+<p>One of the primary native ALSA MIDI capabilities in Ecasound is
+continuous parameter automation. Using the <code>-km</code> (controller
+modulation) and <code>-kmp</code> (parameter controller mapping)
+options, incoming ALSA MIDI Control Change (CC) messages can directly
+manipulate real-time audio parameters.</p>
+<ul>
+<li><strong>Controller Mapping:</strong> ALSA sequencer inputs can be
+assigned to modulate effect parameters, gain levels, panning positions,
+and filter cutoff frequencies on active audio chains.</li>
+<li><strong>Range Normalization:</strong> Incoming MIDI values (ranging
+from 0 to 127) are automatically interpolated and scaled to match the
+defined upper and lower bounds of the target effect parameter.</li>
+</ul>
+<h3 id="transport-synchronization-and-clocking">Transport
+Synchronization and Clocking</h3>
+<p>Ecasound supports standard transport synchronization mechanisms
+routed through the ALSA MIDI sequencer:</p>
+<ul>
+<li><strong>MIDI Machine Control (MMC):</strong> Ecasound can listen for
+MMC commands over ALSA sequencer ports to start, stop, pause, and
+relocate the audio engine transport, allowing external MIDI hardware or
+external DAWs to control playback.</li>
+<li><strong>MIDI Beat Clock:</strong> The engine can send and receive
+standard MIDI Clock messages over ALSA sequencer streams, facilitating
+tempo-locked playback with external hardware drum machines,
+synthesizers, and external sequencers.</li>
+<li><strong>MIDI Time Code (MTC):</strong> Ecasound provides native
+support for tracking MTC over ALSA MIDI, enabling frame-accurate
+synchronization with external video and audio playback systems.</li>
+</ul>
+<h3 id="midi-stream-recording-and-playback">MIDI Stream Recording and
+Playback</h3>
+<p>While Ecasound is fundamentally an audio processor rather than a
+full-featured MIDI composition piano-roll environment, its native ALSA
+sequencer layer handles standard MIDI data streams:</p>
+<ul>
+<li><strong>Recording:</strong> Raw MIDI event streams delivered to
+Ecasound’s ALSA sequencer input can be written directly to standard
+<code>.mid</code> files in synchronization with multitrack audio
+capture.</li>
+<li><strong>Playback:</strong> Standard MIDI files can be assigned to an
+output chain and transmitted directly to external hardware or software
+synthesizers via the native ALSA sequencer output port.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

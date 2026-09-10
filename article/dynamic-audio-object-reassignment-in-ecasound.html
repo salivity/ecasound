@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Audio Object Reassignment in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound does not support seamless, zero-latency dynamic reassignment of audio objects between chains while the engine is actively processing audio. In order to move an audio input or output object from one chain to another, the real-time processing loop">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/dynamic-audio-object-reassignment-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dynamic Audio Object Reassignment in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/dynamic-audio-object-reassignment-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not support seamless, zero-latency dynamic reassignment of audio objects between chains while the engine is actively processing audio. In order to move an audio input or output object from one chain to another, the real-time processing loop" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="dynamic-audio-object-reassignment-in-ecasound">Dynamic Audio
+Object Reassignment in Ecasound</h1>
+<p>Ecasound does not support seamless, zero-latency dynamic reassignment
+of audio objects between chains while the engine is actively processing
+audio. In order to move an audio input or output object from one chain
+to another, the real-time processing loop must be temporarily stopped,
+the chains reconfigured via Ecasound's interactive control interface,
+and the processing engine restarted.</p>
+<h3 id="engine-limitations-during-real-time-execution">Engine
+Limitations During Real-Time Execution</h3>
+<p>Ecasound locks its routing topology during execution. When you run
+the <code>start</code> command, Ecasound compiles the current chain
+setup into an internal processing graph, allocating buffers and
+establishing sample-rate synchronization for all attached audio inputs
+(<code>-i</code>) and audio outputs (<code>-o</code>). Because the
+engine relies on a static graph to guarantee stable, real-time
+performance without buffer underruns, it prevents structural
+changes—such as moving, detaching, or attaching audio objects—while
+audio is actively streaming.</p>
+<h3 id="modifying-objects-using-ecasound-interactive-mode-eci">Modifying
+Objects Using Ecasound Interactive Mode (ECI)</h3>
+<p>Dynamic reconfiguration must be handled by transitioning out of the
+processing state using the Ecasound Control Interface (ECI) or Net-ECI.
+The workflow requires the following sequence:</p>
+<ol type="1">
+<li><strong>Halt Execution:</strong> Issue the <code>stop</code> command
+to pause real-time processing.</li>
+<li><strong>Select the Target Chain:</strong> Use
+<code>c-select &lt;chain_name&gt;</code> to focus on the chain currently
+holding the audio object.</li>
+<li><strong>Detach the Object:</strong> Execute <code>ai-detach</code>
+(for audio inputs) or <code>ao-detach</code> (for audio outputs) to
+remove the object from the selected chain.</li>
+<li><strong>Switch Chains:</strong> Select the destination chain using
+<code>c-select &lt;new_chain_name&gt;</code>.</li>
+<li><strong>Attach the Object:</strong> Use <code>ai-attach</code> or
+<code>ao-attach</code> to bind the audio object to the new chain.</li>
+<li><strong>Resume Execution:</strong> Run <code>start</code> to
+reinitialize the audio engine with the new topology.</li>
+</ol>
+<p>While this process can be automated via control scripts in
+milliseconds, it will cause an audible interruption or drop in the audio
+stream.</p>
+<h3 id="alternatives-for-seamless-signal-redirection">Alternatives for
+Seamless Signal Redirection</h3>
+<p>If your use case requires continuous, glitch-free reassignment of
+audio routing during live execution, you should employ routing
+workarounds rather than detaching audio objects:</p>
+<ul>
+<li><strong>Pre-Configured Parallel Chains:</strong> Create multiple
+chains mapped to the necessary destinations in advance. Instead of
+moving audio objects, leave all objects attached and manipulate the
+signal dynamically by adjusting chain gain (<code>-ea</code>) or using
+muting controllers via ECI while the engine runs.</li>
+<li><strong>Loop Devices:</strong> Route signals through Ecasound’s
+internal loop devices (<code>loop,id</code>). Loops can act as
+intermediate audio buses that multiple chains read from and write to
+simultaneously.</li>
+<li><strong>JACK Audio Connection Kit:</strong> Run Ecasound with JACK
+inputs and outputs (<code>-i jack -o jack</code>). When using JACK,
+Ecasound's internal chains remain static, but audio ports can be freely
+disconnected, reconnected, and reassigned to different software clients
+or hardware ports in real time without stopping Ecasound.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

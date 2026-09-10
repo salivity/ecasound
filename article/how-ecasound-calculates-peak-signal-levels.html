@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Calculates Peak Signal Levels - ecasound</title>
+    <meta name="description" content="This article provides a technical overview of how the Ecasound digital audio processor evaluates peak signal levels using its built-in analysis operators. It details the internal sample representation, the algorithmic process of tracking absolute sample">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-calculates-peak-signal-levels">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Calculates Peak Signal Levels - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-calculates-peak-signal-levels" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a technical overview of how the Ecasound digital audio processor evaluates peak signal levels using its built-in analysis operators. It details the internal sample representation, the algorithmic process of tracking absolute sample" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-calculates-peak-signal-levels">How Ecasound
+Calculates Peak Signal Levels</h1>
+<p>This article provides a technical overview of how the Ecasound
+digital audio processor evaluates peak signal levels using its built-in
+analysis operators. It details the internal sample representation, the
+algorithmic process of tracking absolute sample values across audio
+buffers, and the mathematical conversion from raw amplitude to decibels
+relative to full scale.</p>
+<h3 id="built-in-peak-analysis-operators">Built-in Peak Analysis
+Operators</h3>
+<p>Ecasound provides native analysis operators to monitor and measure
+signal dynamics. The primary operators responsible for level inspection
+are <code>-ev</code> (analyze amplitude and print volume
+recommendations) and <code>-evp</code> (peak amplitude analyzer). When
+attached to an audio chain, these operators intercept audio buffers
+continuously during playback, recording, or processing without altering
+the underlying audio stream.</p>
+<h3 id="internal-audio-representation">Internal Audio
+Representation</h3>
+<p>Before running any mathematical analysis, Ecasound converts incoming
+audio samples—regardless of their original bit depth (such as 16-bit or
+24-bit PCM)—into an internal 32-bit floating-point format. In this
+normalized floating-point domain:</p>
+<ul>
+<li>A full-scale positive peak corresponds to <code>+1.0</code>.</li>
+<li>A full-scale negative peak corresponds to <code>-1.0</code>.</li>
+<li>Silence or zero-crossing corresponds to <code>0.0</code>.</li>
+</ul>
+<p>This normalization allows the engine to evaluate signals uniformly
+across different input formats and prevent precision loss during
+mathematical analysis.</p>
+<h3 id="the-peak-detection-algorithm">The Peak Detection Algorithm</h3>
+<p>Peak signal calculation in Ecasound operates on the absolute value of
+the audio waveform. Because audio signals fluctuate symmetrically above
+and below the zero-amplitude center line, negative signal excursions can
+represent full-scale peak energy just as positive ones do.</p>
+<p>During processing, Ecasound steps through each sample in the active
+audio buffer per channel:</p>
+<ol type="1">
+<li><strong>Absolute Value Calculation:</strong> For each sample <span
+class="math inline">\(x[n]\)</span>, the operator takes the absolute
+magnitude <span class="math inline">\(|x[n]|\)</span>.</li>
+<li><strong>Comparison and Update:</strong> The operator compares <span
+class="math inline">\(|x[n]|\)</span> against the running peak register
+(<span class="math inline">\(Peak_{current}\)</span>). If <span
+class="math inline">\(|x[n]| &gt; Peak_{current}\)</span>, the register
+updates to store the new value: <span
+class="math display">\[Peak_{current} = \max(Peak_{current},
+|x[n]|)\]</span></li>
+<li><strong>Channel Tracking:</strong> Ecasound tracks these values
+independently across all individual audio channels to isolate
+channel-specific clipping or imbalance.</li>
+</ol>
+<h3 id="conversion-to-decibels-full-scale-dbfs">Conversion to Decibels
+Full Scale (dBFS)</h3>
+<p>While internal comparisons use linear scale values between
+<code>0.0</code> and <code>1.0</code> (or higher in floating-point
+headroom scenarios), human auditory perception and standard metering
+require logarithmic representation.</p>
+<p>Ecasound converts the highest observed linear peak value into
+decibels relative to full scale (dBFS) using standard voltage/amplitude
+ratio conversion:</p>
+<p><span class="math display">\[\text{Level (dBFS)} = 20 \times
+\log_{10}(Peak_{linear})\]</span></p>
+<ul>
+<li>A linear peak of <code>1.0</code> yields <span
+class="math inline">\(20 \times \log_{10}(1.0) = 0.0\text{
+dBFS}\)</span> (the digital threshold of clipping for fixed-point
+output).</li>
+<li>A linear peak of <code>0.5</code> yields approximately <span
+class="math inline">\(-6.02\text{ dBFS}\)</span>.</li>
+<li>Values above <code>1.0</code> yield positive dB values, indicating
+that clipping will occur if the stream is rendered to a fixed-point
+integer file without gain reduction.</li>
+</ul>
+<h3 id="final-reporting">Final Reporting</h3>
+<p>At the conclusion of audio processing, or in real time depending on
+the interactive mode in use, the operator formats the peak data.
+Operators like <code>-ev</code> output both the absolute peak level and
+the maximum allowable gain adjustment (headroom) required to normalize
+the signal precisely to <span class="math inline">\(0.0\text{
+dBFS}\)</span> without introducing distortion.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

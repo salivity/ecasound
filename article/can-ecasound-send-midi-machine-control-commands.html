@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can Ecasound Send MIDI Machine Control Commands? - ecasound</title>
+    <meta name="description" content="Ecasound does not have native support for generating or transmitting MIDI Machine Control (MMC) commands to synchronize tape decks or digital audio workstations (DAWs). While Ecasound provides robust command-line multitrack recording and supports various">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/can-ecasound-send-midi-machine-control-commands">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Can Ecasound Send MIDI Machine Control Commands? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/can-ecasound-send-midi-machine-control-commands" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not have native support for generating or transmitting MIDI Machine Control (MMC) commands to synchronize tape decks or digital audio workstations (DAWs). While Ecasound provides robust command-line multitrack recording and supports various" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="can-ecasound-send-midi-machine-control-commands">Can Ecasound
+Send MIDI Machine Control Commands?</h1>
+<p>Ecasound does not have native support for generating or transmitting
+MIDI Machine Control (MMC) commands to synchronize tape decks or digital
+audio workstations (DAWs). While Ecasound provides robust command-line
+multitrack recording and supports various synchronization protocols such
+as MIDI Time Code (MTC) and JACK Transport, it lacks the built-in
+ability to formulate the System Exclusive (SysEx) messages required by
+the MMC standard. However, users can achieve synchronization across
+external tape machines and DAWs by utilizing alternate protocols or
+bridging Ecasound with external utility scripts.</p>
+<h3 id="understanding-the-limitation-mmc-vs-mtc">Understanding the
+Limitation: MMC vs. MTC</h3>
+<p>MIDI Machine Control (MMC) relies on specialized Universal Real Time
+System Exclusive messages to instruct recording equipment to start,
+stop, pause, rewind, or locate specific positions. Ecasound's MIDI
+engine is designed around timing and parameter manipulation rather than
+transport command dispatching:</p>
+<ul>
+<li><strong>MIDI Time Code (MTC) and MIDI Clock:</strong> Ecasound
+natively supports MTC and standard MIDI clock for tracking time position
+and tempo-based synchronization.</li>
+<li><strong>Control Change (CC) and Note Events:</strong> Ecasound can
+receive MIDI CC and note messages to control volume, panning, and
+processing parameters via its controller inputs.</li>
+<li><strong>SysEx Omission:</strong> Ecasound does not possess an
+internal engine to generate or interpret arbitrary SysEx command
+strings, which directly excludes native MMC master capabilities.</li>
+</ul>
+<h3 id="alternatives-for-synchronizing-daws">Alternatives for
+Synchronizing DAWs</h3>
+<p>If your target destination is another DAW, relying on MMC is rarely
+necessary because more modern, sample-accurate options exist:</p>
+<ol type="1">
+<li><strong>JACK Transport:</strong> The most efficient way to
+synchronize Ecasound with a software DAW on Linux is through the JACK
+Audio Connection Kit. Ecasound can operate as a JACK transport master or
+client using the <code>-G:jack</code> command-line switch. Connecting
+Ecasound and your DAW (such as Ardour or REAPER) to the same JACK server
+allows seamless transport synchronization without MIDI
+configuration.</li>
+<li><strong>MIDI Time Code (MTC):</strong> Ecasound can send or receive
+MTC via ALSA MIDI. If your DAW accepts MTC, you can route Ecasound's
+timing output directly into the DAW’s synchronization input to lock
+their playback timelines together.</li>
+</ol>
+<h3 id="workarounds-for-mmc-only-hardware-tape-decks">Workarounds for
+MMC-Only Hardware Tape Decks</h3>
+<p>Analog tape machines equipped with MMC interfaces (such as Tascam or
+Fostex decks) require actual MMC commands to engage their transport
+solenoids. Because Ecasound cannot output these directly, you must use
+an intermediary approach:</p>
+<ul>
+<li><strong>External Translation Scripts:</strong> Tools like
+<code>mididings</code> or custom Python scripts using
+<code>python-rtmidi</code> can monitor Ecasound's transport states via
+the Ecasound Control Interface (ECI) or NetECI. When a play or stop
+event is initiated in Ecasound, the script generates the corresponding
+raw MMC SysEx hex string (e.g.,
+<code>F0 7F &lt;device-ID&gt; 06 02 F7</code> for Play) and transmits it
+to your physical MIDI interface.</li>
+<li><strong>JACK-to-MMC Bridges:</strong> You can slave Ecasound to JACK
+Transport and run a dedicated JACK-to-MMC bridge utility. When Ecasound
+or JACK triggers playback, the utility translates the transport state
+changes into standard MMC packets and delivers them to the tape
+machine's MIDI input.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

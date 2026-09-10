@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Software License Governs Ecasound? - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool designed for Linux and Unix-like operating systems. This article provides a concise overview of the software licenses governing Ecasound, detailing how the GNU General Public License (G">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/what-software-license-governs-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Software License Governs Ecasound? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/what-software-license-governs-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool designed for Linux and Unix-like operating systems. This article provides a concise overview of the software licenses governing Ecasound, detailing how the GNU General Public License (G" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="what-software-license-governs-ecasound">What Software License
+Governs Ecasound?</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool
+designed for Linux and Unix-like operating systems. This article
+provides a concise overview of the software licenses governing Ecasound,
+detailing how the GNU General Public License (GPL) and the GNU Lesser
+General Public License (LGPL) apply to its core components, executables,
+and libraries, along with the rights and obligations these licenses
+grant to developers and users.</p>
+<h3 id="the-licensing-framework-of-ecasound">The Licensing Framework of
+Ecasound</h3>
+<p>Ecasound employs a dual-licensing model based on open-source licenses
+maintained by the Free Software Foundation (FSF). Instead of a single
+blanket license, different components of the software are covered by
+specific licenses to balance user freedom with developer
+integration.</p>
+<h4 id="1-gnu-general-public-license-gpl">1. GNU General Public License
+(GPL)</h4>
+<p>The primary applications, standalone executables, and user-facing
+utilities in the Ecasound package are governed by the <strong>GNU
+General Public License, Version 2 (or, at your option, any later
+version)</strong>.</p>
+<p>Under the GPL:</p>
+<ul>
+<li><strong>Modification and Forking:</strong> Users are free to modify
+the source code of the Ecasound executable utilities.</li>
+<li><strong>Redistribution:</strong> If you distribute modified versions
+of these utilities, you must also provide the complete source code under
+the same GPL terms.</li>
+<li><strong>Copyleft Protection:</strong> Propitiatory software cannot
+bundle and distribute the GPL-licensed standalone components without
+making the entire derivative work open source.</li>
+</ul>
+<h4 id="2-gnu-lesser-general-public-license-lgpl">2. GNU Lesser General
+Public License (LGPL)</h4>
+<p>The core functionality of Ecasound resides in its shared library,
+<code>libecasound</code>. This library, along with associated
+programming interfaces (such as the C, C++, and Python bindings), is
+governed by the <strong>GNU Lesser General Public License, Version 2.1
+(or any later version)</strong>.</p>
+<p>The LGPL provides more flexibility than the standard GPL:</p>
+<ul>
+<li><strong>Library Linking:</strong> Developers can link
+<code>libecasound</code> dynamically or statically with their own
+software—including commercial and proprietary applications—without being
+forced to release their own application's source code.</li>
+<li><strong>Modifications to the Library:</strong> If changes or
+improvements are made directly to <code>libecasound</code> itself, those
+modifications must remain open source and be made available under the
+LGPL.</li>
+</ul>
+<h3 id="summary-of-user-and-developer-rights">Summary of User and
+Developer Rights</h3>
+<p>By releasing the software under GPL and LGPL, the developers of
+Ecasound ensure that:</p>
+<ul>
+<li>Anyone may download, audit, and use Ecasound for personal, academic,
+or commercial audio processing without paying licensing fees.</li>
+<li>External developers can integrate Ecasound’s audio engine into
+independent software via <code>libecasound</code> while preserving the
+engine's open-source integrity.</li>
+<li>Any distributed enhancements to Ecasound's standalone tools or core
+libraries remain accessible to the wider audio production
+community.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

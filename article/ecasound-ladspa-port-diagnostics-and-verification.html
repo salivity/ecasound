@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound LADSPA Port Diagnostics and Verification - ecasound</title>
+    <meta name="description" content="This guide outlines the built-in diagnostic features and command-line procedures within Ecasound used to inspect LADSPA plugins, verify audio and control port compatibility, and prevent runtime failures before audio processing begins. Ecasound includes a">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-ladspa-port-diagnostics-and-verification">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound LADSPA Port Diagnostics and Verification - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-ladspa-port-diagnostics-and-verification" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide outlines the built-in diagnostic features and command-line procedures within Ecasound used to inspect LADSPA plugins, verify audio and control port compatibility, and prevent runtime failures before audio processing begins. Ecasound includes a" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-ladspa-port-diagnostics-and-verification">Ecasound
+LADSPA Port Diagnostics and Verification</h1>
+<p>This guide outlines the built-in diagnostic features and command-line
+procedures within Ecasound used to inspect LADSPA plugins, verify audio
+and control port compatibility, and prevent runtime failures before
+audio processing begins.</p>
+<h3 id="the-ecasound-interactive-mode-eci-diagnostics">The Ecasound
+Interactive Mode (ECI) Diagnostics</h3>
+<p>Ecasound includes an interactive command-line interface
+(<code>ecasound -c</code>) that allows real-time inspection of chains,
+operators, and plugin configurations prior to launching the processing
+engine.</p>
+<p>Within this interface, several commands inspect plugin availability
+and metadata:</p>
+<ul>
+<li><strong><code>ladspa-list</code></strong>: Scans the
+<code>LADSPA_PATH</code> environment variable and returns a full index
+of discovered plugins, their unique numeric IDs, and their label
+strings.</li>
+<li><strong><code>ladspa-describe &lt;id|label&gt;</code></strong>:
+Prints detailed port information for a designated plugin. This reveals
+the total number of audio input ports, audio output ports, control
+inputs, and control outputs, along with their default values and valid
+bounds.</li>
+</ul>
+<p>Using these commands confirms whether a plugin matches the channel
+count of your target chain setup before connecting inputs or starting
+playback.</p>
+<h3 id="static-port-topology-verification">Static Port Topology
+Verification</h3>
+<p>Ecasound automatically checks LADSPA port requirements when compiling
+a chain setup (<code>cs</code>). It does not dynamically adapt mono
+plugins to stereo chains unless explicitly configured.</p>
+<p>When an operator is added using the <code>-el:plugin_name</code>
+syntax, Ecasound cross-references the plugin's descriptor against the
+chain's channel count:</p>
+<ol type="1">
+<li><strong>Audio Port Matching</strong>: If a chain is configured for
+stereo processing (2 channels) but the selected LADSPA plugin exposes
+only a single audio input and output port, Ecasound flags a topology
+mismatch during the setup phase.</li>
+<li><strong>Control Port Validation</strong>: Parameters passed via the
+<code>-el</code> option are matched sequentially against the plugin’s
+control input ports. If an incorrect number of parameters is supplied,
+Ecasound halts configuration parsing.</li>
+</ol>
+<h3 id="debug-and-verbose-logging-flags">Debug and Verbose Logging
+Flags</h3>
+<p>To diagnose port discovery and binding issues before initiating an
+audio run, Ecasound provides diagnostic logging flags:</p>
+<ul>
+<li><strong><code>-d:1</code> through <code>-d:4</code> (Debug
+Level)</strong>: Controls verbosity. Running <code>ecasound -d:2</code>
+or higher outputs detailed engine initialization data, including LADSPA
+subsystem initialization, library loading, and individual port
+mapping.</li>
+<li><strong><code>-D</code> (Debug Output)</strong>: Prints internal
+state transitions to standard error. If a LADSPA shared library fails to
+load due to missing symbols or invalid port descriptors, the
+<code>-D</code> flag exposes the specific system-level dynamic linker
+errors.</li>
+</ul>
+<h3 id="chain-setup-dry-run-cs-status">Chain Setup Dry-Run
+(<code>cs-status</code>)</h3>
+<p>To verify full system readiness without streaming audio:</p>
+<ol type="1">
+<li>Launch Ecasound in interactive mode with your setup script or
+arguments:
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-a:1</span> <span class="at">-i:input.wav</span> <span class="at">-o:output.wav</span> <span class="at">-el:plugin_label,params</span></span></code></pre></div></li>
+<li>Run <code>cs-status</code> to inspect the chain setup.</li>
+<li>Check the operator list to verify that Ecasound successfully
+attached the LADSPA operator to the audio chain without port binding
+warnings.</li>
+<li>Issue <code>cs-connect</code> to test stream and port connectivity
+without triggering engine processing (<code>start</code>). If port
+counts do not align, Ecasound rejects connection and outputs the
+mismatch directly to the console.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

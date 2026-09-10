@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comb Filtering in Ecasound for Acoustic Simulation - ecasound</title>
+    <meta name="description" content="Comb filtering in Ecasound is implemented through delay-line signal processing architectures that recreate the constructive and destructive acoustic interference caused by physical boundary reflections. By utilizing native delay and feedback operators, E">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/comb-filtering-in-ecasound-for-acoustic-simulation">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Comb Filtering in Ecasound for Acoustic Simulation - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/comb-filtering-in-ecasound-for-acoustic-simulation" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Comb filtering in Ecasound is implemented through delay-line signal processing architectures that recreate the constructive and destructive acoustic interference caused by physical boundary reflections. By utilizing native delay and feedback operators, E" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="comb-filtering-in-ecasound-for-acoustic-simulation">Comb
+Filtering in Ecasound for Acoustic Simulation</h1>
+<p>Comb filtering in Ecasound is implemented through delay-line signal
+processing architectures that recreate the constructive and destructive
+acoustic interference caused by physical boundary reflections. By
+utilizing native delay and feedback operators, Ecasound models the
+frequency-dependent coloration and resonance patterns typical of
+enclosed spaces, serving as a fundamental building block for custom
+digital reverberation and spatial sound design.</p>
+<h3 id="acoustic-principles-of-comb-filtering">Acoustic Principles of
+Comb Filtering</h3>
+<p>In physical acoustics, comb filtering occurs when an original sound
+wave combines with a time-delayed replica of itself—typically reflected
+from a wall, ceiling, or floor. Because sound travels at a finite speed,
+the phase relationship between the direct signal and the reflected
+signal varies across frequencies. Frequencies whose phase shifts result
+in identical alignment reinforce each other, while frequencies that
+arrive 180 degrees out of phase cancel each other out, creating a
+periodic frequency response that resembles the teeth of a comb.</p>
+<h3 id="ecasounds-internal-implementation">Ecasound’s Internal
+Implementation</h3>
+<p>Ecasound realizes comb filtering through discrete digital delay lines
+and buffer management programmed within its C++ audio engine. The
+implementation relies on circular buffers where incoming audio frames
+are stored and read back after a designated delay interval.</p>
+<p>Ecasound supports both primary types of comb filters:</p>
+<ol type="1">
+<li><p><strong>Feedforward Comb Filters (FIR):</strong> In a feedforward
+topology, the current dry input sample is summed with a delayed version
+of the input scaled by an attenuation coefficient: <span
+class="math display">\[y[n] = x[n] + b \cdot x[n - M]\]</span> where
+<span class="math inline">\(x[n]\)</span> is the input signal, <span
+class="math inline">\(M\)</span> is the delay time in samples, and <span
+class="math inline">\(b\)</span> represents the surface reflection
+coefficient (absorption). Ecasound creates this behavior using multiple
+chain routing or delay modules (<code>-etd</code>), simulating single
+discrete reflections.</p></li>
+<li><p><strong>Feedback Comb Filters (IIR):</strong> To simulate
+continuous reflections between parallel surfaces, feedback comb filters
+route the delayed output back into the delay line: <span
+class="math display">\[y[n] = x[n] + g \cdot y[n - M]\]</span> where
+<span class="math inline">\(g\)</span> represents the feedback gain
+(<span class="math inline">\(0 &lt; g &lt; 1\)</span>). Ecasound
+natively provides feedback delay mechanisms through the
+<code>-efb</code> operator
+(<code>-efb:delay_time_ms,feedback_percent</code>), which continuously
+recycles energy through the buffer to model decay over time.</p></li>
+</ol>
+<h3 id="parameter-mapping-for-physical-spaces">Parameter Mapping for
+Physical Spaces</h3>
+<p>To simulate specific acoustic environments using Ecasound, physical
+room characteristics must be translated into DSP parameters:</p>
+<ul>
+<li><strong>Delay Time (<span
+class="math inline">\(M\)</span>):</strong> Calculated directly from the
+distance between virtual acoustic boundaries using the speed of sound
+(<span class="math inline">\(343\text{ m/s}\)</span> at room
+temperature). The delay time in milliseconds dictates the fundamental
+resonance frequency and the spacing between the peaks of the comb filter
+(<span class="math inline">\(f_0 = 1 / \text{delay time}\)</span>).</li>
+<li><strong>Feedback Gain / Attenuation (<span
+class="math inline">\(g\)</span>):</strong> Represents the absorption
+coefficient of the simulated boundary materials. Highly reflective
+surfaces (such as concrete or tile) require high feedback values (e.g.,
+70–90%), while absorbent materials (such as heavy drapery or acoustic
+foam) require significantly lower values.</li>
+</ul>
+<h3 id="modular-acoustic-simulation-networks">Modular Acoustic
+Simulation Networks</h3>
+<p>Ecasound is designed as an open, chain-based routing system.
+Individual comb filters inherently suffer from excessive metallic
+resonance when used in isolation. To mitigate this and simulate
+realistic room impulse responses, Ecasound allows users to construct
+Schroeder-style reverberation networks by running multiple feedback comb
+filters in parallel across parallel audio chains
+(<code>-a:1,2,3,4</code>), each set with mutually prime delay times to
+avoid resonant build-up. The combined output of these comb filters is
+then routed into series all-pass filters (<code>-ea</code>) to increase
+echo density without altering the simulated room's frequency
+balance.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

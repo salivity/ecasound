@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Split Audio Tracks Using Ecasound - ecasound</title>
+    <meta name="description" content="This guide explains how to split a continuous live concert audio recording into individual song tracks using Ecasound, a lightweight, command-line multi-track audio processing utility. By identifying track transition timestamps and leveraging Ecasound's">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-split-audio-tracks-using-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Split Audio Tracks Using Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-split-audio-tracks-using-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to split a continuous live concert audio recording into individual song tracks using Ecasound, a lightweight, command-line multi-track audio processing utility. By identifying track transition timestamps and leveraging Ecasound's" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-split-audio-tracks-using-ecasound">How to Split Audio
+Tracks Using Ecasound</h1>
+<p>This guide explains how to split a continuous live concert audio
+recording into individual song tracks using Ecasound, a lightweight,
+command-line multi-track audio processing utility. By identifying track
+transition timestamps and leveraging Ecasound's input-offset and
+processing-duration parameters, you can quickly extract each song into
+its own lossless audio file without needing a heavyweight graphical
+digital audio workstation (DAW).</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<p>Ensure Ecasound is installed on your system. On Debian- or
+Ubuntu-based Linux distributions, install it using:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt-get install ecasound</span></code></pre></div>
+<h3 id="understanding-the-syntax">Understanding the Syntax</h3>
+<p>Ecasound uses command-line options to define input files, start
+offsets, processing lengths, and output files:</p>
+<ul>
+<li><code>-i:input_file.wav</code>: Specifies the continuous master
+recording.</li>
+<li><code>-y:START_TIME</code>: Sets the starting position (offset) in
+seconds or <code>hh:mm:ss.ddd</code> format.</li>
+<li><code>-t:DURATION</code>: Specifies the duration of the audio clip
+to process.</li>
+<li><code>-o:output_file.wav</code>: Defines the destination file for
+the extracted track.</li>
+</ul>
+<h3 id="step-1-identify-your-track-cue-points">Step 1: Identify Your
+Track Cue Points</h3>
+<p>Listen to the concert recording or use a basic audio player to note
+the start time and end time for each song. Convert these markers into
+duration values:</p>
+<ul>
+<li><strong>Song 1:</strong> Starts at <code>00:00:00</code>, ends at
+<code>00:04:15</code> (Duration: <code>00:04:15</code>)</li>
+<li><strong>Song 2:</strong> Starts at <code>00:04:15</code>, ends at
+<code>00:09:40</code> (Duration: <code>00:05:25</code>)</li>
+<li><strong>Song 3:</strong> Starts at <code>00:09:40</code>, ends at
+<code>00:14:02</code> (Duration: <code>00:04:22</code>)</li>
+</ul>
+<h3 id="step-2-extract-individual-tracks">Step 2: Extract Individual
+Tracks</h3>
+<p>Run individual <code>ecasound</code> commands for each segment.
+Replace <code>concert.wav</code> with the filename of your
+recording:</p>
+<p>Extract Track 1:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:concert.wav</span> <span class="at">-y:00:00:00</span> <span class="at">-t:255</span> <span class="at">-o:track01.wav</span></span></code></pre></div>
+<p><em>(Note: 4 minutes and 15 seconds equals 255 seconds. You can also
+specify <code>-t:00:04:15</code>.)</em></p>
+<p>Extract Track 2:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:concert.wav</span> <span class="at">-y:00:04:15</span> <span class="at">-t:00:05:25</span> <span class="at">-o:track02.wav</span></span></code></pre></div>
+<p>Extract Track 3:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:concert.wav</span> <span class="at">-y:00:09:40</span> <span class="at">-t:00:04:22</span> <span class="at">-o:track03.wav</span></span></code></pre></div>
+<h3 id="step-3-automate-the-extraction-with-a-bash-script">Step 3:
+Automate the Extraction with a Bash Script</h3>
+<p>To avoid running commands manually for long concerts, create a script
+named <code>split_concert.sh</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="va">INPUT</span><span class="op">=</span><span class="st">&quot;concert.wav&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Array format: &quot;OutputFile|StartTime|Duration&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="va">TRACKS</span><span class="op">=</span><span class="va">(</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;track01_intro.wav|00:00:00|00:04:15&quot;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;track02_song_one.wav|00:04:15|00:05:25&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;track03_song_two.wav|00:09:40|00:04:22&quot;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="va">)</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> <span class="st">&quot;</span><span class="va">${TRACKS</span><span class="op">[@]</span><span class="va">}</span><span class="st">&quot;</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">IFS</span><span class="op">=</span><span class="st">&quot;|&quot;</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">OUT</span> <span class="va">START</span> <span class="va">DUR</span> <span class="op">&lt;&lt;&lt;</span> <span class="st">&quot;</span><span class="va">$item</span><span class="st">&quot;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;Extracting </span><span class="va">$OUT</span><span class="st">...&quot;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">ecasound</span> <span class="at">-i:</span><span class="st">&quot;</span><span class="va">$INPUT</span><span class="st">&quot;</span> <span class="at">-y:</span><span class="st">&quot;</span><span class="va">$START</span><span class="st">&quot;</span> <span class="at">-t:</span><span class="st">&quot;</span><span class="va">$DUR</span><span class="st">&quot;</span> <span class="at">-o:</span><span class="st">&quot;</span><span class="va">$OUT</span><span class="st">&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;Splitting complete.&quot;</span></span></code></pre></div>
+<p>Make the script executable and run it:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x split_concert.sh</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./split_concert.sh</span></span></code></pre></div>
+<p>Ecasound will process the master recording sequentially, producing
+clean, gapless audio segments ready for tagging or compression.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

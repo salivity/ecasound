@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pass Multiple Inputs to a Single Chain in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to route multiple audio input files into a single chain using Ecasound. In Ecasound, assigning multiple input objects to the same active chain automatically sums (mixes) the incoming audio streams together into that chain, allow">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/pass-multiple-inputs-to-a-single-chain-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pass Multiple Inputs to a Single Chain in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/pass-multiple-inputs-to-a-single-chain-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to route multiple audio input files into a single chain using Ecasound. In Ecasound, assigning multiple input objects to the same active chain automatically sums (mixes) the incoming audio streams together into that chain, allow" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="pass-multiple-inputs-to-a-single-chain-in-ecasound">Pass
+Multiple Inputs to a Single Chain in Ecasound</h1>
+<p>This article explains how to route multiple audio input files into a
+single chain using Ecasound. In Ecasound, assigning multiple input
+objects to the same active chain automatically sums (mixes) the incoming
+audio streams together into that chain, allowing you to process multiple
+tracks simultaneously with shared chain operators and route them to a
+single output.</p>
+<h3 id="basic-command-syntax">Basic Command Syntax</h3>
+<p>To assign multiple inputs to one chain, define the active chain using
+the <code>-a</code> switch, followed sequentially by multiple
+<code>-i</code> input options before specifying your output with
+<code>-o</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:track1.wav</span> <span class="at">-i:track2.wav</span> <span class="at">-o:mixed_output.wav</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-a:1</code> creates and selects chain <code>1</code>.</li>
+<li><code>-i:track1.wav</code> attaches the first audio file to chain
+<code>1</code>.</li>
+<li><code>-i:track2.wav</code> attaches the second audio file to the
+still-active chain <code>1</code>.</li>
+<li><code>-o:mixed_output.wav</code> sets the destination output for the
+processed signal of chain <code>1</code>.</li>
+</ul>
+<h3 id="signal-mixing-behavior">Signal Mixing Behavior</h3>
+<p>When multiple audio inputs are routed to a single chain, Ecasound
+mixes their samples in real-time. If both files are stereo (2 channels),
+corresponding channels are added together.</p>
+<p>To prevent clipping caused by summing signal levels, apply an
+attenuation or volume-scaling effect to the chain using the
+<code>-ea</code> operator:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:track1.wav</span> <span class="at">-i:track2.wav</span> <span class="at">-ea:50</span> <span class="at">-o:mixed_output.wav</span></span></code></pre></div>
+<p>Here, <code>-ea:50</code> reduces the overall volume of the combined
+inputs in chain <code>1</code> to 50% to maintain audio headroom.</p>
+<h3 id="ensuring-file-compatibility">Ensuring File Compatibility</h3>
+<p>For inputs to be combined directly in a single chain without
+processing errors, the files should share compatible audio
+parameters:</p>
+<ul>
+<li><strong>Sample Rate:</strong> Ensure all inputs match (e.g., 44.1
+kHz or 48 kHz). If they differ, specify global audio parameters using
+<code>-f:bits,channels,sample_rate</code> to force resampling.</li>
+<li><strong>Channel Count:</strong> If mixing files with differing
+channel counts (e.g., mono and stereo), assign them to separate chains
+first and route them to a shared loop device or intermediate chain to
+avoid channel mismatches.</li>
+</ul>
+<h3 id="sequential-inputs-alternative">Sequential Inputs
+Alternative</h3>
+<p>If your goal is to play multiple files one after the other rather
+than mixing them simultaneously, do not pass multiple <code>-i</code>
+flags to the same chain. Instead, use Ecasound's playlist input
+format:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:playlist,file_list.txt</span> <span class="at">-o:continuous_output.wav</span></span></code></pre></div>
+<p>Where <code>file_list.txt</code> contains the paths to each audio
+file on separate lines.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

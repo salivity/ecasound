@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mute and Unmute Chains in Active Ecasound Sessions - ecasound</title>
+    <meta name="description" content="Ecasound does not feature a dedicated, standalone toggle command for chain muting in its interactive mode. Instead, dynamically muting and unmuting specific audio chains during an active session is accomplished by attaching an amplify operator (-ea) to t">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/mute-and-unmute-chains-in-active-ecasound-sessions">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mute and Unmute Chains in Active Ecasound Sessions - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/mute-and-unmute-chains-in-active-ecasound-sessions" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not feature a dedicated, standalone toggle command for chain muting in its interactive mode. Instead, dynamically muting and unmuting specific audio chains during an active session is accomplished by attaching an amplify operator (-ea) to t" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mute-and-unmute-chains-in-active-ecasound-sessions">Mute and
+Unmute Chains in Active Ecasound Sessions</h1>
+<p>Ecasound does not feature a dedicated, standalone toggle command for
+chain muting in its interactive mode. Instead, dynamically muting and
+unmuting specific audio chains during an active session is accomplished
+by attaching an amplify operator (<code>-ea</code>) to the chain and
+adjusting its gain level to either <code>0</code> or <code>100</code> in
+real time. This guide explains how to set up your chains for gain
+control and how to send interactive mode commands to silence and restore
+specific tracks on the fly.</p>
+<h3 id="1-configure-the-chain-with-an-amplify-operator">1. Configure the
+Chain with an Amplify Operator</h3>
+<p>To control audio levels dynamically, each chain you wish to mute must
+include an amplify effect operator when launched. Start Ecasound in
+interactive mode (<code>-c</code>) with the <code>-ea</code> operator
+set to 100% on the designated chains:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-a:track1</span> <span class="at">-i:audio1.wav</span> <span class="at">-ea:100</span> <span class="at">-o:default</span> <span class="at">-a:track2</span> <span class="at">-i:audio2.wav</span> <span class="at">-ea:100</span> <span class="at">-o:default</span></span></code></pre></div>
+<p>In this setup, <code>-ea:100</code> acts as the first chain operator
+on both <code>track1</code> and <code>track2</code>.</p>
+<h3 id="2-enter-the-interactive-engine">2. Enter the Interactive
+Engine</h3>
+<p>Start playback or processing from the interactive prompt:</p>
+<pre class="text"><code>start</code></pre>
+<p>Once running, the interactive prompt
+(<code>ecasound ('h' for help) &gt;</code>) allows you to query,
+navigate, and adjust active parameters.</p>
+<h3 id="3-mute-a-specific-chain">3. Mute a Specific Chain</h3>
+<p>To mute a chain, target the chain by name, select its amplify
+operator, and set the amplification factor to <code>0</code>:</p>
+<ol type="1">
+<li><p><strong>Select the target chain:</strong></p>
+<pre class="text"><code>c-select track1</code></pre></li>
+<li><p><strong>Select the amplify operator:</strong></p>
+<pre class="text"><code>cop-select 1</code></pre>
+<p><em>(Note: <code>1</code> refers to the index of the <code>-ea</code>
+operator on that chain.)</em></p></li>
+<li><p><strong>Set the gain parameter to 0%:</strong></p>
+<pre class="text"><code>co-set 1 0</code></pre></li>
+</ol>
+<p>Parameter <code>1</code> of the <code>-ea</code> effect represents
+linear amplification percentage. Setting it to <code>0</code> completely
+silences the selected chain without stopping playback on other
+chains.</p>
+<h3 id="4-unmute-the-chain">4. Unmute the Chain</h3>
+<p>To restore the audio signal to its normal volume, update the
+parameter back to <code>100</code>:</p>
+<ol type="1">
+<li><strong>Select the chain (if not already focused):</strong>
+<pre class="text"><code>c-select track1</code></pre></li>
+<li><strong>Select the operator:</strong>
+<pre class="text"><code>cop-select 1</code></pre></li>
+<li><strong>Restore normal volume:</strong>
+<pre class="text"><code>co-set 1 100</code></pre></li>
+</ol>
+<p>The chain will immediately resume normal output while remaining
+synchronized with the rest of the session.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

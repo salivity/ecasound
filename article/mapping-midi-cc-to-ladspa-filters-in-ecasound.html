@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapping MIDI CC to LADSPA Filters in Ecasound - ecasound</title>
+    <meta name="description" content="This guide explains the exact Ecasound syntax required to bind a physical MIDI controller knob to a LADSPA filter frequency for real-time sound processing. By using Ecasound’s built-in MIDI controller operator (-km), you can route continuous control ch">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/mapping-midi-cc-to-ladspa-filters-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mapping MIDI CC to LADSPA Filters in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/mapping-midi-cc-to-ladspa-filters-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains the exact Ecasound syntax required to bind a physical MIDI controller knob to a LADSPA filter frequency for real-time sound processing. By using Ecasound’s built-in MIDI controller operator (-km), you can route continuous control ch" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mapping-midi-cc-to-ladspa-filters-in-ecasound">Mapping MIDI CC
+to LADSPA Filters in Ecasound</h1>
+<p>This guide explains the exact Ecasound syntax required to bind a
+physical MIDI controller knob to a LADSPA filter frequency for real-time
+sound processing. By using Ecasound’s built-in MIDI controller operator
+(<code>-km</code>), you can route continuous control change (CC)
+messages directly to LADSPA plugin parameters, establishing minimum and
+maximum frequency boundaries for dynamic hardware automation.</p>
+<h3 id="the--km-controller-syntax">The <code>-km</code> Controller
+Syntax</h3>
+<p>In Ecasound, continuous parameter modulation from MIDI hardware is
+configured using the <code>-km</code> controller operator. The syntax
+is:</p>
+<pre class="text"><code>-km:fx_param,low_val,high_val,controller_number,midi_channel</code></pre>
+<ul>
+<li><strong><code>fx_param</code></strong>: The 1-based parameter index
+of the LADSPA plugin you want to manipulate. For most single-filter
+plugins (such as <code>lowpass_iir</code>), the cutoff frequency is
+parameter <code>1</code>.</li>
+<li><strong><code>low_val</code></strong>: The target frequency in Hertz
+when the MIDI knob is turned fully counter-clockwise (MIDI value
+0).</li>
+<li><strong><code>high_val</code></strong>: The target frequency in
+Hertz when the MIDI knob is turned fully clockwise (MIDI value
+127).</li>
+<li><strong><code>controller_number</code></strong>: The MIDI Continuous
+Controller (CC) number transmitted by your physical knob.</li>
+<li><strong><code>midi_channel</code></strong>: The MIDI channel
+transmitting the message (1–16).</li>
+</ul>
+<h3 id="setting-up-the-ladspa-filter">Setting Up the LADSPA Filter</h3>
+<p>Before applying the controller, instantiate your filter with the
+<code>-el</code> (enable LADSPA) option:</p>
+<pre class="text"><code>-el:lowpass_iir,1000,2</code></pre>
+<p>In the <code>lowpass_iir</code> plugin, parameter 1 is the cutoff
+frequency in Hz (initially set to 1000 Hz), and parameter 2 is the
+number of filter stages.</p>
+<h3 id="specifying-the-midi-device">Specifying the MIDI Device</h3>
+<p>To route physical MIDI data into Ecasound, define an ALSA sequencer
+MIDI input device using the <code>-Md</code> flag:</p>
+<pre class="text"><code>-Md:alsaseq,client:port</code></pre>
+<p>Replace <code>client:port</code> with your controller's ALSA port
+identification (obtained by running <code>aconnect -l</code> or
+<code>amidi -l</code>).</p>
+<h3 id="complete-working-example">Complete Working Example</h3>
+<p>The following command takes real-time audio input from your
+soundcard, passes it through a LADSPA low-pass filter, outputs the audio
+back to your speakers, and maps MIDI CC #74 on channel 1 to sweep the
+filter cutoff frequency between 80 Hz and 12,000 Hz:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:alsahw,0,0</span> <span class="at">-o:alsahw,0,0</span> <span class="at">-el:lowpass_iir,1000,2</span> <span class="at">-km:1,80,12000,74,1</span> <span class="at">-Md:alsaseq,20:0</span></span></code></pre></div>
+<ul>
+<li><strong><code>-i:alsahw,0,0</code></strong>: Captures input from
+ALSA device 0.</li>
+<li><strong><code>-o:alsahw,0,0</code></strong>: Plays output to ALSA
+device 0.</li>
+<li><strong><code>-el:lowpass_iir,1000,2</code></strong>: Loads the
+low-pass filter.</li>
+<li><strong><code>-km:1,80,12000,74,1</code></strong>: Maps parameter 1
+(cutoff) from 80 Hz to 12,000 Hz using MIDI CC 74 on MIDI Channel
+1.</li>
+<li><strong><code>-Md:alsaseq,20:0</code></strong>: Listens to the ALSA
+sequencer client <code>20:0</code> for incoming hardware control
+changes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

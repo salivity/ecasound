@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Signal Processing and Routing Architecture - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing utility built on an efficient, modular signal processing engine. This article examines the internal architecture of Ecasound, detailing how it handles internal audio stream routing, the func">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-signal-processing-and-routing-architecture">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Signal Processing and Routing Architecture - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-signal-processing-and-routing-architecture" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing utility built on an efficient, modular signal processing engine. This article examines the internal architecture of Ecasound, detailing how it handles internal audio stream routing, the func" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-signal-processing-and-routing-architecture">Ecasound
+Signal Processing and Routing Architecture</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing
+utility built on an efficient, modular signal processing engine. This
+article examines the internal architecture of Ecasound, detailing how it
+handles internal audio stream routing, the functional relationships
+between inputs, chains, operators, and outputs, and the sequential
+execution model that governs signal transformation.</p>
+<h2 id="the-chain-based-routing-model">The Chain-Based Routing
+Model</h2>
+<p>At the heart of Ecasound's internal signal processing pipeline is the
+concept of <strong>chains</strong>. A chain represents a linear signal
+path through which audio frames pass sequentially from an assigned input
+to an assigned output.</p>
+<p>Rather than using a rigid matrix or a node-based visual graph,
+Ecasound structures its routing logic using three core elements:</p>
+<ul>
+<li><strong>Audio Inputs:</strong> Sources that supply audio data (e.g.,
+ALSA, JACK, OSS, raw files, WAV, MP3, or standard input).</li>
+<li><strong>Chains:</strong> Independent serial processing lines where
+audio samples undergo alteration.</li>
+<li><strong>Audio Outputs:</strong> Sinks where processed audio streams
+are delivered (e.g., physical soundcard channels, audio files, standard
+output, or null sinks).</li>
+</ul>
+<p>A collection of chains configured to execute simultaneously is
+referred to as a <strong>chainset</strong>. Ecasound's routing engine
+processes chainsets synchronously inside an internal real-time loop.</p>
+<h2 id="stream-splitting-and-mixing">Stream Splitting and Mixing</h2>
+<p>Ecasound achieves complex routing—including multitrack recording,
+bussing, and effects sends—through the relationships established between
+inputs, chains, and outputs.</p>
+<h3 id="one-to-many-routing-signal-splitting">One-to-Many Routing
+(Signal Splitting)</h3>
+<p>An audio input can be assigned to multiple chains simultaneously.
+When an input is shared among several chains, the internal engine
+duplicates the incoming audio buffer for each assigned chain at the
+beginning of each processing cycle. This allows a single microphone
+input, for example, to be split into one dry chain directed to disk and
+another wet chain routed through a reverb processor.</p>
+<h3 id="many-to-one-routing-summing-and-mixing">Many-to-One Routing
+(Summing and Mixing)</h3>
+<p>Multiple chains can be assigned to a single audio output. When this
+occurs, Ecasound acts as an automatic summing mixer. As each chain
+completes its processing tasks for a given buffer cycle, its resulting
+audio data is summed into the designated output buffer before being
+committed to the target device or file.</p>
+<h3 id="multi-channel-assignment-and-channel-routing">Multi-Channel
+Assignment and Channel Routing</h3>
+<p>Ecasound allows chains to have different channel counts from the
+inputs and outputs to which they connect. Channel routing operators
+(such as <code>-erc</code>, <code>-erm</code>, and <code>-etd</code>)
+can manipulate individual channel assignments within a chain. Audio
+channels can be copied, muted, mapped to different channel indices, or
+mixed down from multi-channel configurations (such as 5.1 or stereo) to
+mono before reaching downstream operators or endpoints.</p>
+<h2 id="chain-operators-and-signal-flow">Chain Operators and Signal
+Flow</h2>
+<p>Inside a chain, audio flows unidirectionally through zero or more
+<strong>chain operators</strong> (cops). These operators execute in the
+exact order they are defined:</p>
+<ol type="1">
+<li><strong>Input Ingestion:</strong> The chain fetches raw audio frames
+from its connected input buffer.</li>
+<li><strong>Sequential Modification:</strong> The audio passes through
+the chain’s sequence of operators. Operators can include integrated
+filters, gain stages, dynamic processors, or external plugins via LADSPA
+or LV2 architectures.</li>
+<li><strong>Controller Modulation:</strong> Internal controllers (such
+as LFOs, envelope followers, or automated linear interpolators) hook
+into specific parameters of chain operators, dynamically modulating
+attributes (e.g., filter cutoff, volume) on a frame-by-frame basis.</li>
+<li><strong>Output Dispatch:</strong> The processed buffer is
+transferred to the connected output sink or added to an output
+accumulation buffer for mixing.</li>
+</ol>
+<h2 id="the-execution-engine-and-buffer-management">The Execution Engine
+and Buffer Management</h2>
+<p>Ecasound processes audio in discrete blocks called buffers. The
+internal execution cycle operates as follows:</p>
+<ul>
+<li><strong>Engine Iteration:</strong> During each processing cycle,
+Ecasound queries active inputs for a specific number of frames
+(determined by the global buffer size parameter).</li>
+<li><strong>Interleaved Floating-Point Processing:</strong> Internally,
+Ecasound processes sample data using double- or single-precision
+floating-point formats, regardless of the input format's native bit
+depth (such as 16-bit or 24-bit PCM). This ensures mathematical accuracy
+across multiple effects and prevents digital clipping during internal
+summing.</li>
+<li><strong>Format Conversion:</strong> The engine automatically
+performs sample format and sample rate conversions at the input and
+output boundaries when the formats of the hardware devices and audio
+streams do not match.</li>
+<li><strong>Low-Latency Subsystems:</strong> When integrated with
+low-latency audio servers like JACK, Ecasound synchronizes its
+processing loop directly with the host server's process callback,
+bypassing local timing loops and aligning buffer boundaries to prevent
+phase issues across parallel chains.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

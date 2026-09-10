@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aligning Audio Clock Drift with Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to align multi-track audio recordings that drift out of sync due to sample clock offsets using Ecasound. When recording with multiple unlinked audio interfaces, slight hardware clock discrepancies cause audio tracks to drift apa">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/aligning-audio-clock-drift-with-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Aligning Audio Clock Drift with Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/aligning-audio-clock-drift-with-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to align multi-track audio recordings that drift out of sync due to sample clock offsets using Ecasound. When recording with multiple unlinked audio interfaces, slight hardware clock discrepancies cause audio tracks to drift apa" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="aligning-audio-clock-drift-with-ecasound">Aligning Audio Clock
+Drift with Ecasound</h1>
+<p>This article explains how to align multi-track audio recordings that
+drift out of sync due to sample clock offsets using Ecasound. When
+recording with multiple unlinked audio interfaces, slight hardware clock
+discrepancies cause audio tracks to drift apart over time. You will
+learn how to identify clock drift, calculate the offset ratio, apply
+static start-time corrections, and use Ecasound's resampling and chain
+processing capabilities to keep tracks phase-aligned throughout a
+recording.</p>
+<h3 id="understanding-sample-clock-drift">Understanding Sample Clock
+Drift</h3>
+<p>When two or more independent audio devices record the same event
+without a shared master word clock, their internal crystal oscillators
+operate at marginally different speeds. Even if both are configured to
+record at 44.1 kHz, one device might capture 44,101 samples per second
+while the other captures 44,099.</p>
+<p>Unlike fixed buffer latency—which creates a constant delay from start
+to finish—clock drift is cumulative. A simple time-shift fixes alignment
+at the beginning, but the tracks will inevitably drift out of sync as
+playback progresses, causing phase cancellation, flamming, or audible
+echo.</p>
+<h3 id="step-1-measure-the-drift-rate">Step 1: Measure the Drift
+Rate</h3>
+<p>To correct drifting takes in Ecasound, you must determine both the
+initial latency and the cumulative drift across a known time window:</p>
+<ol type="1">
+<li>Identify a sharp transient near the beginning of the recording
+(e.g., a slate, clapper, or drum hit) present on both tracks. Note the
+sample difference between the two tracks.</li>
+<li>Identify a similar sharp transient near the end of the
+recording.</li>
+<li>Calculate the difference in drift over the elapsed time: <span
+class="math display">\[\text{Drift Ratio} = \frac{\text{Length of
+Reference Track (samples)}}{\text{Length of Drifting Track
+(samples)}}\]</span></li>
+</ol>
+<h3 id="step-2-establish-the-initial-offset">Step 2: Establish the
+Initial Offset</h3>
+<p>Use Ecasound’s position offset controller to align the initial
+transients. Ecasound provides the <code>-y</code> parameter, which sets
+the starting position offset for an audio chain:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:reference.wav</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:drifting.wav</span> <span class="at">-y:0.045</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>In this command, <code>-y:0.045</code> delays the playback or
+processing of chain 2 by 45 milliseconds, aligning its initial transient
+with chain 1.</p>
+<h3 id="step-3-compensate-for-clock-drift-via-resampling">Step 3:
+Compensate for Clock Drift via Resampling</h3>
+<p>Because the audio data expands or contracts relative to real time,
+the drifting track must be resampled so that its total sample count
+matches the reference track across the same time span.</p>
+<p>Ecasound utilizes <code>libsamplerate</code> (Secret Rabbit Code) for
+sample rate conversion. You can correct clock drift directly in Ecasound
+using two primary workflows:</p>
+<h4 id="method-a-overriding-the-input-sample-rate-definition">Method A:
+Overriding the Input Sample Rate Definition</h4>
+<p>If you know the exact ratio of the clock drift, you can declare a
+custom, non-standard sampling rate for the drifting file's chain.
+Ecasound will then resample that input to match the project's global
+sampling rate.</p>
+<p>For instance, if the drifting file was recorded roughly 2 samples per
+second fast on a 44,100 Hz timeline:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-r:44100</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:1</span> <span class="at">-i:reference.wav</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-f:s16_le,2,44102</span> <span class="at">-i:drifting.wav</span> <span class="at">-y:0.045</span> <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-o:aligned_mix.wav</span></span></code></pre></div>
+<p>By telling Ecasound that <code>drifting.wav</code> operates at 44,102
+Hz, the internal resampling engine subtly stretches the audio samples so
+that it aligns with the 44,100 Hz reference track over time.</p>
+<h4 id="method-b-integrating-ladspa-time-stretching-plugins">Method B:
+Integrating LADSPA Time-Stretching Plugins</h4>
+<p>For complex drift where sample rates should remain standard, Ecasound
+can host LADSPA plugins within any chain. By inserting a pitch-neutral
+time-scaling plugin (such as the Rubber Band LADSPA plugin), you can
+scale the duration of track 2 without altering its pitch:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:reference.wav</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:2</span> <span class="at">-i:drifting.wav</span> <span class="at">-y:0.045</span> <span class="at">-el:rubberband_pitch_regroup,1.0,0.99995</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">-a:all</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>Here, the <code>-el</code> flag calls the plugin and applies a
+precise scale ratio to compensate for the hardware speed difference.</p>
+<h3 id="verifying-alignment">Verifying Alignment</h3>
+<p>Once processed, verify track alignment by mixing both chains to a
+single test file and checking the waveform in an audio editor or
+listening to the mix down directly. If phase artifacts decrease toward
+the end of the take rather than increase, the clock drift has been
+accurately neutralized.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

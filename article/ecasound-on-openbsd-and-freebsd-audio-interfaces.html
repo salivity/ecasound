@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound on OpenBSD and FreeBSD Audio Interfaces - ecasound</title>
+    <meta name="description" content="Ecasound offers mixed support for the native audio interfaces found on modern BSD distributions. While it natively and seamlessly supports FreeBSD through the kernel's built-in Open Sound System (OSS) API, it does not provide native upstream support for">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-on-openbsd-and-freebsd-audio-interfaces">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound on OpenBSD and FreeBSD Audio Interfaces - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-on-openbsd-and-freebsd-audio-interfaces" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound offers mixed support for the native audio interfaces found on modern BSD distributions. While it natively and seamlessly supports FreeBSD through the kernel's built-in Open Sound System (OSS) API, it does not provide native upstream support for" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-on-openbsd-and-freebsd-audio-interfaces">Ecasound on
+OpenBSD and FreeBSD Audio Interfaces</h1>
+<p>Ecasound offers mixed support for the native audio interfaces found
+on modern BSD distributions. While it natively and seamlessly supports
+FreeBSD through the kernel's built-in Open Sound System (OSS) API, it
+does not provide native upstream support for OpenBSD's modern audio
+framework, sndio. Consequently, while FreeBSD users can interface
+directly with hardware sound devices out of the box, OpenBSD users must
+rely on intermediate sound servers or streaming pipes.</p>
+<h2 id="freebsd-audio-interface-support">FreeBSD Audio Interface
+Support</h2>
+<p>Ecasound fully supports FreeBSD's native audio hardware interface.
+The FreeBSD kernel implements the Open Sound System (OSS) 4.x API
+directly as its standard sound subsystem architecture, exposing audio
+devices via <code>/dev/dsp*</code> nodes.</p>
+<p>Because Ecasound includes an internal, native OSS input and output
+driver, it communicates directly with FreeBSD sound hardware without
+needing extra translation layers or emulation daemons.</p>
+<p>To use Ecasound directly with FreeBSD's native audio interface:</p>
+<ul>
+<li>Specify OSS as the audio format driver: <code>-i:oss,/dev/dsp</code>
+for recording.</li>
+<li>Route playback directly to the hardware:
+<code>-o:oss,/dev/dsp</code> for output.</li>
+</ul>
+<p>Ecasound is available through the FreeBSD Ports collection and
+<code>pkg</code> system with OSS support compiled in by default. Users
+requiring lower latency or inter-application routing on FreeBSD can also
+use the JACK Audio Connection Kit backend instead of direct OSS.</p>
+<h2 id="openbsd-audio-interface-support">OpenBSD Audio Interface
+Support</h2>
+<p>OpenBSD does not have native hardware interface support in upstream
+Ecasound. The native audio and MIDI framework on OpenBSD is
+<code>sndio</code>, managed by the <code>sndiod</code> daemon and the
+<code>sioctl</code> hardware control layer. Upstream Ecasound lacks a
+dedicated <code>sndio</code> driver module.</p>
+<p>Older versions of OpenBSD provided legacy Sun-style
+<code>/dev/audio</code> devices and OSS emulation layers, both of which
+match built-in Ecasound drivers. However, modern OpenBSD releases have
+completely removed these legacy interfaces in favor of
+<code>sndio</code>.</p>
+<p>To run Ecasound on OpenBSD, users must employ workarounds:</p>
+<ul>
+<li><strong>The JACK Audio Connection Kit:</strong> Run a JACK daemon
+that has been compiled with <code>sndio</code> support, and connect
+Ecasound to JACK using the <code>-i:jack</code> and <code>-o:jack</code>
+options.</li>
+<li><strong>Standard Audio Pipes:</strong> Pipe raw PCM audio streams
+between Ecasound and OpenBSD's native <code>aucat</code> utility using
+standard input and output descriptors (<code>-i:stdin</code> and
+<code>-o:stdout</code>).</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>FreeBSD:</strong> Supported natively. FreeBSD uses the OSS
+API as its primary audio subsystem, which works out of the box with
+Ecasound's built-in OSS driver.</li>
+<li><strong>OpenBSD:</strong> Not supported natively. Ecasound does not
+include a <code>sndio</code> engine, requiring the use of JACK or
+command-line audio pipes for signal routing.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

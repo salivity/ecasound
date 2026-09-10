@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Disk Caching for Multichannel Recording - ecasound</title>
+    <meta name="description" content="During long, multi-channel recording sessions, sustained data throughput can overwhelm storage subsystems and introduce audio dropouts if disk writes are not properly synchronized. Ecasound, a command-line multitrack audio processing tool, manages disk w">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-disk-caching-for-multichannel-recording">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Disk Caching for Multichannel Recording - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-disk-caching-for-multichannel-recording" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="During long, multi-channel recording sessions, sustained data throughput can overwhelm storage subsystems and introduce audio dropouts if disk writes are not properly synchronized. Ecasound, a command-line multitrack audio processing tool, manages disk w" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-disk-caching-for-multichannel-recording">Ecasound Disk
+Caching for Multichannel Recording</h1>
+<p>During long, multi-channel recording sessions, sustained data
+throughput can overwhelm storage subsystems and introduce audio dropouts
+if disk writes are not properly synchronized. Ecasound, a command-line
+multitrack audio processing tool, manages disk write caching by
+decoupling real-time audio capture from file I/O through internal
+circular ring buffers while relying on the host operating system's
+virtual memory page cache. Understanding how Ecasound structures its
+memory, interacts with kernel writeback mechanisms, and uses
+configurable buffer flags allows audio engineers to prevent buffer
+overruns and dropped samples over long recording runs.</p>
+<h3 id="decoupling-audio-capture-from-disk-io">Decoupling Audio Capture
+from Disk I/O</h3>
+<p>Ecasound avoids direct, synchronous writes to persistent storage from
+its primary audio processing loop. In multi-channel recording,
+continuous streams of uncompressed PCM data arrive from sound cards via
+ALSA, JACK, or OSS. To prevent blocking the audio acquisition thread
+during slow storage operations, Ecasound employs an internal
+double-buffering mechanism.</p>
+<p>Audio frames captured by the sound driver are immediately written
+into user-space circular ring buffers. A separate I/O routine pulls data
+from these buffers and issues POSIX <code>write()</code> system calls to
+target audio files on disk (such as WAV or RAW files). This architecture
+ensures that standard file system write latencies do not immediately
+stall the input pipeline.</p>
+<h3 id="interaction-with-the-os-page-cache">Interaction with the OS Page
+Cache</h3>
+<p>Ecasound does not implement a standalone, proprietary secondary
+caching engine on the disk level; instead, it delegates file-level
+caching to the Linux kernel page cache.</p>
+<p>When Ecasound calls <code>write()</code>, data moves from the
+application's internal buffer directly into the kernel's dirty pages in
+RAM. The kernel then decides when to physically flush these dirty pages
+to storage via background writeback threads (<code>flusher</code> or
+<code>kworker</code>).</p>
+<p>Because Ecasound uses standard buffered I/O rather than synchronous
+flags (such as <code>O_SYNC</code> or <code>O_DIRECT</code>), initial
+writes occur at the speed of memory. However, during long sessions
+involving many channels (e.g., 16 or 24 channels at 24-bit/96kHz), dirty
+pages accumulate quickly. If the page cache fills faster than the
+storage medium can write them, the kernel may force synchronous
+flushing, temporarily freezing application write calls.</p>
+<h3 id="mitigating-latency-spikes-in-long-sessions">Mitigating Latency
+Spikes in Long Sessions</h3>
+<p>To prevent kernel write stalls from starving Ecasound’s internal
+input buffers during extended sessions, several parameters must be
+balanced:</p>
+<ul>
+<li><strong>Engine Buffer Size (<code>-b:sample_count</code>):</strong>
+Ecasound’s <code>-b</code> option dictates the processing buffer size in
+sample frames. Increasing this value gives the system a larger temporal
+window to absorb kernel write pauses, though it increases monitoring
+latency. For pure recording sessions where latency is not a constraint,
+large buffer sizes (e.g., 2048, 4096, or higher) are standard to guard
+against I/O blocking.</li>
+<li><strong>Double Buffering Flags (<code>-z:mixbuf</code>):</strong>
+Ecasound allows the usage of mixing and intermediate buffers. Enabling
+these ensures that data can accumulate in memory even if the file system
+thread is held waiting on a busy disk controller.</li>
+<li><strong>Real-Time Engine Priority (<code>-r</code>):</strong> Using
+the <code>-r</code> or <code>-r:priority</code> flag instructs Ecasound
+to run its audio acquisition threads under real-time scheduling policies
+(<code>SCHED_FIFO</code> or <code>SCHED_RR</code>). While this does not
+accelerate disk writes, it ensures the kernel always gives CPU priority
+to emptying the sound card interface into RAM over the background disk
+flushing process.</li>
+</ul>
+<h3 id="kernel-tuning-for-continuous-multichannel-streams">Kernel Tuning
+for Continuous Multichannel Streams</h3>
+<p>Because Ecasound leverages the system’s native caching layer, optimal
+behavior during massive multi-track capture depends on tuning Linux
+virtual memory (VM) parameters.</p>
+<p>By default, Linux permits a high percentage of memory to be filled
+with dirty pages before forcing writes. During sustained writes, this
+leads to a massive, sudden flush that locks the file system. Configuring
+continuous, smaller flushes prevents Ecasound's write routines from
+blocking:</p>
+<ul>
+<li><strong><code>vm.dirty_background_ratio</code> or
+<code>vm.dirty_background_bytes</code>:</strong> Setting this to a low
+threshold forces the kernel to continually trickle dirty pages to the
+disk in the background as soon as data arrives, rather than waiting for
+large batches.</li>
+<li><strong><code>vm.dirty_ratio</code> or
+<code>vm.dirty_bytes</code>:</strong> Lowering the maximum limit
+prevents the kernel from letting unwritten data balloon to sizes that
+cause the system to freeze foreground processes while clearing
+space.</li>
+</ul>
+<p>By pairing adequately sized internal Ecasound sample buffers with
+continuous, low-latency kernel writeback settings, Ecasound successfully
+records high-channel-count sessions for hours without risking storage
+bottlenecks or dropped audio frames.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

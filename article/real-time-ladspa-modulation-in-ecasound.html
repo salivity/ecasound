@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time LADSPA Modulation in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound fully supports real-time modulation of LADSPA plugin control parameters. Users can dynamically alter audio effects during playback or processing using internal automation operators, external MIDI continuous controllers, or live commands sent thr">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/real-time-ladspa-modulation-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Real-Time LADSPA Modulation in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/real-time-ladspa-modulation-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound fully supports real-time modulation of LADSPA plugin control parameters. Users can dynamically alter audio effects during playback or processing using internal automation operators, external MIDI continuous controllers, or live commands sent thr" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="real-time-ladspa-modulation-in-ecasound">Real-Time LADSPA
+Modulation in Ecasound</h1>
+<p>Ecasound fully supports real-time modulation of LADSPA plugin control
+parameters. Users can dynamically alter audio effects during playback or
+processing using internal automation operators, external MIDI continuous
+controllers, or live commands sent through Ecasound’s interactive mode
+(ECI). This guide explains how Ecasound interacts with LADSPA controls
+and outlines the primary methods available for real-time parameter
+modulation.</p>
+<h3 id="how-ecasound-integrates-ladspa-plugins">How Ecasound Integrates
+LADSPA Plugins</h3>
+<p>LADSPA plugins are attached to an Ecasound chain using the
+<code>-el</code> (or <code>-eli</code>) chain operator, followed by the
+plugin name and its static default parameters:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa <span class="at">-el:ladspa_plugin_name,param1,param2</span></span></code></pre></div>
+<p>In LADSPA architecture, parameters designated as "control inputs" can
+be adjusted on the fly without interrupting the audio stream. Ecasound
+numbers these control ports sequentially, allowing you to attach control
+sources directly to them.</p>
+<h3 id="method-1-internal-control-oscillators-lfos-and-envelopes">Method
+1: Internal Control Oscillators (LFOs and Envelopes)</h3>
+<p>Ecasound includes built-in controller operators that can modulate any
+chain operator parameter automatically at runtime. These controllers
+attach to the target parameter by specifying its index number.</p>
+<ul>
+<li><strong>Sine LFO (<code>-kos</code>):</strong> Modulates a parameter
+using a low-frequency sine wave.
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-kos:fx_param,min_val,max_val,frequency,initial_phase</span></span></code></pre></div></li>
+<li><strong>Linear Ramp / Envelope (<code>-kog</code>):</strong>
+Generates a time-based linear envelope or ramp to transition parameter
+values gradually.</li>
+</ul>
+<p>For example, to attach a low-pass filter and oscillate its cutoff
+frequency between 500 Hz and 3000 Hz at a rate of 0.5 Hz:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:lowpass_iir,1000,2</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-kos:1,500,3000,0.5,0</span></span></code></pre></div>
+<p>In this command, <code>-kos:1,...</code> targets parameter
+<code>1</code> (the cutoff frequency of the filter) in real-time.</p>
+<h3 id="method-2-midi-hardware-controllers">Method 2: MIDI Hardware
+Controllers</h3>
+<p>You can map physical MIDI continuous controllers (knobs, sliders, or
+pedals) directly to LADSPA plugin parameters using the <code>-km</code>
+operator.</p>
+<p>The syntax for MIDI continuous controller mapping is:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-km:fx_param,min_val,max_val,midi_controller_number,midi_channel</span></span></code></pre></div>
+<p>Example: To modulate the resonance or cutoff of a filter using MIDI
+controller #74 on channel 1:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:lowpass_iir,1000,2</span> <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-km:1,200,8000,74,1</span></span></code></pre></div>
+<p>Ecasound translates the 0–127 MIDI control values smoothly into the
+target range (200 Hz to 8000 Hz) while audio continues running.</p>
+<h3 id="method-3-interactive-mode-eci">Method 3: Interactive Mode
+(ECI)</h3>
+<p>Ecasound includes the Ecasound Control Interface (ECI), which enables
+direct command-line or programmatic manipulation while the audio engine
+runs.</p>
+<ol type="1">
+<li>Launch Ecasound in interactive mode:
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa <span class="at">-el:lowpass_iir,1000,2</span></span></code></pre></div></li>
+<li>Start playback with the <code>start</code> command.</li>
+<li>Use operator control commands to inspect and update parameters in
+real-time:
+<ul>
+<li><code>cop-select 1</code> (select the LADSPA plugin operator)</li>
+<li><code>cop-set 1,2500</code> (instantly update parameter 1 to
+2500)</li>
+</ul></li>
+</ol>
+<p>Because ECI commands can be issued over standard input, Python
+bindings, or via a TCP/IP network socket (<code>--server</code>), you
+can build external GUIs or automated scripts to modulate LADSPA
+parameters dynamically.</p>
+<h3 id="control-rate-vs-audio-rate">Control Rate vs. Audio Rate</h3>
+<p>LADSPA control parameters are updated at the block control rate
+rather than the sample rate. While this allows for extremely low CPU
+overhead when automating complex filters, delays, and reverbs, very
+rapid modulation may cause audible stepping if the buffer size
+(<code>-b</code>) is set too high. Reducing the buffer size improves
+modulation responsiveness and resolution.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

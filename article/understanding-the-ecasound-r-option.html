@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding the Ecasound -r Option - ecasound</title>
+    <meta name="description" content="This article explains the function and practical application of the -r option when executing Ecasound, a command-line multitrack audio processing tool. Readers will learn how this option configures process scheduling, why it is critical for low-latency a">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/understanding-the-ecasound-r-option">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding the Ecasound -r Option - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/understanding-the-ecasound-r-option" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the function and practical application of the -r option when executing Ecasound, a command-line multitrack audio processing tool. Readers will learn how this option configures process scheduling, why it is critical for low-latency a" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="understanding-the-ecasound--r-option">Understanding the Ecasound
+-r Option</h1>
+<p>This article explains the function and practical application of the
+<code>-r</code> option when executing Ecasound, a command-line
+multitrack audio processing tool. Readers will learn how this option
+configures process scheduling, why it is critical for low-latency audio
+performance, how to specify priority levels, and the system permissions
+necessary to use it effectively.</p>
+<p>When launching an Ecasound instance, the <code>-r</code> option
+designates that the process should run with real-time scheduling
+priority. By default, standard processes are handled by the operating
+system's standard dynamic scheduler (such as <code>SCHED_OTHER</code> in
+Linux), which treats audio processing with the same general priority as
+regular background tasks. Invoking <code>-r</code> tells the kernel to
+handle Ecasound using POSIX real-time first-in, first-out scheduling
+(<code>SCHED_FIFO</code>).</p>
+<p>The primary purpose of enabling real-time priority with
+<code>-r</code> is to prevent buffer underruns and overruns (commonly
+referred to as xruns). In multitrack recording, live effects processing,
+or low-latency monitoring, any interruption or scheduling delay caused
+by other system tasks can lead to audible clicks, pops, or dropped audio
+frames. Applying <code>-r</code> ensures that Ecasound’s audio engine
+threads take precedence over non-real-time operations, maintaining
+steady, uninterrupted audio streams.</p>
+<p>The option can be used as a standalone flag or with an optional
+integer parameter to designate a specific priority level:</p>
+<ul>
+<li><code>-r</code>: Enables real-time scheduling using the default
+priority defined by the system or Ecasound configuration.</li>
+<li><code>-r:priority</code>: Enables real-time scheduling and
+explicitly sets the process priority to the specified numeric value (for
+example, <code>-r:50</code>).</li>
+</ul>
+<p>Operating systems restrict the ability to grant real-time priority to
+prevent unprivileged tasks from starving critical system services. To
+use the <code>-r</code> option without running as the root user, the
+operating system must be configured to grant real-time permissions to
+the user. On Linux systems, this typically involves configuring the
+<code>rtprio</code> resource limits in
+<code>/etc/security/limits.conf</code> or ensuring the user belongs to
+an <code>audio</code> group with predefined real-time execution
+privileges.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

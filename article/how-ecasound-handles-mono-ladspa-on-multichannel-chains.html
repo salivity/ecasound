@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Handles Mono LADSPA on Multichannel Chains - ecasound</title>
+    <meta name="description" content="When a mono LADSPA plugin (one input and one output) is inserted into a multi-channel audio chain, Ecasound automatically replicates the plugin across every audio channel in that chain. This article explains Ecasound’s automated channel-cloning mechani">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-handles-mono-ladspa-on-multichannel-chains">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Handles Mono LADSPA on Multichannel Chains - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-handles-mono-ladspa-on-multichannel-chains" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a mono LADSPA plugin (one input and one output) is inserted into a multi-channel audio chain, Ecasound automatically replicates the plugin across every audio channel in that chain. This article explains Ecasound’s automated channel-cloning mechani" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-handles-mono-ladspa-on-multichannel-chains">How
+Ecasound Handles Mono LADSPA on Multichannel Chains</h1>
+<p>When a mono LADSPA plugin (one input and one output) is inserted into
+a multi-channel audio chain, Ecasound automatically replicates the
+plugin across every audio channel in that chain. This article explains
+Ecasound’s automated channel-cloning mechanism, how control parameters
+are shared across instances, and how users can route multi-channel audio
+if they wish to avoid applying the mono effect to every channel
+simultaneously.</p>
+<h3 id="automatic-plugin-instantiation">Automatic Plugin
+Instantiation</h3>
+<p>In Ecasound, audio chains have an assigned channel count (such as 2
+for stereo, or 6 for 5.1 surround). When you attach a LADSPA plugin
+using the <code>-el</code> or <code>-eli</code> operators, Ecasound
+inspects the plugin’s audio port configuration.</p>
+<p>If an <em>N</em>-channel chain encounters a mono LADSPA plugin (1
+input, 1 output), Ecasound instantiates <em>N</em> identical copies of
+the plugin. Each audio channel passes through its own dedicated plugin
+instance in parallel:</p>
+<ul>
+<li>Channel 1 passes through Plugin Instance 1</li>
+<li>Channel 2 passes through Plugin Instance 2</li>
+<li>Channel <em>N</em> passes through Plugin Instance <em>N</em></li>
+</ul>
+<p>This allows mono effects—such as standard EQs, compressors, or
+filters—to work seamlessly on stereo or surround chains without crashing
+or dropping channels.</p>
+<h3 id="parameter-synchronization-vs-internal-state">Parameter
+Synchronization vs. Internal State</h3>
+<p>While multiple instances of the plugin are created, they share the
+exact control parameters provided on the command line or modified via
+the Ecasound Control Interface (ECI). If you automate or alter a control
+port (such as adjusting a filter cutoff frequency), Ecasound applies
+that change simultaneously across all instantiated clones.</p>
+<p>However, the internal runtime memory (state) of each instance remains
+completely isolated. For example, a mono delay or reverb plugin
+duplicated on a stereo chain will maintain independent delay buffers for
+the left and right channels. Signals do not bleed between channels
+unless the plugin itself is explicitly designed to communicate across
+instances via external shared memory, which standard LADSPA plugins do
+not do.</p>
+<h3 id="targeting-specific-channels">Targeting Specific Channels</h3>
+<p>Because Ecasound defaults to processing all channels in the chain,
+applying a mono plugin to only a single channel requires explicit
+routing. You can isolate channels using Ecasound's built-in routing
+tools:</p>
+<ol type="1">
+<li><strong>Chain Splitting:</strong> Separate multichannel inputs into
+individual mono chains using <code>-chcopy</code> or <code>-erc</code>
+(route channels).</li>
+<li><strong>Channel-Specific Processing:</strong> Place the LADSPA
+plugin exclusively on the chain designated for that specific
+channel.</li>
+<li><strong>Recombining:</strong> Merge the chains back into a single
+multi-channel output or route them using loop devices
+(<code>loop,label</code>).</li>
+</ol>
+<p>By default, users can rely on Ecasound to automatically handle mono
+LADSPA plugins transparently across all channels of a multi-channel
+chain without requiring manual channel splitting.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

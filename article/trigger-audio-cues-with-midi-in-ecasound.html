@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trigger Audio Cues with MIDI in Ecasound - ecasound</title>
+    <meta name="description" content="While Ecasound is a powerful command-line multitrack recorder and audio processing tool, it does not natively function as a standard sample player or soundboard. An external MIDI keyboard cannot trigger one-shot audio cues out of the box inside Ecasound">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/trigger-audio-cues-with-midi-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trigger Audio Cues with MIDI in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/trigger-audio-cues-with-midi-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While Ecasound is a powerful command-line multitrack recorder and audio processing tool, it does not natively function as a standard sample player or soundboard. An external MIDI keyboard cannot trigger one-shot audio cues out of the box inside Ecasound" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="trigger-audio-cues-with-midi-in-ecasound">Trigger Audio Cues
+with MIDI in Ecasound</h1>
+<p>While Ecasound is a powerful command-line multitrack recorder and
+audio processing tool, it does not natively function as a standard
+sample player or soundboard. An external MIDI keyboard cannot trigger
+one-shot audio cues out of the box inside Ecasound without external
+middleware or custom scripting. However, by using the Ecasound Control
+Interface (ECI) or specialized MIDI routing utilities, you can achieve
+MIDI-triggered audio playback.</p>
+<h3 id="native-midi-capabilities-and-limitations">Native MIDI
+Capabilities and Limitations</h3>
+<p>Ecasound includes built-in support for MIDI, but its implementation
+focuses on real-time parameter automation and transport synchronization
+rather than polyphonic sample triggering.</p>
+<p>Natively, Ecasound allows you to:</p>
+<ul>
+<li>Map MIDI Continuous Controller (CC) messages to effect parameters
+(such as volume, pan, and filter cutoff).</li>
+<li>Control engine transport states (start, stop) using MIDI Machine
+Control (MMC).</li>
+<li>Route and record raw MIDI data streams.</li>
+</ul>
+<p>Because Ecasound manages audio via continuous processing chains
+rather than an internal cue buffer or sample-triggering engine, a
+standard MIDI Note-On message will not automatically load, seek, and
+fire a specific audio file natively.</p>
+<h3 id="method-1-using-the-ecasound-control-interface-eci">Method 1:
+Using the Ecasound Control Interface (ECI)</h3>
+<p>The most direct way to trigger cues inside Ecasound using a keyboard
+is through the Ecasound Control Interface (ECI). Ecasound can run in
+interactive mode (<code>-c</code>) or as a background daemon accepting
+commands via Python, C, Perl, or Netcat.</p>
+<p>To implement this:</p>
+<ol type="1">
+<li>Run a lightweight MIDI listener (such as a Python script using
+<code>mido</code> or <code>python-rtmidi</code>).</li>
+<li>Map incoming Note-On numbers to specific audio files or chains.</li>
+<li>Send interactive Ecasound commands through ECI (such as
+<code>cs-add</code>, <code>ai-add sample.wav</code>, and
+<code>start</code>, or seeking existing chains to position
+<code>0</code> using <code>setpos 0</code>).</li>
+</ol>
+<p>This approach gives you low-latency cue triggering while still
+utilizing Ecasound's real-time routing and DSP architecture.</p>
+<h3 id="method-2-chain-unmuting-via-midi-controllers">Method 2: Chain
+Unmuting via MIDI Controllers</h3>
+<p>If your keyboard or controller has assignable pads or faders that
+transmit MIDI CC messages, you can set up pre-loaded chains inside an
+Ecasound chainsetup.</p>
+<ul>
+<li>Each chain loads a specific audio file as an input.</li>
+<li>A volume/gain effect (<code>-ea</code>) or gate is placed on each
+chain.</li>
+<li>You bind the MIDI CC to control the chain's volume.</li>
+</ul>
+<p>While this allows you to bring cues in and out using MIDI, it is
+limited: long samples will loop or run continuously in the background
+rather than restarting from the beginning upon each press.</p>
+<h3 id="alternative-cli-solutions">Alternative CLI Solutions</h3>
+<p>If you require precise, low-latency one-shot sample playback without
+developing custom ECI scripts, consider using a dedicated Linux audio
+sampler alongside Ecasound:</p>
+<ul>
+<li><strong>LinuxSampler</strong> or <strong>FluidSynth:</strong>
+Standalone command-line instruments that translate Note-On events
+directly into sample playback.</li>
+<li><strong>Mididings:</strong> A Python-based MIDI router that can
+listen to your keyboard and execute system-level commands or trigger
+external audio tools.</li>
+</ul>
+<p>You can then pipe the audio output from these tools directly into an
+Ecasound JACK or ALSA input chain for recording and real-time audio
+processing.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

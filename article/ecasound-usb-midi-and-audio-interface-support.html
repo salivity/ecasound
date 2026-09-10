@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound USB-MIDI and Audio Interface Support - ecasound</title>
+    <meta name="description" content="Ecasound fully supports USB-MIDI and class-compliant audio interfaces out of the box on Linux-based systems by leveraging native ALSA and JACK drivers. Because class-compliant USB audio and MIDI hardware requires no proprietary drivers, Ecasound can dire">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-usb-midi-and-audio-interface-support">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound USB-MIDI and Audio Interface Support - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-usb-midi-and-audio-interface-support" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound fully supports USB-MIDI and class-compliant audio interfaces out of the box on Linux-based systems by leveraging native ALSA and JACK drivers. Because class-compliant USB audio and MIDI hardware requires no proprietary drivers, Ecasound can dire" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-usb-midi-and-audio-interface-support">Ecasound USB-MIDI
+and Audio Interface Support</h1>
+<p>Ecasound fully supports USB-MIDI and class-compliant audio interfaces
+out of the box on Linux-based systems by leveraging native ALSA and JACK
+drivers. Because class-compliant USB audio and MIDI hardware requires no
+proprietary drivers, Ecasound can directly access these devices for
+multitrack recording, playback, signal routing, and real-time parameter
+control without third-party plugins or manual compilation.</p>
+<h3 id="audio-interface-compatibility">Audio Interface
+Compatibility</h3>
+<p>Class-compliant USB audio devices operate under the standard Linux
+kernel module <code>snd-usb-audio</code>. Once connected, the operating
+system registers the device as an ALSA hardware node.</p>
+<p>Ecasound interacts with these interfaces directly through its
+standard input and output arguments. You can target the interface by
+specifying the ALSA device directly:</p>
+<ul>
+<li><strong>Playback:</strong>
+<code>ecasound -i:somefile.wav -o:alsa,hw:1,0</code></li>
+<li><strong>Recording:</strong>
+<code>ecasound -i:alsa,hw:1,0 -o:recording.wav</code></li>
+</ul>
+<p>If you are running the JACK Audio Connection Kit, Ecasound
+communicates with the interface through JACK ports just as easily using
+<code>-i:jack</code> and <code>-o:jack</code>.</p>
+<h3 id="usb-midi-and-hardware-control-support">USB-MIDI and Hardware
+Control Support</h3>
+<p>Ecasound provides native support for MIDI input through the ALSA
+sequencer and ALSA raw MIDI subsystems. Class-compliant USB-MIDI
+controllers automatically register as available MIDI endpoints in Linux,
+allowing Ecasound to receive MIDI messages immediately.</p>
+<p>Ecasound uses MIDI primarily for dynamic control of processing
+parameters rather than soft-synth playback. Using Ecasound’s controller
+mapping options (<code>-km</code>), you can assign incoming MIDI
+Continuous Controller (CC) messages from hardware knobs, faders, or
+expression pedals to internal effect parameters, volume levels, and
+panning positions in real time.</p>
+<p>For example, to map MIDI CC #1 on channel 1 to control the master
+volume of a chain, you can specify:</p>
+<p><code>ecasound -a:1 -i:audio.wav -o:alsa -ea:100 -km:1,1,127,1,1</code></p>
+<h3 id="summary-of-requirements">Summary of Requirements</h3>
+<p>To use your class-compliant USB-MIDI and audio hardware with
+Ecasound, ensure the following:</p>
+<ol type="1">
+<li><strong>Linux Kernel Support:</strong> The standard
+<code>snd-usb-audio</code> module must be active (standard on almost all
+Linux distributions).</li>
+<li><strong>ALSA Utilities:</strong> Tools like <code>aplay -l</code>
+and <code>amidi -l</code> can verify the device card and subdevice
+numbers to pass to Ecasound.</li>
+<li><strong>Correct Permissions:</strong> The user account running
+Ecasound must belong to the <code>audio</code> group to access real-time
+priority and hardware nodes directly.</li>
+</ol>
+<p>As long as the host operating system recognizes the class-compliant
+device, Ecasound requires no additional setup to utilize both audio
+streams and MIDI control signals.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

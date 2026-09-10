@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routing Headphone Cue Mixes in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to configure independent headphone cue mixes with separate volume levels using Ecasound, a powerful command-line multitrack audio processor. By utilizing Ecasound’s chain architecture, you can split audio inputs into distinct">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/routing-headphone-cue-mixes-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Routing Headphone Cue Mixes in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/routing-headphone-cue-mixes-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure independent headphone cue mixes with separate volume levels using Ecasound, a powerful command-line multitrack audio processor. By utilizing Ecasound’s chain architecture, you can split audio inputs into distinct" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="routing-headphone-cue-mixes-in-ecasound">Routing Headphone Cue
+Mixes in Ecasound</h1>
+<p>This article explains how to configure independent headphone cue
+mixes with separate volume levels using Ecasound, a powerful
+command-line multitrack audio processor. By utilizing Ecasound’s chain
+architecture, you can split audio inputs into distinct signal paths,
+apply isolated gain adjustments to each path, and route them to separate
+hardware outputs for performers and engineers.</p>
+<h2 id="core-concepts-chains-and-routing">Core Concepts: Chains and
+Routing</h2>
+<p>Ecasound processes audio using "chains." A chain is an independent
+audio path that connects inputs, effect operators (such as volume
+control), and outputs.</p>
+<p>To route an audio stream to multiple outputs with independent
+volumes:</p>
+<ol type="1">
+<li>Assign an input source to multiple chains.</li>
+<li>Apply independent amplitude scaling (<code>-ea</code>) to each
+chain.</li>
+<li>Assign each chain to a distinct physical output device or
+subchannel.</li>
+</ol>
+<h2 id="determining-your-audio-outputs">Determining Your Audio
+Outputs</h2>
+<p>Before routing, identify your sound card’s playback channels. With
+ALSA, list playback devices:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">aplay</span> <span class="at">-l</span></span></code></pre></div>
+<p>For professional multichannel sound cards, ALSA channels are
+typically represented as subdevices or exposed as multichannel streams.
+If you use JACK, output ports are typically named
+<code>system:playback_1</code>, <code>system:playback_2</code>, etc.</p>
+<h2 id="basic-two-chain-cue-mix-command">Basic Two-Chain Cue Mix
+Command</h2>
+<p>The following example takes a single stereo input file and routes it
+to two separate stereo outputs: the main monitors (outputs 1–2) and
+performer headphones (outputs 3–4), each with independent volume
+levels.</p>
+<h3 id="using-alsa">Using ALSA</h3>
+<p>If your interface exposes outputs as separate subdevices (e.g.,
+<code>hw:0,0</code> for main and <code>hw:0,1</code> for cue):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main,cue</span> <span class="at">-i:backing_track.wav</span> <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main</span> <span class="at">-ea:100</span> <span class="at">-o:alsa,hw:0,0</span> <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:cue</span>  <span class="at">-ea:60</span>  <span class="at">-o:alsa,hw:0,1</span></span></code></pre></div>
+<ul>
+<li><code>-a:main,cue -i:backing_track.wav</code>: Assigns
+<code>backing_track.wav</code> as the input to both the
+<code>main</code> and <code>cue</code> chains.</li>
+<li><code>-a:main -ea:100 -o:alsa,hw:0,0</code>: Configures the
+<code>main</code> chain with 100% gain, outputting to ALSA device
+0,0.</li>
+<li><code>-a:cue -ea:60 -o:alsa,hw:0,1</code>: Configures the
+<code>cue</code> chain with 60% gain, outputting to ALSA device
+0,1.</li>
+</ul>
+<h3 id="using-jack">Using JACK</h3>
+<p>When running a JACK audio server, route directly to specific system
+playback channels:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main,cue</span> <span class="at">-i:backing_track.wav</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main</span> <span class="at">-ea:100</span> <span class="at">-o:jack,system:playback_1,system:playback_2</span> <span class="dt">\</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:cue</span>  <span class="at">-ea:75</span>  <span class="at">-o:jack,system:playback_3,system:playback_4</span></span></code></pre></div>
+<h2 id="multitrack-inputs-with-independent-cue-mix-balances">Multitrack
+Inputs with Independent Cue Mix Balances</h2>
+<p>In real-world tracking scenarios, you often need to balance multiple
+stems differently between the main control room and the performer's
+headphones.</p>
+<p>To achieve this, create dedicated chains for each track per mix:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drums_main,drums_cue</span> <span class="at">-i:drums.wav</span> <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:vox_main,vox_cue</span>     <span class="at">-i:vocals.wav</span> <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drums_main</span> <span class="at">-ea:100</span> <span class="at">-o:jack,system:playback_1,system:playback_2</span> <span class="dt">\</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:vox_main</span>   <span class="at">-ea:80</span>  <span class="at">-o:jack,system:playback_1,system:playback_2</span> <span class="dt">\</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:drums_cue</span>  <span class="at">-ea:60</span>  <span class="at">-o:jack,system:playback_3,system:playback_4</span> <span class="dt">\</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:vox_cue</span>    <span class="at">-ea:120</span> <span class="at">-o:jack,system:playback_3,system:playback_4</span></span></code></pre></div>
+<p>In this setup:</p>
+<ul>
+<li>The control room (<code>main</code>) hears full-volume drums
+(<code>-ea:100</code>) and moderate vocals (<code>-ea:80</code>).</li>
+<li>The vocalist (<code>cue</code>) receives reduced drums
+(<code>-ea:60</code>) and boosted vocals (<code>-ea:120</code>).</li>
+</ul>
+<h2 id="adjusting-volume-levels-in-real-time">Adjusting Volume Levels in
+Real-Time</h2>
+<p>To modify headphone cue volumes during a session without stopping
+audio playback, run Ecasound in interactive mode by appending the
+<code>-c</code> flag:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main,cue</span> <span class="at">-i:backing_track.wav</span> <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:main</span> <span class="at">-ea:100</span> <span class="at">-o:alsa,hw:0,0</span> <span class="dt">\</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:cue</span>  <span class="at">-ea:60</span>  <span class="at">-o:alsa,hw:0,1</span></span></code></pre></div>
+<p>Once inside the interactive prompt, change the cue volume using
+standard Ecasound interactive commands:</p>
+<ol type="1">
+<li>Select the cue chain:
+<pre class="text"><code>c-select cue</code></pre></li>
+<li>Locate the amplify operator position:
+<pre class="text"><code>cop-list</code></pre></li>
+<li>Set the new gain value (e.g., changing the first operator to 85%):
+<pre class="text"><code>cop-set 1 1 85</code></pre></li>
+</ol>
+<p>This updates the headphone mix immediately without interrupting the
+primary recording or playback stream.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

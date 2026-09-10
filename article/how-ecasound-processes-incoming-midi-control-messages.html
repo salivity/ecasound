@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Processes Incoming MIDI Control Messages - ecasound</title>
+    <meta name="description" content="Ecasound is a powerful command-line multitrack audio processing tool capable of capturing, routing, and translating incoming MIDI Continuous Controller (CC) messages into dynamic, real-time parameters for audio effects and chain setups. By interfacing di">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-processes-incoming-midi-control-messages">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Processes Incoming MIDI Control Messages - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-processes-incoming-midi-control-messages" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a powerful command-line multitrack audio processing tool capable of capturing, routing, and translating incoming MIDI Continuous Controller (CC) messages into dynamic, real-time parameters for audio effects and chain setups. By interfacing di" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-processes-incoming-midi-control-messages">How
+Ecasound Processes Incoming MIDI Control Messages</h1>
+<p>Ecasound is a powerful command-line multitrack audio processing tool
+capable of capturing, routing, and translating incoming MIDI Continuous
+Controller (CC) messages into dynamic, real-time parameters for audio
+effects and chain setups. By interfacing directly with low-level audio
+and MIDI subsystems—primarily the ALSA sequencer, raw MIDI devices, or
+OSS—Ecasound intercepts incoming control bytes, normalizes their values,
+and modulates assigned parameters such as volume, panning, and filter
+cutoffs on the fly.</p>
+<h3 id="1-interfacing-and-capturing-midi-input">1. Interfacing and
+Capturing MIDI Input</h3>
+<p>To capture incoming MIDI control messages, Ecasound establishes a
+connection to a hardware port or software sequencer using the
+<code>-Md</code> (MIDI device) global option. Depending on the operating
+system and user configuration, it supports several drivers:</p>
+<ul>
+<li><strong>ALSA Sequencer (<code>-Md:alsaseq,device</code>)</strong>:
+Creates an ALSA sequencer client port, allowing users to connect
+hardware controllers or software synthesizers via utilities like
+<code>aconnect</code>.</li>
+<li><strong>ALSA Raw MIDI
+(<code>-Md:rawmidi,/dev/snd/midiC0D0</code>)</strong>: Reads direct byte
+streams from an ALSA raw MIDI hardware interface.</li>
+<li><strong>OSS MIDI (<code>-Md:oss,/dev/midi</code>)</strong>: Captures
+messages from standard Open Sound System MIDI device nodes.</li>
+</ul>
+<p>During initialization, Ecasound creates a dedicated background thread
+or non-blocking event listener for the designated device to read
+incoming byte streams without interrupting the real-time audio
+processing loop.</p>
+<h3 id="2-message-decoding-and-filtering">2. Message Decoding and
+Filtering</h3>
+<p>Once the MIDI stream is active, Ecasound's event parser monitors the
+incoming data packets for Channel Voice messages:</p>
+<ul>
+<li><strong>Message Filtering</strong>: Ecasound identifies status bytes
+corresponding to Control Change events (typically <code>0xBn</code>,
+where <code>n</code> is the MIDI channel from 0 to 15).</li>
+<li><strong>Data Extraction</strong>: When a CC event is detected, the
+parser extracts the subsequent two data bytes: the controller number
+(0–127) and the controller value (0–127). Unrelated messages, such as
+Note On/Off or SysEx, are ignored unless explicitly routed to other
+processes.</li>
+</ul>
+<h3 id="3-controller-mapping-with-the--km-operator">3. Controller
+Mapping with the <code>-km</code> Operator</h3>
+<p>Ecasound bridges the gap between incoming MIDI CC data and audio
+parameters using the MIDI control mapping operator (<code>-km</code>).
+The mapping syntax determines how a specific incoming controller
+modifies a chain operator parameter:</p>
+<p><code>-km:param_id,controller,channel,low_val,high_val</code></p>
+<ul>
+<li><strong><code>param_id</code></strong>: Identifies which chain
+operator parameter is being targeted (such as an effect's cutoff
+frequency, wet/dry mix, or gain).</li>
+<li><strong><code>controller</code></strong>: Specifies the target MIDI
+CC number (e.g., CC 1 for modulation wheel, CC 7 for volume).</li>
+<li><strong><code>channel</code></strong>: The targeted MIDI channel
+(1–16).</li>
+<li><strong><code>low_val</code> and <code>high_val</code></strong>: The
+target parameter's range boundaries corresponding to MIDI values 0 and
+127, respectively.</li>
+</ul>
+<h3 id="4-normalization-interpolation-and-parameter-updates">4.
+Normalization, Interpolation, and Parameter Updates</h3>
+<p>After decoding a valid CC message, Ecasound performs real-time value
+scaling:</p>
+<ol type="1">
+<li><strong>Value Scaling</strong>: The raw MIDI input (0 to 127) is
+linearly interpolated into the target parameter range defined by
+<code>low_val</code> and <code>high_val</code>. For instance, mapping CC
+7 to an amplifier gain ranging from -40 dB to +6 dB scales input 0 to
+-40 dB and 127 to +6 dB.</li>
+<li><strong>Thread-Safe Modulation</strong>: The scaled value is applied
+to the active chain operator via thread-safe internal pointers. Because
+the audio thread and MIDI capture run concurrently, updates are applied
+synchronously at the start of each audio processing buffer cycle,
+preventing audio dropouts, zipper noise, or race conditions.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

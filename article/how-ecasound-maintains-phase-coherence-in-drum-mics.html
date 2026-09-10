@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Maintains Phase Coherence in Drum Mics - ecasound</title>
+    <meta name="description" content="Maintaining absolute phase coherence across multi-channel drum mic arrays requires sample-accurate synchronization, deterministic buffer execution, and the total elimination of independent channel drift. Ecasound achieves this level of phase fidelity by">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-maintains-phase-coherence-in-drum-mics">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Maintains Phase Coherence in Drum Mics - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-maintains-phase-coherence-in-drum-mics" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Maintaining absolute phase coherence across multi-channel drum mic arrays requires sample-accurate synchronization, deterministic buffer execution, and the total elimination of independent channel drift. Ecasound achieves this level of phase fidelity by" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-maintains-phase-coherence-in-drum-mics">How
+Ecasound Maintains Phase Coherence in Drum Mics</h1>
+<p>Maintaining absolute phase coherence across multi-channel drum mic
+arrays requires sample-accurate synchronization, deterministic buffer
+execution, and the total elimination of independent channel drift.
+Ecasound achieves this level of phase fidelity by processing
+multi-channel signals within a single, synchronous engine loop tightly
+bound to low-level audio backends like JACK or ALSA. By reading,
+processing, and routing multi-mic inputs as unified, fixed-length sample
+blocks within the same hardware clock cycle, Ecasound ensures that
+transient-heavy drum elements—such as the relationship between direct
+close mics and stereo overheads—remain sample-locked without suffering
+from phase cancellation or comb filtering.</p>
+<h3 id="unified-audio-engine-and-synchronous-block-execution">Unified
+Audio Engine and Synchronous Block Execution</h3>
+<p>Unlike modular software architectures that assign independent
+processing threads or dynamic queues to separate audio tracks, Ecasound
+operates via a centralized, deterministic engine loop. When recording or
+routing an array of drum microphones (e.g., kick, snare, toms, and
+overheads), Ecasound handles the inputs simultaneously in discrete,
+fixed-size blocks (configured via the <code>-b:buffersize</code>
+parameter).</p>
+<p>In this unified loop, sample frames for all active channels are
+fetched, processed through the defined chains, and delivered to their
+outputs within the exact same execution cycle. Because the engine
+processes an identical number of sample frames for every channel per
+iteration, it is structurally impossible for one microphone channel to
+advance ahead of or fall behind another.</p>
+<h3 id="native-multi-channel-stream-handling">Native Multi-Channel
+Stream Handling</h3>
+<p>Ecasound treats multi-channel audio devices not as disparate,
+unrelated single-channel feeds, but as interleaved or synchronized
+non-interleaved multi-channel frames. When configuring an audio
+interface with an 8-channel or 16-channel capture specification:</p>
+<ul>
+<li>The system hardware driver (ALSA or JACK) exposes the input channels
+under a shared hardware clock.</li>
+<li>Ecasound reads these channels as a single multi-channel stream.</li>
+<li>The samples arriving from mic preamps at time <em>t</em> are
+assigned to the exact same frame index <em>n</em>.</li>
+</ul>
+<p>By avoiding decoupled single-channel virtual inputs, Ecasound
+prevents inter-channel software jitter. The physical spatial offset
+between drum microphones remains purely acoustic, preserving the
+engineer's intended physical alignment rather than introducing
+unpredictable digital timing variations.</p>
+<h3 id="deterministic-routing-via-chainsetups">Deterministic Routing via
+Chainsetups</h3>
+<p>Ecasound’s internal routing relies on the "chainsetup" concept, where
+inputs are mapped to outputs through discrete processing chains
+(<code>-a:chain_name</code>). When routing multi-mic drum setups, users
+can split multi-channel inputs across separate chains to apply specific
+filtering, dynamic control, or panning:</p>
+<ul>
+<li><strong>Parallel Chain Processing:</strong> When a multi-channel
+input is split across multiple chains, Ecasound guarantees that every
+chain receives its corresponding channel's data within the same
+computation cycle.</li>
+<li><strong>Operator Determinism:</strong> Standard Ecasound operators
+(such as gain adjustments, parametric EQs, and low/high-pass filters)
+compute strictly per-frame without introducing undocumented lookahead
+buffers or independent delays unless a delay or time-stretching operator
+is explicitly inserted.</li>
+</ul>
+<p>Because no hidden buffer-compensation algorithms or asynchronous
+worker threads are introduced into individual chains, all processed
+outputs exit the engine with identical processing latency.</p>
+<h3 id="strict-sample-level-clocking-via-jack-integration">Strict
+Sample-Level Clocking via JACK Integration</h3>
+<p>When used with the JACK Audio Connection Kit, Ecasound acts as a
+direct client within JACK’s real-time execution graph. JACK enforces a
+strict synchronous cycle: all connected clients must finish processing
+the current period before the next period begins.</p>
+<p>When multi-channel drum mics are routed from physical inputs through
+JACK into Ecasound, JACK guarantees that all input buffers are populated
+by the hardware driver at the exact same sample instant. Ecasound
+processes its chains and returns the buffers back to JACK within that
+exact process callback. This zero-drift handoff ensures that
+high-frequency transients—such as the snap of a snare top mic relative
+to the snare bottom or overheads—experience zero sample-slippage over
+extended recording sessions.</p>
+<h3 id="elimination-of-asynchronous-buffer-drift">Elimination of
+Asynchronous Buffer Drift</h3>
+<p>In multi-mic drum setups, the primary cause of digital phase
+degradation is dynamic, per-channel buffering (such as elastic ring
+buffers or asynchronous sample rate converters). Ecasound strictly
+enforces static buffer allocation:</p>
+<ol type="1">
+<li><strong>No Elastic Queues:</strong> Channels do not use independent
+dynamic FIFOs that can expand or contract based on thread
+availability.</li>
+<li><strong>Global Sample Rate Enforcement:</strong> All chains within a
+given chainsetup share a single global sample rate, eliminating
+inter-channel drift caused by misaligned software resampling.</li>
+</ol>
+<p>By combining synchronous hardware clocking, static block-based
+execution, and parallel deterministic routing, Ecasound guarantees
+absolute, sample-accurate phase coherence across any multi-channel drum
+microphone setup.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Mastering: Stereo Width and Brickwall Limiter - ecasound</title>
+    <meta name="description" content="This guide explains how to build a clean, terminal-based audio mastering chain using Ecasound, focused on stereo field expansion and transparent brickwall limiting. By leveraging LADSPA plugins within Ecasound's command-line interface, you will learn how">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-mastering-stereo-width-and-brickwall-limiter">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Mastering: Stereo Width and Brickwall Limiter - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-mastering-stereo-width-and-brickwall-limiter" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to build a clean, terminal-based audio mastering chain using Ecasound, focused on stereo field expansion and transparent brickwall limiting. By leveraging LADSPA plugins within Ecasound's command-line interface, you will learn how" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-mastering-stereo-width-and-brickwall-limiter">Ecasound
+Mastering: Stereo Width and Brickwall Limiter</h1>
+<p>This guide explains how to build a clean, terminal-based audio
+mastering chain using Ecasound, focused on stereo field expansion and
+transparent brickwall limiting. By leveraging LADSPA plugins within
+Ecasound's command-line interface, you will learn how to route an audio
+signal, adjust stereo spread without introducing phase issues, and catch
+digital inter-sample peaks using a fast-lookahead brickwall limiter.</p>
+<h3 id="1-prerequisites-and-required-ladspa-plugins">1. Prerequisites
+and Required LADSPA Plugins</h3>
+<p>Ecasound relies on LADSPA plugins for complex signal processing. To
+configure stereo expansion and brickwall limiting, install the Steve
+Harris (<code>swh-plugins</code>) and TAP (<code>tap-plugins</code>)
+packages on your system:</p>
+<ul>
+<li><strong>Debian/Ubuntu:</strong>
+<code>sudo apt-get install ecasound swh-plugins tap-plugins</code></li>
+<li><strong>Arch Linux:</strong>
+<code>sudo pacman -S ecasound swh-plugins tap-plugins</code></li>
+</ul>
+<p>This configuration uses two specific plugins:</p>
+<ul>
+<li><strong>Matrix Spatialiser (LADSPA label:
+<code>matrixSpatialiser</code>, ID: 1422):</strong> Expands the stereo
+field using mid/side manipulation.</li>
+<li><strong>Fast Lookahead Limiter (LADSPA label:
+<code>fastLookaheadLimiter</code>, ID: 1913):</strong> Acts as a true
+brickwall peak limiter to prevent digital clipping.</li>
+</ul>
+<h3 id="2-the-mastering-chain-command">2. The Mastering Chain
+Command</h3>
+<p>Run the complete mastering process directly from the command line
+using the following syntax:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:mix_premaster.wav</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-o:master_final.wav</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-ea:100</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:matrixSpatialiser,40</span> <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:fastLookaheadLimiter,-0.3,20,0.1</span></span></code></pre></div>
+<h3 id="3-understanding-the-chain-parameters">3. Understanding the Chain
+Parameters</h3>
+<p>The signal flow moves linearly through the defined options:</p>
+<ul>
+<li><code>-i:mix_premaster.wav</code>: The raw, unmastered input file
+(ideally 24-bit or 32-bit float with at least 3 dB to 6 dB of
+headroom).</li>
+<li><code>-o:master_final.wav</code>: The rendered output master
+file.</li>
+<li><code>-ea:100</code>: Gain adjustment set to 100% (unity gain). You
+can adjust this to feed more or less level into the chain (e.g.,
+<code>-ea:110</code> adds 10% gain).</li>
+<li><code>-el:matrixSpatialiser,40</code>: Controls the stereo width
+expansion.
+<ul>
+<li><strong>Parameter 1 (Width):</strong> Set in percentage (0% to
+100%). A value of <code>0</code> collapses the audio to mono,
+<code>25</code> represents standard stereo, and values between
+<code>30</code> and <code>45</code> provide controlled stereo expansion
+without thinning out center content (like kick drums or vocals).</li>
+</ul></li>
+<li><code>-el:fastLookaheadLimiter,-0.3,20,0.1</code>: Controls
+brickwall peak limiting.
+<ul>
+<li><strong>Input gain (dB):</strong> Set here to <code>20</code>
+(maximum gain to add; set lower if your mix is already loud).</li>
+<li><strong>Limit (dB):</strong> Set to <code>-0.3</code> dBFS. Leaving
+-0.3 to -1.0 dB of headroom avoids inter-sample clipping during lossy
+MP3/AAC encoding.</li>
+<li><strong>Release time (s):</strong> Set to <code>0.1</code> (100
+milliseconds) for smooth, transparent release behavior without
+low-frequency distortion.</li>
+</ul></li>
+</ul>
+<h3 id="4-interactive-real-time-monitoring">4. Interactive Real-Time
+Monitoring</h3>
+<p>To audition changes before rendering to disk, replace the output file
+flag with your sound card's ALSA driver to monitor in real time:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:mix_premaster.wav</span> <span class="at">-o:alsa</span> <span class="at">-el:matrixSpatialiser,35</span> <span class="at">-el:fastLookaheadLimiter,-0.5,10,0.08</span></span></code></pre></div>
+<p>You can interactively tweak plugin parameters while audio plays by
+entering interactive mode:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="at">-i:mix_premaster.wav</span> <span class="at">-o:alsa</span> <span class="at">-el:matrixSpatialiser,35</span> <span class="at">-el:fastLookaheadLimiter,-0.5,10,0.08</span></span></code></pre></div>
+<p>Inside the interactive console:</p>
+<ul>
+<li>Type <code>start</code> to begin playback.</li>
+<li>Type <code>cop-set 1,1,40</code> to change the stereo width to 40%
+in real time.</li>
+<li>Type <code>stop</code> to end the session.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

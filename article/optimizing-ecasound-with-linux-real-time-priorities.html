@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizing Ecasound with Linux Real-Time Priorities - ecasound</title>
+    <meta name="description" content="Achieving low-latency, glitch-free audio processing with Ecasound requires configuring the Linux kernel's real-time scheduling policies and thread priorities. This guide outlines how to configure user resource limits, prioritize audio hardware interrupts">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/optimizing-ecasound-with-linux-real-time-priorities">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimizing Ecasound with Linux Real-Time Priorities - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/optimizing-ecasound-with-linux-real-time-priorities" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Achieving low-latency, glitch-free audio processing with Ecasound requires configuring the Linux kernel's real-time scheduling policies and thread priorities. This guide outlines how to configure user resource limits, prioritize audio hardware interrupts" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="optimizing-ecasound-with-linux-real-time-priorities">Optimizing
+Ecasound with Linux Real-Time Priorities</h1>
+<p>Achieving low-latency, glitch-free audio processing with Ecasound
+requires configuring the Linux kernel's real-time scheduling policies
+and thread priorities. This guide outlines how to configure user
+resource limits, prioritize audio hardware interrupts using threaded
+IRQs, assign real-time priority directly within Ecasound or via system
+utilities, and balance priority hierarchies to prevent buffer underruns
+(xruns).</p>
+<h3 id="1-enable-real-time-privileges-for-the-user">1. Enable Real-Time
+Privileges for the User</h3>
+<p>Before Ecasound can request real-time scheduling
+(<code>SCHED_FIFO</code> or <code>SCHED_RR</code>), your user account
+must have the appropriate system limits.</p>
+<p>Create an audio group configuration file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nano /etc/security/limits.d/99-audio.conf</span></code></pre></div>
+<p>Add the following lines to grant the <code>audio</code> group
+real-time scheduling priority and unlimited locked memory (to prevent
+memory swapping):</p>
+<pre class="text"><code>@audio   -   rtprio     95
+@audio   -   memlock    unlimited
+@audio   -   nice      -19</code></pre>
+<p>Add your user to the <code>audio</code> group and log out and back
+in:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> usermod <span class="at">-a</span> <span class="at">-G</span> audio <span class="va">$USER</span></span></code></pre></div>
+<p>Verify your active limits with <code>ulimit -r</code> (should return
+95) and <code>ulimit -l</code> (should return unlimited).</p>
+<hr />
+<h3 id="2-prioritize-hardware-interrupts-threaded-irqs">2. Prioritize
+Hardware Interrupts (Threaded IRQs)</h3>
+<p>Audio processing requires soundcard interrupts to be serviced before
+general I/O operations. On systems running a low-latency or
+<code>PREEMPT_RT</code> patched kernel, hardware interrupts run as
+kernel threads that can be reprioritized.</p>
+<p>Install and configure <code>rtirq</code> to automate IRQ
+prioritization:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Debian/Ubuntu</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install rtirq-init</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Arch Linux</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> pacman <span class="at">-S</span> rtirq</span></code></pre></div>
+<p>Edit <code>/etc/default/rtirq</code> (or
+<code>/etc/rtirq.conf</code>) to ensure your audio hardware (e.g.,
+<code>snd</code>, <code>usb</code>) has top priority:</p>
+<pre class="text"><code>RTIRQ_NAME_LIST=&quot;snd usb&quot;
+RTIRQ_PRIO_HIGH=90
+RTIRQ_PRIO_DECR=5</code></pre>
+<p>Start the service:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart rtirq</span></code></pre></div>
+<p>Verify interrupt thread priorities:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/usr/sbin/rtirq</span> status</span></code></pre></div>
+<p>Your audio card's IRQ thread should display a real-time priority
+(RTPRIO) around 85–90.</p>
+<hr />
+<h3 id="3-assign-real-time-priorities-in-ecasound">3. Assign Real-Time
+Priorities in Ecasound</h3>
+<p>Ecasound provides built-in options to configure real-time scheduling
+and engine thread parameters.</p>
+<h4 id="built-in-real-time-flags">Built-in Real-Time Flags</h4>
+<p>Run Ecasound with the <code>-r</code> option to enable
+<code>SCHED_FIFO</code> scheduling. You can optionally specify the
+priority value:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-r:70</span> <span class="at">-i:soundfile.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p><em>Note: Choose a priority lower than your sound card's IRQ (e.g.,
+priority 70 if your sound card IRQ is 85–90).</em></p>
+<h4 id="manual-execution-via-chrt">Manual Execution via
+<code>chrt</code></h4>
+<p>If you do not pass <code>-r</code> directly to Ecasound, wrap the
+execution in the <code>chrt</code> utility:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">chrt</span> <span class="at">-f</span> 70 ecasound <span class="at">-i:soundfile.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<ul>
+<li><code>-f</code>: Sets the scheduling policy to
+<code>SCHED_FIFO</code>.</li>
+<li><code>70</code>: Sets the priority level (between 1 and 99).</li>
+</ul>
+<hr />
+<h3 id="4-optimal-priority-hierarchy">4. Optimal Priority Hierarchy</h3>
+<p>To avoid priority inversions and audio dropouts, maintain a strict
+priority ladder across your system:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Component</th>
+<th style="text-align: left;">Target Scheduling Policy</th>
+<th style="text-align: left;">Recommended Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>System Timer
+(RTC/HRTimer)</strong></td>
+<td style="text-align: left;"><code>SCHED_FIFO</code></td>
+<td style="text-align: left;">95</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sound Card IRQs
+(<code>snd_*</code>)</strong></td>
+<td style="text-align: left;"><code>SCHED_FIFO</code></td>
+<td style="text-align: left;">85–90</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>JACK Audio Server</strong> <em>(if
+used)</em></td>
+<td style="text-align: left;"><code>SCHED_FIFO</code></td>
+<td style="text-align: left;">75–80</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ecasound Real-Time
+Engine</strong></td>
+<td style="text-align: left;"><code>SCHED_FIFO</code></td>
+<td style="text-align: left;">65–70</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Non-Audio Real-Time
+Tasks</strong></td>
+<td style="text-align: left;"><code>SCHED_FIFO</code> /
+<code>SCHED_RR</code></td>
+<td style="text-align: left;">20–50</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Standard User
+Applications</strong></td>
+<td style="text-align: left;"><code>SCHED_OTHER</code></td>
+<td style="text-align: left;">Default (0)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="5-buffer-tuning-and-memory-locking-in-ecasound">5. Buffer Tuning
+and Memory Locking in Ecasound</h3>
+<p>Real-time scheduling must be paired with appropriate buffer sizing to
+prevent xruns during high processing loads.</p>
+<ul>
+<li><strong>Lock Engine Memory:</strong> Use the <code>-z:nodb</code>
+(disable double-buffering) and enforce fixed buffer sizing.</li>
+<li><strong>Buffer Parameters (<code>-b</code> and
+<code>-B</code>):</strong>
+<ul>
+<li><code>-b:frames</code>: Processing buffer size. Smaller values
+decrease latency but increase CPU load (e.g., <code>-b:128</code> or
+<code>-b:256</code>).</li>
+<li><code>-B:mode</code>: Buffering mode (<code>auto</code>,
+<code>non-realtime</code>, or <code>realtime</code>). For deterministic
+real-time processing, explicitly define your buffer size matching your
+hardware capabilities:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">chrt</span> <span class="at">-f</span> 70 ecasound <span class="at">-B:realtime</span> <span class="at">-b:256</span> <span class="at">-i:soundcard</span> <span class="at">-o:soundfile.wav</span></span></code></pre></div>
+<p>Monitor your system for xruns using Ecasound's standard console
+output during execution. If underruns occur, raise the buffer size
+incrementally or check for conflicting background processes consuming
+real-time CPU time.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

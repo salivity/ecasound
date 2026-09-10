@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Audio Clock Drift in Ecasound Across Soundcards - ecasound</title>
+    <meta name="description" content="This article explains how Ecasound manages audio clock drift when processing streams across multiple independent soundcards. You will learn about Ecasound's master clock paradigm, how asynchronous hardware crystal oscillators cause drift, how the process">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/fix-audio-clock-drift-in-ecasound-across-soundcards">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Audio Clock Drift in Ecasound Across Soundcards - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/fix-audio-clock-drift-in-ecasound-across-soundcards" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Ecasound manages audio clock drift when processing streams across multiple independent soundcards. You will learn about Ecasound's master clock paradigm, how asynchronous hardware crystal oscillators cause drift, how the process" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-audio-clock-drift-in-ecasound-across-soundcards">Fix Audio
+Clock Drift in Ecasound Across Soundcards</h1>
+<p>This article explains how Ecasound manages audio clock drift when
+processing streams across multiple independent soundcards. You will
+learn about Ecasound's master clock paradigm, how asynchronous hardware
+crystal oscillators cause drift, how the processing engine handles
+buffer mismatches, and the practical software and hardware
+configurations used to maintain continuous synchronization.</p>
+<h3 id="the-underlying-problem-of-clock-drift">The Underlying Problem of
+Clock Drift</h3>
+<p>Every independent soundcard relies on its own physical crystal
+oscillator to determine its sampling rate. Even if two separate audio
+interfaces are set to 44.1 kHz or 48 kHz, minor manufacturing variations
+and temperature changes cause their real-world sample rates to diverge
+slightly (for example, 48,000.2 Hz versus 47,999.7 Hz). Over time, this
+discrepancy causes the faster card to produce or demand more audio
+frames than the slower card, leading to inevitable buffer overruns or
+underruns (xruns).</p>
+<h3 id="ecasounds-master-timing-architecture">Ecasound’s Master Timing
+Architecture</h3>
+<p>Ecasound coordinates multichannel and multi-device routing through a
+unified processing engine driven by a single master timing device. When
+multiple soundcards are defined across different audio chains:</p>
+<ol type="1">
+<li><strong>Master Device Selection:</strong> Ecasound designates the
+primary audio device (typically the first active real-time output or
+input specified in the chain setup) as the clock master. The read/write
+cycles of this master interface pace the overall processing loop.</li>
+<li><strong>Slave Synchronization:</strong> All secondary soundcards are
+treated as subordinate I/O streams. The Ecasound engine reads and writes
+fixed-size audio buffers across all configured chains at the rate
+dictated strictly by the master interface.</li>
+</ol>
+<h3 id="buffer-management-and-discrepancy-handling">Buffer Management
+and Discrepancy Handling</h3>
+<p>Because Ecasound executes in discrete processing cycles
+(<code>-b:buffersize</code>), it relies on software ring buffers to
+bridge data transfers between independent devices:</p>
+<ul>
+<li><strong>Short-Term Skew:</strong> Minor fluctuations are absorbed by
+the internal queue buffers configured via the <code>-b</code> and
+<code>-z:db</code> (double buffering) parameters.</li>
+<li><strong>Long-Term Drift:</strong> If secondary devices run without
+rate correction, the mismatch between the master clock and slave clocks
+eventually exceeds the buffer capacity. Without external correction, the
+slave device experiences an I/O block, an audio drop, or an xrun when
+its local hardware ring buffer overflows or starves.</li>
+</ul>
+<h3 id="resolving-drift-with-adaptive-resampling">Resolving Drift with
+Adaptive Resampling</h3>
+<p>To eliminate clock drift indefinitely without dropping samples,
+secondary audio streams must be dynamically adjusted to match the
+master's rate. Ecasound accommodates this through two primary
+methods:</p>
+<ul>
+<li><strong>Integrated Dynamic Resampling:</strong> By routing chains
+through high-quality internal resampling algorithms (such as the
+<code>libsamplerate</code>-backed resamplers in Ecasound), streams can
+be converted between rates. While static resampling shifts standard rate
+differences (e.g., 44.1 kHz to 48 kHz), real-time drift tracking
+requires minute fractional rate adjustments.</li>
+<li><strong>JACK Audio Connection Kit Integration:</strong> For
+production environments running multiple unlinked consumer interfaces,
+Ecasound is commonly deployed as a client inside the JACK ecosystem.
+When Ecasound uses the <code>jack</code> audio subsystem
+(<code>-i:jack</code>, <code>-o:jack</code>), drift correction is
+offloaded to utilities like <code>alsa_in</code> and
+<code>alsa_out</code> (or <code>zita-ajbridge</code>). These utilities
+implement adaptive resampling (DLL loops) that continuously monitor
+buffer fullness and dynamically adjust the sample rate of secondary
+devices to align perfectly with JACK’s master clock.</li>
+</ul>
+<h3 id="hardware-level-synchronization">Hardware-Level
+Synchronization</h3>
+<p>The cleanest way Ecasound maintains drift-free recording across
+multiple interfaces is by bypassing software clock arbitration entirely
+through hardware synchronization:</p>
+<ul>
+<li><strong>Word Clock and Digital Linking:</strong> When soundcards
+share a common physical clock via BNC Word Clock, S/PDIF, or ADAT
+connections, their hardware oscillators lock together.</li>
+<li><strong>Unified ALSA Drivers:</strong> With hardware sync active,
+multiple cards can be grouped into a single virtual interface at the
+driver level (such as ALSA’s <code>pcm.multi</code> plugin). Ecasound
+then interacts with one unified multichannel device, eliminating clock
+divergence at the source.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

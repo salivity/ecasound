@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Queries LADSPA Plugin Ports - ecasound</title>
+    <meta name="description" content="Ecasound queries the input, output, and control ports of a LADSPA (Linux Audio Developer's Simple Plugin API) plugin by dynamically loading the plugin's shared library and inspecting the standardized LADSPADescriptor structure. By parsing this descriptor">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-queries-ladspa-plugin-ports">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Queries LADSPA Plugin Ports - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-queries-ladspa-plugin-ports" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound queries the input, output, and control ports of a LADSPA (Linux Audio Developer's Simple Plugin API) plugin by dynamically loading the plugin's shared library and inspecting the standardized LADSPADescriptor structure. By parsing this descriptor" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-queries-ladspa-plugin-ports">How Ecasound Queries
+LADSPA Plugin Ports</h1>
+<p>Ecasound queries the input, output, and control ports of a LADSPA
+(Linux Audio Developer's Simple Plugin API) plugin by dynamically
+loading the plugin's shared library and inspecting the standardized
+<code>LADSPA_Descriptor</code> structure. By parsing this descriptor,
+Ecasound reads the total port count, evaluates bitmask descriptors to
+classify whether each port is audio or control, determines data
+direction (input or output), and retrieves port names and value ranges
+to integrate the effect into its signal processing chain.</p>
+<h3 id="shared-library-loading-and-descriptor-access">Shared Library
+Loading and Descriptor Access</h3>
+<p>Ecasound searches directories defined in the <code>LADSPA_PATH</code>
+environment variable to locate plugin shared object files
+(<code>.so</code>). When an effect is invoked, Ecasound uses the
+standard POSIX dynamic linking interface (<code>dlopen()</code>) to load
+the library into memory.</p>
+<p>It then uses <code>dlsym()</code> to locate the mandatory entry-point
+function:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">const</span> LADSPA_Descriptor <span class="op">*</span> ladspa_descriptor<span class="op">(</span><span class="dt">unsigned</span> <span class="dt">long</span> Index<span class="op">);</span></span></code></pre></div>
+<p>Ecasound calls <code>ladspa_descriptor()</code> starting at index
+<code>0</code> and increments the index until it encounters a
+<code>NULL</code> return pointer or locates the specific plugin
+requested by the user, matching either the plugin's unique integer ID or
+its case-sensitive <code>Label</code> string.</p>
+<h3 id="reading-port-count-and-port-descriptors">Reading Port Count and
+Port Descriptors</h3>
+<p>Once a matching <code>LADSPA_Descriptor</code> is located, Ecasound
+queries the plugin’s ports by reading the following structure
+members:</p>
+<ul>
+<li><strong><code>PortCount</code></strong>: An unsigned long specifying
+the total number of ports (audio and control combined).</li>
+<li><strong><code>PortDescriptors</code></strong>: An array of
+<code>LADSPA_PortDescriptor</code> bitmasks with a length equal to
+<code>PortCount</code>.</li>
+</ul>
+<p>Ecasound iterates through the array from index <code>0</code> to
+<code>PortCount - 1</code>. For each index, it performs bitwise checks
+against the flags defined in <code>ladspa.h</code> to classify the
+port:</p>
+<ol type="1">
+<li><strong>Direction</strong>: It checks whether the port contains the
+<code>LADSPA_PORT_INPUT</code> or <code>LADSPA_PORT_OUTPUT</code>
+flag.</li>
+<li><strong>Data Type</strong>: It checks whether the port contains the
+<code>LADSPA_PORT_AUDIO</code> or <code>LADSPA_PORT_CONTROL</code>
+flag.</li>
+</ol>
+<p>By combining these flags, Ecasound classifies each port into one of
+four functional categories:</p>
+<ul>
+<li><strong>Audio Input</strong>: Receives incoming audio stream
+buffers.</li>
+<li><strong>Audio Output</strong>: Emits processed audio stream
+buffers.</li>
+<li><strong>Control Input</strong>: Accepts parameter values,
+automation, or user-defined control data.</li>
+<li><strong>Control Output</strong>: Exposes monitoring data or feedback
+values generated by the plugin.</li>
+</ul>
+<h3 id="querying-metadata-and-parameter-hints">Querying Metadata and
+Parameter Hints</h3>
+<p>To present readable feedback to users and validate parameter limits,
+Ecasound evaluates two additional arrays in the descriptor:</p>
+<ul>
+<li><strong><code>PortNames</code></strong>: An array of strings
+providing human-readable labels for each port index. Ecasound displays
+these names in its command-line interface and preset descriptions.</li>
+<li><strong><code>PortRangeHints</code></strong>: An array of
+<code>LADSPA_PortRangeHint</code> structures containing validation rules
+for control ports. Ecasound reads the <code>HintDescriptor</code> field
+to determine whether a parameter has defined bounds
+(<code>LADSPA_HINT_BOUNDED_BELOW</code>,
+<code>LADSPA_HINT_BOUNDED_ABOVE</code>), whether it uses a logarithmic
+scale (<code>LADSPA_HINT_LOGARITHMIC</code>), whether it behaves as a
+toggle/boolean (<code>LADSPA_HINT_TOGGLED</code>), and which default
+value to apply if none is specified by the user.</li>
+</ul>
+<h3 id="port-binding-and-processing">Port Binding and Processing</h3>
+<p>After categorizing each port, Ecasound prepares the plugin for
+execution:</p>
+<ol type="1">
+<li>It allocates float buffers for audio input and output streams.</li>
+<li>It assigns float storage for control inputs based on CLI arguments,
+controllers, or defaults.</li>
+<li>It calls the plugin's <code>connect_port()</code> function for each
+port index, passing a pointer to the corresponding memory location:</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>descriptor<span class="op">-&gt;</span>connect_port<span class="op">(</span>InstanceHandle<span class="op">,</span> PortIndex<span class="op">,</span> <span class="op">&amp;</span>DataLocation<span class="op">);</span></span></code></pre></div>
+<p>Whenever Ecasound processes an audio block, audio buffers and control
+values are read and written directly through these mapped memory
+addresses.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Attach LADSPA Plugins to Ecasound Chains - ecasound</title>
+    <meta name="description" content="Ecasound is a versatile command-line multitrack audio processing tool that supports real-time audio routing, recording, and effects processing. Integrating Linux Audio Developer's Simple Plugin Architecture (LADSPA) plugins into an Ecasound signal chain">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-attach-ladspa-plugins-to-ecasound-chains">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Attach LADSPA Plugins to Ecasound Chains - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-attach-ladspa-plugins-to-ecasound-chains" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound is a versatile command-line multitrack audio processing tool that supports real-time audio routing, recording, and effects processing. Integrating Linux Audio Developer's Simple Plugin Architecture (LADSPA) plugins into an Ecasound signal chain" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-attach-ladspa-plugins-to-ecasound-chains">How to Attach
+LADSPA Plugins to Ecasound Chains</h1>
+<p>Ecasound is a versatile command-line multitrack audio processing tool
+that supports real-time audio routing, recording, and effects
+processing. Integrating Linux Audio Developer's Simple Plugin
+Architecture (LADSPA) plugins into an Ecasound signal chain allows users
+to apply a wide variety of audio filters, dynamics processors, and
+effects. This guide details the exact command-line syntax required to
+attach LADSPA plugins using both plugin labels and unique numerical
+identifiers.</p>
+<h3 id="the-ladspa-plugin-operator-syntax">The LADSPA Plugin Operator
+Syntax</h3>
+<p>In Ecasound, effects and processors are attached to the currently
+selected audio chain using operators. LADSPA plugins are attached using
+either the <code>-el</code> (by label) or <code>-eli</code> (by unique
+ID) option.</p>
+<h4 id="attaching-by-plugin-label--el">Attaching by Plugin Label
+(<code>-el</code>)</h4>
+<p>The standard syntax to load a plugin using its textual label is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-el:plugin_label,param1,param2,...</span></span></code></pre></div>
+<ul>
+<li><code>plugin_label</code>: The unique alphanumeric name assigned to
+the plugin in its descriptor.</li>
+<li><code>param1,param2,...</code>: A comma-separated list of values for
+the plugin's control input ports.</li>
+</ul>
+<h4 id="attaching-by-plugin-id--eli">Attaching by Plugin ID
+(<code>-eli</code>)</h4>
+<p>If you prefer to target a plugin by its numeric LADSPA identifier,
+use:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-eli:plugin_id,param1,param2,...</span></span></code></pre></div>
+<ul>
+<li><code>plugin_id</code>: The integer ID assigned to the plugin.</li>
+</ul>
+<hr />
+<h3 id="command-line-execution-examples">Command-Line Execution
+Examples</h3>
+<h4 id="1-applying-a-lowpass-filter-by-label">1. Applying a Lowpass
+Filter by Label</h4>
+<p>To process an audio file (<code>input.wav</code>) through the
+standard LADSPA single-pole lowpass filter (<code>lowpass_iir</code>)
+and send the output to your soundcard:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:input.wav</span> <span class="at">-el:lowpass_iir,1000,1</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-i:input.wav</code> sets the input source.</li>
+<li><code>-el:lowpass_iir,1000,1</code> attaches the
+<code>lowpass_iir</code> plugin with a cutoff frequency of
+<code>1000</code> Hz and stage parameter set to <code>1</code>.</li>
+<li><code>-o:alsa</code> routes the output to the default ALSA
+device.</li>
+</ul>
+<h4 id="2-specifying-chain-assignment">2. Specifying Chain
+Assignment</h4>
+<p>When working with multiple chains, ensure you explicitly select the
+chain using <code>-a:chain_name</code> before adding the LADSPA
+operator:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-a:1</span> <span class="at">-i:input.wav</span> <span class="at">-el:amp_mono,2.0</span> <span class="at">-a:1</span> <span class="at">-o:output.wav</span></span></code></pre></div>
+<p>This applies a mono amplifier plugin (<code>amp_mono</code>) with a
+gain multiplier of <code>2.0</code> directly to chain
+<code>1</code>.</p>
+<hr />
+<h3 id="discovering-plugin-labels-and-parameters">Discovering Plugin
+Labels and Parameters</h3>
+<p>Before attaching a LADSPA plugin, you must know its accepted label
+and the order of its control input parameters. You can inspect installed
+LADSPA plugins using external utility commands:</p>
+<ul>
+<li><code>listplugins</code>: Displays a list of all installed LADSPA
+plugin libraries and their member plugins.</li>
+<li><code>analyseplugin &lt;plugin_name&gt;</code>: Displays the label,
+unique ID, and required input control ports for a specific plugin
+library.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

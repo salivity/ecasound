@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Audio Directly to FLAC with Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how the command-line utility Ecasound captures live audio and encodes it directly to the Free Lossless Audio Codec (FLAC) format in real time. By eliminating the need to write an intermediate, uncompressed WAV file to disk, Ecasound">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/record-audio-directly-to-flac-with-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Record Audio Directly to FLAC with Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/record-audio-directly-to-flac-with-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the command-line utility Ecasound captures live audio and encodes it directly to the Free Lossless Audio Codec (FLAC) format in real time. By eliminating the need to write an intermediate, uncompressed WAV file to disk, Ecasound" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="record-audio-directly-to-flac-with-ecasound">Record Audio
+Directly to FLAC with Ecasound</h1>
+<p>This article explains how the command-line utility Ecasound captures
+live audio and encodes it directly to the Free Lossless Audio Codec
+(FLAC) format in real time. By eliminating the need to write an
+intermediate, uncompressed WAV file to disk, Ecasound streamlines the
+recording workflow and conserves system storage. Below is a detailed
+breakdown of Ecasound's internal routing, the role of backend encoding
+libraries, and the exact process required to record directly to
+FLAC.</p>
+<h3 id="ecasounds-stream-architecture">Ecasound’s Stream
+Architecture</h3>
+<p>Ecasound treats all audio operations as modular chains consisting of
+inputs, signal processors, and outputs. When recording, an input
+(<code>-i</code>) represents the audio source—such as an ALSA hardware
+device, a JACK server port, or an OSS stream. The output
+(<code>-o</code>) represents the destination, which can be an audio
+device, a pipe, or a target file.</p>
+<p>During execution, Ecasound reads raw, uncompressed PCM data from the
+input hardware buffer into its internal processing engine. Instead of
+buffering this raw audio entirely into system RAM or caching it as a
+temporary uncompressed file on a hard drive, Ecasound feeds the live
+audio frames through an internal pipeline directly into the output
+subsystem frame by frame.</p>
+<h3 id="the-role-of-libsndfile-in-flac-encoding">The Role of libsndfile
+in FLAC Encoding</h3>
+<p>Ecasound achieves direct FLAC creation primarily through its tight
+integration with <code>libsndfile</code>, a comprehensive C library for
+reading and writing audio files.</p>
+<ol type="1">
+<li><strong>Format Detection:</strong> When an output file is defined
+with a <code>.flac</code> extension (for example,
+<code>-o session.flac</code>), Ecasound's file-handling layer inspects
+the file extension and matches it to the FLAC file format specifications
+supported by <code>libsndfile</code>.</li>
+<li><strong>Stream Initialization:</strong> Ecasound passes the target
+audio parameters—such as sample rate, bit depth (e.g., 16-bit or 24-bit
+linear PCM), and channel count—to <code>libsndfile</code>. The library
+initializes a FLAC encoder stream and generates the appropriate FLAC
+header at the beginning of the file.</li>
+<li><strong>Continuous Block Encoding:</strong> As audio buffers cycle
+through Ecasound's engine, the raw PCM samples are passed immediately to
+<code>libsndfile</code>'s write functions. The underlying FLAC algorithm
+performs linear prediction, calculates residual signals, and applies
+entropy coding on these blocks on the fly before writing the compressed
+frames directly to the storage medium.</li>
+</ol>
+<h3 id="buffer-management-and-real-time-safety">Buffer Management and
+Real-Time Safety</h3>
+<p>Encoding audio to a compressed format like FLAC requires more CPU
+cycles than writing linear PCM data. To ensure that the compression
+workload does not interrupt recording and cause buffer under-runs
+(dropouts or xruns), Ecasound relies on an adjustable multi-buffering
+system.</p>
+<p>Ecasound utilizes distinct buffers for reading from the input device
+and passing data to the output target. If system load spikes due to the
+computational demands of the FLAC compression algorithm, Ecasound's
+internal FIFO (First-In, First-Out) queuing maintains a steady stream
+between the sound card driver and the encoder. Setting appropriate
+buffer sizes using the <code>-b</code> (buffer size) and
+<code>-z:nodb</code> or <code>-z:db</code> (double-buffering) options
+ensures continuous writing without audio dropouts.</p>
+<h3 id="direct-recording-example">Direct Recording Example</h3>
+<p>To initiate direct-to-FLAC recording, specify the input audio driver
+and hardware address alongside the desired <code>.flac</code> output
+filename.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> alsa,hw:0,0 <span class="at">-f:s16_le,2,44100</span> <span class="at">-o</span> live_recording.flac</span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li><code>-i alsa,hw:0,0</code> accesses the hardware audio interface
+directly via ALSA.</li>
+<li><code>-f:s16_le,2,44100</code> establishes the input format as
+16-bit signed, little-endian, stereo, at a 44.1 kHz sample rate.</li>
+<li><code>-o live_recording.flac</code> signals Ecasound and
+<code>libsndfile</code> to initialize the FLAC encoder and write
+compressed audio straight to disk until the process is stopped.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapping MIDI CC to LADSPA Ports in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how Ecasound maps incoming MIDI Continuous Controller (CC) data to the input control ports of LADSPA audio plugins. By reading MIDI streams through its controller subsystem, Ecasound dynamically scales raw 7-bit MIDI control message">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/mapping-midi-cc-to-ladspa-ports-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mapping MIDI CC to LADSPA Ports in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/mapping-midi-cc-to-ladspa-ports-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Ecasound maps incoming MIDI Continuous Controller (CC) data to the input control ports of LADSPA audio plugins. By reading MIDI streams through its controller subsystem, Ecasound dynamically scales raw 7-bit MIDI control message" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mapping-midi-cc-to-ladspa-ports-in-ecasound">Mapping MIDI CC to
+LADSPA Ports in Ecasound</h1>
+<p>This article explains how Ecasound maps incoming MIDI Continuous
+Controller (CC) data to the input control ports of LADSPA audio plugins.
+By reading MIDI streams through its controller subsystem, Ecasound
+dynamically scales raw 7-bit MIDI control messages (0–127) to match the
+floating-point parameter ranges expected by LADSPA plugins, enabling
+real-time automation and physical hardware control inside a
+terminal-based audio chain.</p>
+<h3 id="configuring-the-midi-input-device">Configuring the MIDI Input
+Device</h3>
+<p>Before assigning control parameters, Ecasound must be configured to
+receive MIDI events from a valid interface. This is done using the
+<code>-Md</code> option, which attaches a MIDI control device to the
+current engine setup. Common drivers include ALSA sequencer ports or raw
+MIDI devices:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-Md:alsaseq,default</span> ...</span></code></pre></div>
+<p>Once the MIDI device is declared, Ecasound listens for incoming
+channel events, including Continuous Controller messages.</p>
+<h3 id="the--km-controller-operator">The <code>-km</code> Controller
+Operator</h3>
+<p>Ecasound attaches parameter automation to audio effects using
+"controllers." The specific operator used for MIDI Continuous
+Controllers is <code>-km</code>.</p>
+<p>When defining an audio processing chain, the <code>-km</code> option
+attaches directly to the immediately preceding chain operator (such as a
+LADSPA effect loaded via <code>-el</code>). The syntax is structured as
+follows:</p>
+<pre class="text"><code>-km:fx_param,midichannel,cc_number,low_value,high_value</code></pre>
+<p>The parameters function as follows:</p>
+<ul>
+<li><strong><code>fx_param</code></strong>: The numerical index of the
+target parameter on the LADSPA plugin (starting from 1). This matches
+the control port index of the plugin.</li>
+<li><strong><code>midichannel</code></strong>: The MIDI channel to
+listen to (1 to 16).</li>
+<li><strong><code>cc_number</code></strong>: The MIDI Continuous
+Controller number (0 to 127), such as CC 1 (Modulation Wheel) or CC 7
+(Channel Volume).</li>
+<li><strong><code>low_value</code></strong>: The target floating-point
+value assigned when the MIDI CC is at its minimum (<code>0</code>).</li>
+<li><strong><code>high_value</code></strong>: The target floating-point
+value assigned when the MIDI CC is at its maximum
+(<code>127</code>).</li>
+</ul>
+<h3 id="parameter-scaling-and-value-translation">Parameter Scaling and
+Value Translation</h3>
+<p>LADSPA control ports operate using standard single-precision
+floating-point numbers, while MIDI CC messages deliver integer values
+between <code>0</code> and <code>127</code>.</p>
+<p>Ecasound maps the two by performing linear interpolation between
+<code>low_value</code> and <code>high_value</code>. When an incoming
+MIDI message is received on the configured channel and CC number,
+Ecasound computes the new port value using the following formula:</p>
+<p><span class="math display">\[\text{Port Value} = \text{low\_value} +
+\left( \frac{\text{MIDI CC Value}}{127} \right) \times
+(\text{high\_value} - \text{low\_value})\]</span></p>
+<p>Inverted control is also supported by defining <code>low_value</code>
+higher than <code>high_value</code>, allowing maximum controller
+positions to correspond to minimum plugin values.</p>
+<h3 id="practical-implementation-example">Practical Implementation
+Example</h3>
+<p>The following command demonstrates routing an audio input through a
+LADSPA low-pass filter while mapping MIDI CC 74 (standard
+brightness/cutoff) on MIDI channel 1 to control the filter's cutoff
+frequency between 200 Hz and 8000 Hz:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:sound.wav</span> <span class="at">-o:alsa</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-Md:alsaseq,128:0</span> <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-el:lowpass_iir,200,2</span> <span class="dt">\</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-km:1,1,74,200,8000</span></span></code></pre></div>
+<p>In this command:</p>
+<ol type="1">
+<li><code>-el:lowpass_iir,200,2</code> initializes the plugin with
+default parameters (cutoff = 200, stages = 2).</li>
+<li><code>-km:1,1,74,200,8000</code> binds parameter <code>1</code>
+(cutoff frequency) of that plugin to MIDI Channel <code>1</code>,
+Controller <code>74</code>, scaling the output continuously across
+<code>200</code> to <code>8000</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

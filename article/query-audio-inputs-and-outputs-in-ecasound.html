@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Audio Inputs and Outputs in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound includes a powerful interactive mode (EIAO) that allows you to manage signal routing, inspect system drivers, and control processing in real time. This article explains how to start Ecasound in interactive mode and use its built-in commands to q">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/query-audio-inputs-and-outputs-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Query Audio Inputs and Outputs in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/query-audio-inputs-and-outputs-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound includes a powerful interactive mode (EIAO) that allows you to manage signal routing, inspect system drivers, and control processing in real time. This article explains how to start Ecasound in interactive mode and use its built-in commands to q" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="query-audio-inputs-and-outputs-in-ecasound">Query Audio Inputs
+and Outputs in Ecasound</h1>
+<p>Ecasound includes a powerful interactive mode (EIAO) that allows you
+to manage signal routing, inspect system drivers, and control processing
+in real time. This article explains how to start Ecasound in interactive
+mode and use its built-in commands to query currently active audio
+inputs and outputs, as well as inspect supported audio device drivers
+and object types.</p>
+<h3 id="launching-interactive-mode">Launching Interactive Mode</h3>
+<p>To access the interactive prompt, launch Ecasound with the
+<code>-c</code> flag from your terminal:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<p>If you already have a predefined setup or specific input/output
+devices to test immediately, you can pass them along with the command
+(for example, <code>ecasound -c -i alsa -o alsa</code>), but launching
+with <code>-c</code> alone provides an empty session ready for
+configuration.</p>
+<h3 id="listing-currently-bound-inputs-and-outputs">Listing Currently
+Bound Inputs and Outputs</h3>
+<p>Once inside the interactive interpreter
+(<code>ecasound'c&gt;</code>), you can query the active chainsetup for
+assigned inputs and outputs using the audio object list command:</p>
+<pre class="text"><code>aio-list</code></pre>
+<p>This command returns all audio inputs and outputs attached to the
+current chainsetup. If you need more detailed runtime information about
+the status of these I/O streams—such as buffer sizes, positions, and
+operational state—run:</p>
+<pre class="text"><code>aio-status</code></pre>
+<h3 id="checking-supported-audio-io-drivers-and-formats">Checking
+Supported Audio I/O Drivers and Formats</h3>
+<p>To see which audio subsystems (such as ALSA, JACK, OSS, or file
+handlers like WAV and FLAC) are available for input and output on your
+installation, query the registered audio object types:</p>
+<pre class="text"><code>aio-register</code></pre>
+<p>This displays a complete list of valid audio object prefixes (e.g.,
+<code>alsa</code>, <code>jack</code>, <code>soundcard</code>,
+<code>null</code>) that you can use when defining input
+(<code>-i</code>) and output (<code>-o</code>) targets.</p>
+<h3 id="verifying-chainsetup-routing">Verifying Chainsetup Routing</h3>
+<p>To inspect the overall topology and see how inputs and outputs map to
+individual processing chains:</p>
+<pre class="text"><code>cs-status</code></pre>
+<p>The output details the active setup, selected chains, connected audio
+inputs, and assigned audio outputs, allowing you to confirm that your
+inputs and outputs are properly routed before initiating playback or
+recording with the <code>start</code> command.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

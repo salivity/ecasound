@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Multichannel ALSA Audio Setup - ecasound</title>
+    <meta name="description" content="This article explains how Ecasound interacts with Advanced Linux Sound Architecture (ALSA) hardware to record, process, and play back more than two channels of audio. It covers the required ALSA device specifications, channel configuration formats, and t">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-multichannel-alsa-audio-setup">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Multichannel ALSA Audio Setup - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-multichannel-alsa-audio-setup" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Ecasound interacts with Advanced Linux Sound Architecture (ALSA) hardware to record, process, and play back more than two channels of audio. It covers the required ALSA device specifications, channel configuration formats, and t" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-multichannel-alsa-audio-setup">Ecasound Multichannel
+ALSA Audio Setup</h1>
+<p>This article explains how Ecasound interacts with Advanced Linux
+Sound Architecture (ALSA) hardware to record, process, and play back
+more than two channels of audio. It covers the required ALSA device
+specifications, channel configuration formats, and the internal routing
+operators Ecasound uses to manage individual audio channels across
+complex signal chains.</p>
+<h3 id="direct-alsa-hardware-access">Direct ALSA Hardware Access</h3>
+<p>Standard ALSA software plugins, such as <code>dmix</code> or
+<code>default</code>, often restrict stream input and output to
+2-channel stereo. To access all channels on a multichannel soundcard,
+Ecasound must communicate directly with the ALSA hardware device using
+the <code>alsahw</code> or <code>hw</code> interface instead of the
+generic <code>alsa</code> layer.</p>
+<p>The device syntax follows this structure:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">alsahw:CARD,DEVICE</span></span></code></pre></div>
+<p>For instance, addressing device <code>0</code> on card <code>1</code>
+requires <code>-i:alsahw:1,0</code> for input or
+<code>-o:alsahw:1,0</code> for output. Using direct hardware access
+bypasses operating system resampling and channel downmixing, exposing
+the full channel capability of the card.</p>
+<h3 id="specifying-format-and-channel-count">Specifying Format and
+Channel Count</h3>
+<p>Ecasound requires explicit format definitions to negotiate
+multichannel buffers with the ALSA driver. This is configured via the
+audio format parameter (<code>-f</code>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-f:sample_format,channels,sample_rate</span></span></code></pre></div>
+<p>When handling an 8-channel interface recording at 24-bit/48kHz, the
+command must explicitly request all 8 channels:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">-f:s24_le,8,48000</span></span></code></pre></div>
+<p>If the channel count specified does not match the physical hardware
+requirements, ALSA will reject the stream. Certain interfaces require
+specific interleaved channel counts (e.g., must open exactly 8 or 16
+channels, even if only four are needed).</p>
+<h3 id="managing-multichannel-routing-with-chains">Managing Multichannel
+Routing with Chains</h3>
+<p>Ecasound processes audio using independent processing paths called
+"chains." By default, an audio object attached to a chain receives all
+channels defined by the stream format. To process individual channels or
+sub-mixes independently, Ecasound uses internal channel-routing
+operators:</p>
+<ul>
+<li><strong><code>-erc:from_channel,to_channel</code> (Route
+Channel):</strong> Copies or redirects a single channel index to another
+index within the chain.</li>
+<li><strong><code>-chcopy:from,to</code>:</strong> Directly duplicates
+channel content.</li>
+<li><strong><code>-chorder:ch1,ch2,...</code>:</strong> Reorders, drops,
+or duplicates incoming channels to match a specified layout.</li>
+<li><strong><code>-ea:intensity</code> (Amplify):</strong> Used on
+individual channel chains to adjust gain or mute unused tracks.</li>
+</ul>
+<h3 id="example-recording-multichannel-input-to-separate-files">Example:
+Recording Multichannel Input to Separate Files</h3>
+<p>To capture specific channels from a multichannel interface into
+separate audio files, Ecasound assigns the ALSA input to multiple chains
+and isolates the channels on each:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:alsahw:1,0</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-erc:1,1</span> <span class="at">-o:track1.wav</span> <span class="at">-f:s32_le,1,48000</span> <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:alsahw:1,0</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-erc:2,1</span> <span class="at">-o:track2.wav</span> <span class="at">-f:s32_le,1,48000</span></span></code></pre></div>
+<p>In this setup:</p>
+<ol type="1">
+<li>Two chains (<code>1</code> and <code>2</code>) pull from the
+8-channel physical interface (<code>alsahw:1,0</code>).</li>
+<li>Chain 1 routes hardware input channel 1 to mono channel 1
+(<code>-erc:1,1</code>) and outputs to <code>track1.wav</code>.</li>
+<li>Chain 2 routes hardware input channel 2 to mono channel 1
+(<code>-erc:2,1</code>) and outputs to <code>track2.wav</code>.</li>
+</ol>
+<h3 id="example-multichannel-playback-routing">Example: Multichannel
+Playback Routing</h3>
+<p>To route different stereo stems or mono sources out to distinct
+physical hardware outputs on an 8-channel interface:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1</span> <span class="at">-i:stereo1.wav</span> <span class="at">-erc:2,2</span> <span class="at">-erc:1,1</span> <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:2</span> <span class="at">-i:stereo2.wav</span> <span class="at">-erc:2,4</span> <span class="at">-erc:1,3</span> <span class="dt">\</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:1,2</span> <span class="at">-f:s32_le,8,48000</span> <span class="at">-o:alsahw:1,0</span></span></code></pre></div>
+<p>Here, Chain 1 assigns its stereo tracks to hardware outputs 1 and 2,
+while Chain 2 routes its channels to physical outputs 3 and 4. Both
+chains output to the combined 8-channel ALSA device.</p>
+<h3 id="buffer-and-latency-considerations">Buffer and Latency
+Considerations</h3>
+<p>Multichannel operations require significantly more system bandwidth
+than stereo feeds. If buffer underruns (xruns) occur when opening
+multiple channels, buffer settings can be optimized using:</p>
+<ul>
+<li><strong><code>-B:buffering_mode</code>:</strong> Controls internal
+buffering behavior (e.g., <code>auto</code>, <code>nonrealtime</code>,
+<code>realtime</code>).</li>
+<li><strong><code>-b:buffer_size</code>:</strong> Sets the internal
+buffer size in samples.</li>
+</ul>
+<p>Matching the buffer size to an exact power of two (such as 128, 256,
+or 512) helps maintain synchronization across all active hardware
+channels.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

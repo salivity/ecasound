@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Normalize Audio to 0 dBFS in Ecasound - ecasound</title>
+    <meta name="description" content="Normalizing audio amplitude to zero decibels full scale (0 dBFS) in Ecasound requires using the volume analysis operator, -ev, in combination with the amplification operator, -ea. Because Ecasound is designed as a real-time, stream-based audio processor,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-normalize-audio-to-0-dbfs-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Normalize Audio to 0 dBFS in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-normalize-audio-to-0-dbfs-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Normalizing audio amplitude to zero decibels full scale (0 dBFS) in Ecasound requires using the volume analysis operator, -ev, in combination with the amplification operator, -ea. Because Ecasound is designed as a real-time, stream-based audio processor," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-normalize-audio-to-0-dbfs-in-ecasound">How to Normalize
+Audio to 0 dBFS in Ecasound</h1>
+<p>Normalizing audio amplitude to zero decibels full scale (0 dBFS) in
+Ecasound requires using the volume analysis operator,
+<strong><code>-ev</code></strong>, in combination with the amplification
+operator, <strong><code>-ea</code></strong>. Because Ecasound is
+designed as a real-time, stream-based audio processor, it does not scan
+ahead in a single pass to automatically normalize peak levels. Instead,
+peak normalization to 0 dBFS is achieved through a standard two-step
+process: analyzing the signal with <code>-ev</code> to determine the
+maximum peak and required gain, then applying that gain with
+<code>-ea</code>.</p>
+<h2 id="the-operators-explained">The Operators Explained</h2>
+<h3 id="the-analysis-operator--ev">The Analysis Operator:
+<code>-ev</code></h3>
+<p>The <code>-ev</code> (envelope volume) operator analyzes the audio
+stream and outputs statistical volume data without altering the audio.
+When executed on an audio file, it calculates:</p>
+<ul>
+<li>Peak amplitude</li>
+<li>RMS amplitude</li>
+<li>The exact multiplier factor required to scale the highest peak to 0
+dBFS (100% amplitude)</li>
+</ul>
+<h3 id="the-amplification-operator--ea">The Amplification Operator:
+<code>-ea</code></h3>
+<p>The <code>-ea:multiplier</code> operator applies linear amplification
+across all channels. The parameter represents an amplitude scaling
+factor (where <code>100</code> represents 100% / unity gain, and values
+above or below amplify or attenuate accordingly).</p>
+<hr />
+<h2 id="step-by-step-normalization-process">Step-by-Step Normalization
+Process</h2>
+<h3 id="step-1-analyze-the-peak-level">Step 1: Analyze the Peak
+Level</h3>
+<p>Run Ecasound with the <code>-ev</code> operator directed to null
+output to inspect the file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-ev</span></span></code></pre></div>
+<p>At the end of processing, Ecasound outputs volume statistics in the
+terminal, including a line indicating the peak amplitude and the
+required scaling value:</p>
+<pre class="text"><code>(eca-chainsetup) Volume analysis results:
+...
+-- multiplier for max peak: 1.45 (or percentage equivalent)</code></pre>
+<h3 id="step-2-apply-the-normalization-gain">Step 2: Apply the
+Normalization Gain</h3>
+<p>Take the calculated multiplier and apply it using <code>-ea</code> to
+render the normalized file:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-ea:145</span></span></code></pre></div>
+<p>If the output provides a direct percentage or floating-point
+multiplier, adjust the parameter so the peak reaches exactly 1.0 (100% /
+0 dBFS).</p>
+<hr />
+<h2 id="alternative-real-time-peak-limiting-with--eal">Alternative:
+Real-Time Peak Limiting with <code>-eal</code></h2>
+<p>If dynamic peak control is needed in a single real-time stream rather
+than two-pass linear normalization, Ecasound provides the
+<strong><code>-eal:max-limit-%</code></strong> operator.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-o</span> output.wav <span class="at">-eal:100</span></span></code></pre></div>
+<p>Setting <code>-eal:100</code> restricts the maximum signal amplitude
+to 100% (0 dBFS). However, <code>-eal</code> operates as a limiter
+(compressing or clipping peaks that exceed the threshold) rather than
+applying uniform gain adjustment across the entire recording. For true
+linear normalization to 0 dBFS without altering dynamics, the
+<code>-ev</code> and <code>-ea</code> workflow remains the correct
+approach.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

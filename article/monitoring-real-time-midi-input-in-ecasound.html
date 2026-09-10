@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Real-Time MIDI Input in Ecasound - ecasound</title>
+    <meta name="description" content="This article explains how to configure and monitor incoming real-time MIDI events directly from the terminal using Ecasound. By attaching Ecasound to the ALSA sequencer or raw MIDI subsystems, users can inspect active MIDI event streams, verify hardware">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/monitoring-real-time-midi-input-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Monitoring Real-Time MIDI Input in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/monitoring-real-time-midi-input-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure and monitor incoming real-time MIDI events directly from the terminal using Ecasound. By attaching Ecasound to the ALSA sequencer or raw MIDI subsystems, users can inspect active MIDI event streams, verify hardware" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="monitoring-real-time-midi-input-in-ecasound">Monitoring
+Real-Time MIDI Input in Ecasound</h1>
+<p>This article explains how to configure and monitor incoming real-time
+MIDI events directly from the terminal using Ecasound. By attaching
+Ecasound to the ALSA sequencer or raw MIDI subsystems, users can inspect
+active MIDI event streams, verify hardware controllers, and trace
+parameter automation changes in real time without a graphical
+interface.</p>
+<h3 id="setting-up-the-midi-input-driver">Setting Up the MIDI Input
+Driver</h3>
+<p>Ecasound accesses hardware and virtual MIDI streams through its MIDI
+input subsystem designated by the <code>-Md</code> option. For modern
+Linux distributions, the Advanced Linux Sound Architecture (ALSA)
+sequencer is the most versatile driver option.</p>
+<p>To open an ALSA sequencer port ready for MIDI monitoring, use the
+following syntax:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-Md:alsaseq,default</span> <span class="at">-c</span></span></code></pre></div>
+<p>Here, <code>-Md:alsaseq,default</code> instructs Ecasound to register
+a client port within the ALSA sequencer subsystem. The <code>-c</code>
+flag starts Ecasound in interactive mode, allowing real-time session
+control and preventing the program from terminating immediately.</p>
+<h3 id="connecting-the-midi-device">Connecting the MIDI Device</h3>
+<p>Once Ecasound is running with the sequencer input enabled, connect
+your MIDI keyboard, pad controller, or sequencer interface using ALSA's
+routing tools. In a separate terminal, list available input and output
+ports:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">aconnect</span> <span class="at">-l</span></span></code></pre></div>
+<p>Locate your MIDI controller's port ID (e.g., <code>20:0</code>) and
+Ecasound's client ID (e.g., <code>128:0</code>). Route the controller
+directly to Ecasound:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">aconnect</span> 20:0 128:0</span></code></pre></div>
+<p>Ecasound will now receive all raw events transmitted across the
+hardware MIDI bus.</p>
+<h3 id="tracking-events-with-debug-output">Tracking Events with Debug
+Output</h3>
+<p>To see active MIDI data packets printed directly to the standard
+output, adjust Ecasound’s internal debug and verbosity levels. The
+<code>-d</code> parameter controls event logging:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-d:15</span> <span class="at">-Md:alsaseq,default</span> <span class="at">-c</span></span></code></pre></div>
+<p>Setting a high debug mask outputs granular information regarding
+packet delivery, driver hooks, and system events. As messages flow
+through the MIDI layer, the terminal console prints event reception
+notifications and timing intervals.</p>
+<h3 id="monitoring-continuous-controller-cc-mappings">Monitoring
+Continuous Controller (CC) Mappings</h3>
+<p>For monitoring specific MIDI parameters such as Continuous
+Controllers (CC), pitch bend, or note triggers affecting an audio
+signal, map the incoming MIDI data to an audio chain operator using
+controller assignment syntax (<code>-km</code>).</p>
+<p>For example, to attach an ALSA MIDI CC to an audio amplifier
+module:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i:null</span> <span class="at">-o:null</span> <span class="at">-ea:100</span> <span class="at">-Md:alsaseq,default</span> <span class="at">-km:1,0,200,7,1</span> <span class="at">-c</span></span></code></pre></div>
+<p>Breakdown of the mapping flags:</p>
+<ul>
+<li><code>-i:null -o:null</code>: Runs a lightweight virtual processing
+chain without requiring active audio hardware routing.</li>
+<li><code>-ea:100</code>: Adds an amplification effect operator.</li>
+<li><code>-km:1,0,200,7,1</code>: Connects Controller #1 to target
+effect operator 1, varying values between 0 and 200, mapped specifically
+to MIDI CC #7 (standard volume) on MIDI Channel 1.</li>
+</ul>
+<h3 id="using-interactive-mode-to-inspect-parameter-changes">Using
+Interactive Mode to Inspect Parameter Changes</h3>
+<p>Once the engine is initiated by typing <code>start</code> inside the
+interactive command console, any adjustment to the assigned physical
+controller produces real-time terminal updates.</p>
+<p>You can inspect the state of any controller mapping dynamically by
+entering:</p>
+<pre class="text"><code>controller-status</code></pre>
+<p>or query the operational health of the overall processing engine:</p>
+<pre class="text"><code>engine-status</code></pre>
+<p>Ecasound will return the current normalized values received from the
+incoming MIDI stream, providing immediate confirmation of your
+controller's transmission range and communication state.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

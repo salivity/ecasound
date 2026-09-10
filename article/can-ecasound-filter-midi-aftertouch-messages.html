@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can Ecasound Filter MIDI Aftertouch Messages? - ecasound</title>
+    <meta name="description" content="Ecasound does not have built-in capabilities to filter out specific MIDI event types such as polyphonic or channel aftertouch. While Ecasound excels at multitrack audio processing, routing, and real-time effect handling, its MIDI functionality is primari">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/can-ecasound-filter-midi-aftertouch-messages">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Can Ecasound Filter MIDI Aftertouch Messages? - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/can-ecasound-filter-midi-aftertouch-messages" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound does not have built-in capabilities to filter out specific MIDI event types such as polyphonic or channel aftertouch. While Ecasound excels at multitrack audio processing, routing, and real-time effect handling, its MIDI functionality is primari" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="can-ecasound-filter-midi-aftertouch-messages">Can Ecasound
+Filter MIDI Aftertouch Messages?</h1>
+<p>Ecasound does not have built-in capabilities to filter out specific
+MIDI event types such as polyphonic or channel aftertouch. While
+Ecasound excels at multitrack audio processing, routing, and real-time
+effect handling, its MIDI functionality is primarily limited to MIDI
+clock synchronization, transport control, and mapping incoming Control
+Change (CC) messages to effect parameters. To reduce processing overhead
+caused by dense aftertouch data streams, you must strip these messages
+using an external MIDI processing utility before the data reaches your
+synthesizer or processing chain.</p>
+<h3 id="ecasounds-midi-capabilities-and-limitations">Ecasound's MIDI
+Capabilities and Limitations</h3>
+<p>Ecasound interacts with MIDI primarily via the ALSA sequencer
+subsystem or OSS MIDI devices. Its design focuses on:</p>
+<ul>
+<li>Synchronizing audio tracks with external hardware or software via
+MIDI Clock and MMC (MIDI Machine Control).</li>
+<li>Using continuous controller (CC) messages to automate parameters
+like volume, panning, and LADSPA plugin controls using the
+<code>-km</code> controller mapping options.</li>
+</ul>
+<p>Ecasound does not inspect, parse, or mutate the general stream of
+MIDI performance data (such as Note-On, Note-Off, Pitch Bend, or
+Aftertouch) passing through an arbitrary signal path. Because it lacks a
+native MIDI event transformation engine, it cannot drop, block, or
+filter raw Aftertouch (Status bytes <code>0xA0</code> for Polyphonic Key
+Pressure or <code>0xD0</code> for Channel Pressure) to lower message
+density.</p>
+<h3 id="why-aftertouch-generates-overhead">Why Aftertouch Generates
+Overhead</h3>
+<p>Aftertouch sensors generate continuous, high-frequency streams of
+data when a performer varies pressure on the keys. In
+resource-constrained environments, this continuous data can saturate the
+ALSA sequencer buffer, trigger unnecessary CPU interrupts, and introduce
+latency into software synthesizers or DAW environments. Removing these
+messages is a common optimization when the receiving sound engine does
+not use pressure data.</p>
+<h3 id="the-solution-external-midi-pre-filtering">The Solution: External
+MIDI Pre-Filtering</h3>
+<p>To prevent aftertouch messages from consuming processing bandwidth,
+you should filter the MIDI stream upstream before it enters your synth
+or DAW pipeline.</p>
+<h4 id="using-mididings">Using <code>mididings</code></h4>
+<p>The most effective tool for this task on Linux systems is
+<code>mididings</code>, a Python-based MIDI router and processor. You
+can run a lightweight background script that discards aftertouch events
+entirely:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mididings <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>run(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Filter(AFTERTOUCH) <span class="op">&gt;&gt;</span> Discard()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This ensures only desired messages (such as Note events, Pitch Bend,
+and relevant CC data) are passed through to ALSA client ports,
+completely removing the processing overhead of aftertouch from your
+audio setup.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

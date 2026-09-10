@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Chainsetup Operational Lifecycle Guide - ecasound</title>
+    <meta name="description" content="This article provides a comprehensive overview of the operational lifecycle of a chainsetup in Ecasound, tracking its path from initial instantiation to complete destruction. It covers how a chainsetup is defined, configured with signal processing chains">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-chainsetup-operational-lifecycle-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Chainsetup Operational Lifecycle Guide - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-chainsetup-operational-lifecycle-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of the operational lifecycle of a chainsetup in Ecasound, tracking its path from initial instantiation to complete destruction. It covers how a chainsetup is defined, configured with signal processing chains" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-chainsetup-operational-lifecycle-guide">Ecasound
+Chainsetup Operational Lifecycle Guide</h1>
+<p>This article provides a comprehensive overview of the operational
+lifecycle of a chainsetup in Ecasound, tracking its path from initial
+instantiation to complete destruction. It covers how a chainsetup is
+defined, configured with signal processing chains, bound to physical
+audio endpoints, processed by the execution engine, and cleanly
+decommissioned.</p>
+<h3 id="1-creation-and-instantiation">1. Creation and Instantiation</h3>
+<p>The lifecycle begins when a chainsetup is instantiated, either via
+command-line parameters or through Ecasound's Interactive Mode (EIAM).
+In interactive mode, this is achieved using the <code>cs-add</code>
+command followed by <code>cs-select</code>. At this stage, the
+chainsetup acts as an empty container allocated in memory, establishing
+the configuration scope for all subsequent chains, inputs, outputs, and
+effect operators.</p>
+<h3 id="2-configuration-and-topology-definition">2. Configuration and
+Topology Definition</h3>
+<p>Once created, the chainsetup enters the configuration phase. Here,
+the audio routing topology is constructed:</p>
+<ul>
+<li><strong>Chains:</strong> Individual signal paths are declared using
+<code>c-add</code> (or <code>-a</code>).</li>
+<li><strong>Inputs and Outputs:</strong> Audio sources (sound files,
+ALSA/JACK devices) are attached to specific chains using
+<code>ai-add</code> / <code>ao-add</code> (or <code>-i</code> /
+<code>-o</code>).</li>
+<li><strong>Operators and Controllers:</strong> DSP plugins (LADSPA,
+native Ecasound effects) and continuous parameter controllers
+(envelopes, oscillators) are assigned to the chains.</li>
+</ul>
+<p>Throughout this state, the chainsetup remains purely descriptive. No
+physical audio hardware is locked, no files are opened, and sample rate
+negotiation has not yet taken place.</p>
+<h3 id="3-connection-and-resource-allocation">3. Connection and Resource
+Allocation</h3>
+<p>To transition from a static configuration to an active processing
+graph, the chainsetup must be connected using the
+<code>cs-connect</code> command (or automatically when starting
+processing). During this phase:</p>
+<ul>
+<li>Device interfaces (such as ALSA, JACK, or OSS) and audio files are
+opened and validated.</li>
+<li>Format negotiation occurs, aligning sample rates, channel counts,
+and sample formats across the graph.</li>
+<li>Required processing buffers and intermediate memory allocations are
+locked in place.</li>
+<li>If any invalid routing, missing file, or format mismatch is
+detected, the process fails, returning the chainsetup to the unconnected
+configuration state.</li>
+</ul>
+<h3 id="4-real-time-processing-execution">4. Real-Time Processing
+(Execution)</h3>
+<p>With the chainsetup connected, it can be executed by starting the
+Ecasound transport engine using <code>start</code> or <code>run</code>.
+During execution:</p>
+<ul>
+<li>Audio buffers are continuously pulled from inputs, routed through
+chain-specific DSP operators, and pushed to outputs.</li>
+<li>Controllers dynamically modify effect parameters in real time.</li>
+<li>The engine supports state transitions between running and paused
+(<code>stop</code>) without releasing system resources, allowing
+repositioning via transport commands (<code>seek</code>,
+<code>setpos</code>).</li>
+</ul>
+<h3 id="5-disconnection">5. Disconnection</h3>
+<p>When processing finishes or the graph needs structural
+reconfiguration, the chainsetup is disconnected using
+<code>cs-disconnect</code>. During disconnection:</p>
+<ul>
+<li>All open file handles are flushed and closed properly.</li>
+<li>Connections to audio servers (e.g., JACK ports) and hardware drivers
+(e.g., ALSA handles) are released.</li>
+<li>Internal processing buffers are freed. The chainsetup remains in
+memory in an editable state, allowing parameter changes or topology
+updates before reconnecting.</li>
+</ul>
+<h3 id="6-destruction">6. Destruction</h3>
+<p>The final stage of the lifecycle is complete destruction, executed
+via the <code>cs-remove</code> command or when exiting Ecasound
+(<code>quit</code>). The engine checks that the chainsetup is
+disconnected, then systematically deallocates all associated chains,
+operators, controllers, and metadata from system memory. Once destroyed,
+the chainsetup reference ceases to exist, concluding its operational
+lifecycle.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

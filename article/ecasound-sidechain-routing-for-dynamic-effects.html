@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Sidechain Routing for Dynamic Effects - ecasound</title>
+    <meta name="description" content="Ecasound achieves sidechain dynamic processing by combining its modular chain architecture, channel-mapping operators, and multi-channel LADSPA dynamic plugins. By routing a secondary control signal alongside a primary audio signal via inter-chain loop d">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-sidechain-routing-for-dynamic-effects">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Sidechain Routing for Dynamic Effects - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-sidechain-routing-for-dynamic-effects" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound achieves sidechain dynamic processing by combining its modular chain architecture, channel-mapping operators, and multi-channel LADSPA dynamic plugins. By routing a secondary control signal alongside a primary audio signal via inter-chain loop d" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-sidechain-routing-for-dynamic-effects">Ecasound
+Sidechain Routing for Dynamic Effects</h1>
+<p>Ecasound achieves sidechain dynamic processing by combining its
+modular chain architecture, channel-mapping operators, and multi-channel
+LADSPA dynamic plugins. By routing a secondary control signal alongside
+a primary audio signal via inter-chain loop devices or channel
+multiplexing, users can drive dynamics processors—such as duckers,
+compressors, and gates—using an external trigger. This article details
+the structural mechanics of Ecasound's signal flow and demonstrates how
+to configure external sidechain routing directly from the command
+line.</p>
+<h3 id="the-mechanism-multi-channel-ladspa-architecture">The Mechanism:
+Multi-Channel LADSPA Architecture</h3>
+<p>Ecasound does not feature a dedicated internal "sidechain" bus in the
+traditional graphical digital audio workstation (DAW) sense. Instead, it
+relies on the channel configuration of LADSPA (Linux Audio Developer's
+Simple Plugin API) plugins that accept sidechain inputs, such as Steve
+Harris’s SC4 compressor (<code>sc4_1882</code>).</p>
+<p>In this model, a sidechain-enabled plugin treats extra audio channels
+as the control trigger:</p>
+<ul>
+<li>Channels 1 and 2 represent the primary program audio (left and
+right).</li>
+<li>Channels 3 and 4 (or channel 3 in a mono trigger setup) represent
+the sidechain control signal (trigger).</li>
+</ul>
+<p>To make sidechaining work, Ecasound must aggregate the target audio
+and the trigger audio into a single multi-channel stream before feeding
+that stream into the plugin.</p>
+<h3 id="inter-chain-routing-via-loop-devices">Inter-Chain Routing via
+Loop Devices</h3>
+<p>Ecasound manages parallel processing through chains (defined by
+<code>-a:chain_name</code>). To route one signal into another chain as a
+trigger, Ecasound uses internal real-time loop devices
+(<code>loop,id</code>).</p>
+<p>A typical ducking setup involves three functional chains:</p>
+<ol type="1">
+<li><strong>The Program Chain:</strong> Carries the audio to be
+compressed (e.g., background music).</li>
+<li><strong>The Control Chain:</strong> Carries the trigger audio (e.g.,
+a voiceover microphone) and duplicates it to a loop device.</li>
+<li><strong>The Processing Chain:</strong> Takes the audio and the loop
+signal, multiplexes them into a 4-channel stream, processes them with
+the LADSPA compressor, and strips the trigger channels before outputting
+to the soundcard or file.</li>
+</ol>
+<h3 id="step-by-step-sidechain-implementation">Step-by-Step Sidechain
+Implementation</h3>
+<p>To illustrate the signal routing, consider ducking a stereo music
+track using a mono voiceover track.</p>
+<h4 id="1-defining-chains-and-inputs">1. Defining Chains and Inputs</h4>
+<p>The inputs are assigned to separate chains:</p>
+<ul>
+<li>Chain <code>music</code> reads the stereo background track:
+<code>-a:music -i:music.wav</code></li>
+<li>Chain <code>voice</code> reads the microphone or voice track:
+<code>-a:voice -i:voice.wav</code></li>
+</ul>
+<h4 id="2-splitting-the-control-signal">2. Splitting the Control
+Signal</h4>
+<p>The voice signal must be heard in the final mix, but it must also
+serve as the trigger. The voice chain outputs to both the master mix
+loop and a sidechain loop:</p>
+<ul>
+<li><code>-a:voice -o:loop,voice_out</code></li>
+<li><code>-a:voice_sc -i:loop,voice_out -o:loop,sc_trigger</code></li>
+</ul>
+<h4 id="3-channel-multiplexing">3. Channel Multiplexing</h4>
+<p>In the processing chain (<code>comp</code>), the music track and the
+loopback trigger must be combined into a multi-channel stream.
+Ecasound's channel-routing operators handle this:</p>
+<ul>
+<li><code>-a:comp -i:loop,music_in</code></li>
+<li>Combine with the sidechain loop using
+<code>-a:comp -i:loop,sc_trigger</code></li>
+<li>Use the channel routing operator <code>-erc:src,dest</code> or
+channel-mixing operators to ensure Channels 1–2 hold the music, and
+Channel 3 holds the voice trigger.</li>
+</ul>
+<h4 id="4-applying-the-plugin-and-extracting-output">4. Applying the
+Plugin and Extracting Output</h4>
+<p>Once aligned into a single chain:</p>
+<ul>
+<li>Load the dynamic plugin with
+<code>-el:plugin_name,parameters...</code></li>
+<li>The plugin monitors Channel 3 to attenuate Channels 1 and 2.</li>
+<li>Remove or mute Channel 3 before the signal reaches the master output
+using the channel-select or route copy operator (<code>-erc</code>),
+ensuring only the processed stereo program is sent downstream.</li>
+</ul>
+<h3 id="practical-command-line-example">Practical Command-Line
+Example</h3>
+<p>The following command demonstrates ducking stereo music
+(<code>music.wav</code>) against a mono voiceover
+(<code>voice.wav</code>) using the SC4 compressor plugin:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:music</span> <span class="at">-i:music.wav</span> <span class="at">-o:loop,1</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:voice</span> <span class="at">-i:voice.wav</span> <span class="at">-o:loop,2</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix_music</span> <span class="at">-i:loop,1</span> <span class="at">-erc:1,1</span> <span class="at">-erc:2,2</span> <span class="at">-o:loop,3</span> <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:mix_sc</span> <span class="at">-i:loop,2</span> <span class="at">-erc:1,3</span> <span class="at">-o:loop,3</span> <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:process</span> <span class="at">-i:loop,3</span> <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">-f:s16_le,4,44100</span> <span class="dt">\</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">-el:sc4,0,10,0,-24,4,2,0.1,100,0,0,0</span> <span class="dt">\</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">-erc:1,1</span> <span class="at">-erc:2,2</span> <span class="dt">\</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">-f:s16_le,2,44100</span> <span class="dt">\</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:master</span> <span class="at">-i:loop,3</span> <span class="at">-a:voice_dry</span> <span class="at">-i:loop,2</span> <span class="at">-a:master,voice_dry</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p>In this routing configuration:</p>
+<ul>
+<li>The dynamic effect (<code>sc4</code>) evaluates the amplitude
+threshold strictly against the routed sidechain input on channel 3.</li>
+<li>When amplitude on channel 3 exceeds the defined threshold, gain
+reduction applies automatically to channels 1 and 2.</li>
+<li>The downstream pipeline discards the sidechain channel and blends
+the compressed music with the clean voice channel for the final
+mix.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

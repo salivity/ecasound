@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create a Click Track in Ecasound - ecasound</title>
+    <meta name="description" content="Ecasound can generate and monitor click tracks for musicians during live tracking sessions, though it does not feature a single-click dedicated metronome button found in modern graphical digital audio workstations. Because Ecasound is a modular, command-">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-create-a-click-track-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create a Click Track in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-create-a-click-track-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound can generate and monitor click tracks for musicians during live tracking sessions, though it does not feature a single-click dedicated metronome button found in modern graphical digital audio workstations. Because Ecasound is a modular, command-" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-create-a-click-track-in-ecasound">How to Create a Click
+Track in Ecasound</h1>
+<p>Ecasound can generate and monitor click tracks for musicians during
+live tracking sessions, though it does not feature a single-click
+dedicated metronome button found in modern graphical digital audio
+workstations. Because Ecasound is a modular, command-line multitrack
+recorder and signal router, it accomplishes metronome functionality by
+looping pre-rendered click samples, piping in audio-frequency pulses, or
+synchronizing with external MIDI clocks. By routing these generated
+tones exclusively to headphone monitor outputs, performers can track in
+tempo while recording pristine, isolated audio inputs.</p>
+<h3 id="native-generation-vs-sample-playback">Native Generation vs.
+Sample Playback</h3>
+<p>Ecasound excels at routing and processing rather than algorithmic
+pattern generation. To use a metronome during a session, you have two
+primary methods:</p>
+<ol type="1">
+<li><strong>Looping an Audio Sample (Recommended):</strong> You can
+create or download a short click sample (such as a woodblock or rimshot)
+or a pre-rendered 1-bar beat loop, and instruct Ecasound to loop it
+continuously for the duration of the take.</li>
+<li><strong>Piping Real-Time Tones:</strong> You can generate a pulse
+train or click externally using utilities like <code>sox</code> or
+ALSA/JACK-compatible click generators and pipe the raw audio directly
+into an Ecasound chain.</li>
+</ol>
+<h3 id="setting-up-a-click-track-with-a-loop">Setting Up a Click Track
+with a Loop</h3>
+<p>The most reliable way to provide a metronome is to use a
+pre-rendered, tempo-accurate click WAV file that matches the duration of
+a bar or the entire song.</p>
+<p>Ecasound allows you to loop an audio input across an entire recording
+take using the <code>-tl</code> (loop) flag or by chaining a looping
+input.</p>
+<p>A practical tracking command looks like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:click</span> <span class="at">-i:click_120bpm.wav</span> <span class="at">-tl</span> <span class="at">-o:alsa,hw:0,0</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-a:record</span> <span class="at">-i:alsa,hw:0,1</span> <span class="at">-o:guitar_take_1.wav</span></span></code></pre></div>
+<p>In this command:</p>
+<ul>
+<li>Chain <code>click</code> reads <code>click_120bpm.wav</code>, loops
+it continuously (<code>-tl</code>), and sends it to the musician's
+monitoring output (<code>hw:0,0</code>).</li>
+<li>Chain <code>record</code> independently captures the microphone
+input (<code>hw:0,1</code>) and records it directly to
+<code>guitar_take_1.wav</code>.</li>
+<li>The click stays isolated to the monitor output and never bleeds into
+the recorded audio file.</li>
+</ul>
+<h3 id="advanced-monitoring-and-routing">Advanced Monitoring and
+Routing</h3>
+<p>During complex tracking sessions, you may need separate monitor mixes
+for multiple musicians:</p>
+<ul>
+<li><strong>Independent Output Routing:</strong> Ecasound can map audio
+to multi-channel sound cards. For example, you can route the click track
+to hardware outputs 3 and 4 (the musician's headphone amplifier) while
+routing master playback without click to outputs 1 and 2 (the control
+room monitors).</li>
+<li><strong>Level Control:</strong> You can adjust the click level
+independently during tracking using the volume gain controller
+<code>-ea:volume_percent</code> attached to the click chain, without
+altering recording input gain.</li>
+<li><strong>Synchronized Overdubs:</strong> When overdubbing against
+existing tracks, simply add another chain reading the previously
+recorded backing tracks and output them to the same headphone monitor
+channel alongside the looped click.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

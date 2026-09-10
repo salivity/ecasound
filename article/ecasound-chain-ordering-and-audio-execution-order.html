@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound Chain Ordering and Audio Execution Order - ecasound</title>
+    <meta name="description" content="In Ecasound, the sequence in which audio chains and chain operators are defined directly controls the signal flow, processing hierarchy, and real-time execution timing. Chain ordering determines whether audio operators process data sequentially or in par">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-chain-ordering-and-audio-execution-order">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound Chain Ordering and Audio Execution Order - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-chain-ordering-and-audio-execution-order" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Ecasound, the sequence in which audio chains and chain operators are defined directly controls the signal flow, processing hierarchy, and real-time execution timing. Chain ordering determines whether audio operators process data sequentially or in par" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-chain-ordering-and-audio-execution-order">Ecasound
+Chain Ordering and Audio Execution Order</h1>
+<p>In Ecasound, the sequence in which audio chains and chain operators
+are defined directly controls the signal flow, processing hierarchy, and
+real-time execution timing. Chain ordering determines whether audio
+operators process data sequentially or in parallel, governs the latency
+of inter-chain routing via loop devices, and dictates how multi-channel
+inputs are summed and dispatched to outputs. Understanding these
+mechanics is essential for achieving predictable audio effects and
+avoiding unwanted buffer delays during multitrack processing.</p>
+<h3 id="intra-chain-operator-execution">Intra-Chain Operator
+Execution</h3>
+<p>Within an individual chain, execution is strictly linear and
+sequential. When multiple chain operators—such as filters, compressors,
+or gain adjustments—are attached using the <code>-ea</code>,
+<code>-ef</code>, or <code>-el</code> options, Ecasound executes them in
+the exact order they are declared from left to right.</p>
+<p>For example, placing a gain boost before a limiter produces a
+hard-clipped, compressed signal, whereas placing the limiter before the
+gain boost results in clean peak control followed by overall
+amplification. Because each operator consumes and mutates the audio
+stream within the chain's current processing buffer, downstream
+operators only receive the modified output of previous operators.</p>
+<h3 id="inter-chain-processing-and-buffer-scheduling">Inter-Chain
+Processing and Buffer Scheduling</h3>
+<p>Ecasound processes audio in discrete blocks defined by the buffer
+size (<code>-b</code>). During each processing cycle, the engine
+iterates through all active chains assigned to the current setup.</p>
+<p>When chains operate independently—each with its own input and
+output—the order in which the chains are declared does not alter the
+audio results, as each chain receives its input and computes its output
+for the current buffer cycle concurrently. However, CPU workload
+scheduling and output mixing follow the chain sequence registered in the
+engine.</p>
+<h3 id="the-impact-of-order-on-loop-devices">The Impact of Order on Loop
+Devices</h3>
+<p>Chain ordering has its most critical impact when routing signals
+between chains using virtual loop devices (<code>-i:loop,N</code> and
+<code>-o:loop,N</code>). Loop devices pass audio from a writer chain to
+a reader chain.</p>
+<ol type="1">
+<li><strong>Forward Routing (Producer First):</strong> If Chain A writes
+to <code>loop,1</code> and Chain B reads from <code>loop,1</code>, and
+Chain A is declared earlier in the setup than Chain B, Ecasound
+processes Chain A first. Chain B then reads the freshly processed audio
+in the same processing cycle, resulting in zero-buffer cross-chain
+latency.</li>
+<li><strong>Reverse Routing (Consumer First):</strong> If Chain B is
+declared before Chain A, Chain B attempts to read from
+<code>loop,1</code> before Chain A has populated it for that cycle.
+Consequently, Chain B reads the data from the <em>previous</em> cycle,
+introducing an inherent one-buffer delay (latency equal to the
+<code>-b</code> sample buffer size). While this delay is useful for
+deliberate feedback loops, it introduces unintentional phase issues and
+timing offsets in standard sub-mixing or parallel processing
+workflows.</li>
+</ol>
+<h3 id="summing-and-output-dispatch-order">Summing and Output Dispatch
+Order</h3>
+<p>When multiple chains are routed to the same physical audio output,
+Ecasound sums their streams. The declaration order of the chains
+determines the accumulation sequence into the final output buffer. While
+digital audio summing is mathematically commutative (<span
+class="math inline">\(A + B = B + A\)</span>), the chain execution order
+dictates the precise point at which master effects or post-mix routing
+can intercept the combined stream before writing to disk or an external
+sound server like ALSA or JACK.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

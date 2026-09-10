@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Real-Time VU Meter Values with Ecasound ECI - ecasound</title>
+    <meta name="description" content="This article explains how client applications extract real-time VU and peak meter levels using the Ecasound Control Interface (ECI). By embedding a peak monitoring operator into the Ecasound audio chain, running an active processing engine, and periodica">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/read-real-time-vu-meter-values-with-ecasound-eci">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Read Real-Time VU Meter Values with Ecasound ECI - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/read-real-time-vu-meter-values-with-ecasound-eci" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how client applications extract real-time VU and peak meter levels using the Ecasound Control Interface (ECI). By embedding a peak monitoring operator into the Ecasound audio chain, running an active processing engine, and periodica" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="read-real-time-vu-meter-values-with-ecasound-eci">Read Real-Time
+VU Meter Values with Ecasound ECI</h1>
+<p>This article explains how client applications extract real-time VU
+and peak meter levels using the Ecasound Control Interface (ECI). By
+embedding a peak monitoring operator into the Ecasound audio chain,
+running an active processing engine, and periodically querying the
+operator’s parameters via ECI API commands, applications can render
+smooth, responsive volume meters in real time.</p>
+<h3 id="1-initialize-the-eci-instance">1. Initialize the ECI
+Instance</h3>
+<p>The client application starts by initializing the ECI library in its
+chosen language (such as C, Python, or Perl). ECI provides an abstracted
+command-and-response protocol over an internal pipeline or socket to
+control the Ecasound audio engine.</p>
+<p>In Python, for example, the initialization is handled via:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyecasound <span class="im">import</span> ECA_CONTROL_INTERFACE</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>eci <span class="op">=</span> ECA_CONTROL_INTERFACE()</span></code></pre></div>
+<h3 id="2-configure-the-chain-and-attach-a-metering-operator">2.
+Configure the Chain and Attach a Metering Operator</h3>
+<p>To calculate volume levels, Ecasound requires a monitoring operator
+attached to an active audio chain. The most common operator for this
+task is the Peak Amplitude Monitor (<code>epp</code>), which analyzes
+incoming signal buffers and tracks peak amplitude.</p>
+<p>The chain setup sequence requires:</p>
+<ol type="1">
+<li>Creating or selecting a chain (<code>c-add</code>,
+<code>c-select</code>).</li>
+<li>Setting audio inputs and outputs (<code>ai-add</code>,
+<code>ao-add</code>).</li>
+<li>Appending the peak amplitude operator using
+<code>cop-add epp</code>.</li>
+</ol>
+<p>The <code>epp</code> operator continuously monitors sample values
+without modifying the underlying audio stream. It exposes parameters
+representing the current peak level and the cumulative peak level.</p>
+<h3 id="3-start-the-audio-engine">3. Start the Audio Engine</h3>
+<p>Once the inputs, outputs, and operators are configured, the engine
+must be launched into non-blocking or background playback/recording
+mode:</p>
+<pre class="text"><code>cs-connect
+start</code></pre>
+<p>At this stage, the audio engine runs in a separate thread,
+continuously processing buffers and updating internal operator
+states.</p>
+<h3 id="4-query-the-operator-in-a-polling-loop">4. Query the Operator in
+a Polling Loop</h3>
+<p>To retrieve values in real time, the application runs a lightweight
+polling loop (typically tied to a GUI refresh timer or worker thread,
+running at 30–60 Hz). During each iteration, the program targets the
+peak operator and queries its current parameter.</p>
+<p>The querying process involves the following ECI steps:</p>
+<ol type="1">
+<li><strong>Select the operator:</strong> Run
+<code>cop-select epp</code> (or select it by its numerical index in the
+chain).</li>
+<li><strong>Request parameter data:</strong> Run
+<code>cop-get-parameter 1</code> to target the current instantaneous
+peak level.</li>
+<li><strong>Fetch the return value:</strong> Read the returned
+floating-point value using the ECI accessor function, such as
+<code>eci.last_float()</code> in Python or <code>eci_last_float()</code>
+in C.</li>
+</ol>
+<p>Because ECI commands can introduce slight overhead, polling should be
+decoupled from the primary real-time audio thread to avoid buffer
+underruns.</p>
+<h3 id="5-convert-amplitude-to-decibels-db--vu">5. Convert Amplitude to
+Decibels (dB / VU)</h3>
+<p>The raw value returned by the <code>epp</code> operator is a
+normalized linear amplitude where <code>1.0</code> represents full scale
+(0 dBFS). Real-world VU meters typically display values on a logarithmic
+decibel scale.</p>
+<p>To convert the linear float value to dBFS for display:</p>
+<p><span class="math display">\[\text{dB} = 20 \times
+\log_{10}(\text{amplitude})\]</span></p>
+<p>If the linear value is zero or negligible, clamp the calculation to a
+predefined floor (such as -60 dB or -96 dB) to avoid mathematical errors
+with logarithms. The resulting decibel value can then be mapped directly
+to graphical meter bars, numerical readouts, or peak indicator LEDs.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

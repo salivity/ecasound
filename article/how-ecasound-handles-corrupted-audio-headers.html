@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Ecasound Handles Corrupted Audio Headers - ecasound</title>
+    <meta name="description" content="Ecasound relies on specialized underlying decoding libraries like libsndfile to parse audio file structures, which means incoming files with corrupted headers typically cause initialization failures or processing halts. However, Ecasound provides flexibl">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-ecasound-handles-corrupted-audio-headers">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Ecasound Handles Corrupted Audio Headers - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-ecasound-handles-corrupted-audio-headers" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound relies on specialized underlying decoding libraries like libsndfile to parse audio file structures, which means incoming files with corrupted headers typically cause initialization failures or processing halts. However, Ecasound provides flexibl" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-ecasound-handles-corrupted-audio-headers">How Ecasound
+Handles Corrupted Audio Headers</h1>
+<p>Ecasound relies on specialized underlying decoding libraries like
+libsndfile to parse audio file structures, which means incoming files
+with corrupted headers typically cause initialization failures or
+processing halts. However, Ecasound provides flexible raw format
+parameters that allow users to bypass damaged header data entirely,
+reading the audio payload directly as raw PCM to recover the stream.</p>
+<h3 id="default-header-parsing-and-error-handling">Default Header
+Parsing and Error Handling</h3>
+<p>When an audio file is specified as an input using the <code>-i</code>
+parameter (such as <code>-i:file.wav</code>), Ecasound inspects the file
+header to determine the sample rate, bit depth, channel count, and
+encoding format. Because Ecasound offloads container parsing to external
+libraries—primarily <code>libsndfile</code> for standard uncompressed
+formats—it inherits their strict validation rules.</p>
+<p>If an incoming header is truncated, contains an invalid RIFF chunk
+size, or has unreadable format tags, Ecasound cannot initialize the
+input object. The software immediately prints an error message to
+standard error (such as <code>ERROR: Unable to open input...</code> or
+internal <code>libsndfile</code> error strings) and terminates the setup
+phase. Ecasound does not attempt to automatically guess, repair, or
+reconstruct corrupted header fields during automated processing.</p>
+<h3 id="bypassing-headers-with-raw-audio-inputs">Bypassing Headers with
+Raw Audio Inputs</h3>
+<p>To handle files with damaged or missing headers, Ecasound allows you
+to override automatic format detection using explicit format
+definitions. By declaring the audio format manually before specifying
+the input, Ecasound can read the incoming file as raw audio data.</p>
+<p>This is accomplished using the <code>-f</code> flag:</p>
+<pre><code>ecasound -f:s16_le,2,44100 -i:corrupted_file.raw -o:repaired_file.wav</code></pre>
+<p>In this mode, Ecasound ignores any metadata structure inside the file
+and interprets the byte stream directly according to the user-supplied
+sample format, channel count, and sample rate.</p>
+<h3 id="addressing-residual-header-data">Addressing Residual Header
+Data</h3>
+<p>When bypassing a corrupted header by treating a container format
+(such as a WAV or AIFF file) as raw PCM, the corrupted header bytes
+remain at the very beginning of the file. Ecasound will interpret these
+non-audio bytes as PCM samples, which typically produces a brief burst
+of loud digital noise or a "click" at the start of the output.</p>
+<p>To mitigate this, you can instruct Ecasound to skip the corrupted
+header area by applying a time offset or position parameter
+(<code>-y:seconds</code>), effectively dropping the initial damaged
+header bytes and processing only the clean audio data that follows.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

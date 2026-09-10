@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Fix Ecasound Audio Buffer Underruns - ecasound</title>
+    <meta name="description" content="Audio buffer underruns in Ecasound, commonly known as xruns, occur when the audio subsystem requests audio data that the application has not finished processing in time. This article explores the root causes of these interruptions—including inadequate">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/how-to-fix-ecasound-audio-buffer-underruns">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Fix Ecasound Audio Buffer Underruns - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/how-to-fix-ecasound-audio-buffer-underruns" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Audio buffer underruns in Ecasound, commonly known as xruns, occur when the audio subsystem requests audio data that the application has not finished processing in time. This article explores the root causes of these interruptions—including inadequate" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-fix-ecasound-audio-buffer-underruns">How to Fix Ecasound
+Audio Buffer Underruns</h1>
+<p>Audio buffer underruns in Ecasound, commonly known as xruns, occur
+when the audio subsystem requests audio data that the application has
+not finished processing in time. This article explores the root causes
+of these interruptions—including inadequate buffer sizing, real-time
+thread scheduling issues, and high system latency—and details the
+precise command-line parameters and system configurations required to
+eliminate them for reliable, artifact-free audio processing.</p>
+<h2 id="what-causes-buffer-underruns-in-ecasound">What Causes Buffer
+Underruns in Ecasound</h2>
+<p>An audio buffer underrun happens when the digital-to-analog converter
+(DAC) consumes samples from the output ring buffer faster than Ecasound
+can write them. When the buffer empties completely, the hardware plays
+silence or discontinuous data, resulting in audible clicks, pops, or
+dropped audio.</p>
+<p>The primary causes in Ecasound include:</p>
+<ul>
+<li><strong>Undersized Buffers:</strong> Configuring an audio buffer
+size too small for the host CPU to process incoming effects or routings
+within the required period.</li>
+<li><strong>Lack of Real-Time Scheduling:</strong> Running Ecasound as a
+regular user thread without real-time kernel priorities, leaving it
+vulnerable to CPU preemption by background operating system tasks.</li>
+<li><strong>Heavy DSP Loads:</strong> Complex multi-track setups,
+high-latency LADSPA plugins, or real-time resampling that exceed CPU
+cycle limits per audio period.</li>
+<li><strong>System Latency and I/O Bottlenecks:</strong> Disk write
+contention when recording multi-channel uncompressed audio, or slow
+interrupt handling caused by power-saving CPU governors.</li>
+<li><strong>Mismatches in the Audio Chain:</strong> Parameter conflicts
+between Ecasound's internal buffers and underlying sound architectures
+like ALSA or JACK.</li>
+</ul>
+<h2 id="parameters-to-eliminate-underruns">Parameters to Eliminate
+Underruns</h2>
+<p>Adjusting specific Ecasound flags allows you to expand processing
+headroom, balance latency against stability, and elevate thread
+priority.</p>
+<h3 id="1-increase-the-audio-buffer-size--b">1. Increase the Audio
+Buffer Size (<code>-b</code>)</h3>
+<p>The <code>-b</code> parameter sets the processing buffer size in
+sample frames. The default value is often too aggressive for complex
+chains on non-optimized systems.</p>
+<p>Increasing this value gives the CPU more time to fill the buffer
+before the sound card demands the next frame:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-b:1024</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<ul>
+<li><strong>Low latency (risk of xruns):</strong> <code>-b:128</code> or
+<code>-b:256</code></li>
+<li><strong>Standard stability:</strong> <code>-b:512</code> or
+<code>-b:1024</code></li>
+<li><strong>High reliability (mixing, playback, slow systems):</strong>
+<code>-b:2048</code> or <code>-b:4096</code></li>
+</ul>
+<h3 id="2-enable-real-time-scheduling--r">2. Enable Real-Time Scheduling
+(<code>-r</code>)</h3>
+<p>To prevent the Linux kernel from starving Ecasound of CPU time,
+enable POSIX real-time scheduling using the <code>-r</code> flag
+followed by an optional priority level (1–99, default is often 50):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-r:50</span> <span class="at">-b:512</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<p><em>Note: For the <code>-r</code> parameter to function, your user
+account must have permission to set real-time priorities in
+<code>/etc/security/limits.conf</code> (via <code>rtprio</code> and
+<code>memlock</code>).</em></p>
+<h3 id="3-tune-buffering-modes--z">3. Tune Buffering Modes
+(<code>-z</code>)</h3>
+<p>Ecasound provides the <code>-z</code> family of parameters to modify
+low-level engine behaviors:</p>
+<ul>
+<li><strong><code>-z:db</code> (Double Buffering):</strong> Enables
+double buffering between the engine and audio objects. This decouples
+signal processing from audio device I/O, dramatically reducing underruns
+during disk reads/writes.</li>
+<li><strong><code>-z:intbuf</code>:</strong> Sets internal engine buffer
+sizes explicitly if default internal allocations fail to match external
+hardware drivers.</li>
+<li><strong><code>-z:nopsched</code>:</strong> Disables real-time thread
+scheduling optimizations if your operating system uses a custom
+real-time kernel where Ecasound's automated scheduling causes thread
+lockups or priority inversions.</li>
+</ul>
+<p>Example enabling double buffering with real-time priority:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-z:db</span> <span class="at">-r:60</span> <span class="at">-b:1024</span> <span class="at">-i:input.wav</span> <span class="at">-o:alsa</span></span></code></pre></div>
+<h2 id="complementary-system-adjustments">Complementary System
+Adjustments</h2>
+<p>If adjusting Ecasound parameters alone does not eliminate
+underruns:</p>
+<ul>
+<li><strong>Set the CPU Governor to Performance:</strong> Dynamic
+frequency scaling can cause dropouts during frequency state changes. Set
+all CPU cores to maximum frequency using:
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cpupower</span> frequency-set <span class="at">-g</span> performance</span></code></pre></div></li>
+<li><strong>Use JACK as the Audio Subsystem:</strong> When low latency
+is required alongside zero underruns, route Ecasound through a properly
+tuned JACK daemon using <code>-i:jack</code> and <code>-o:jack</code>.
+Configure JACK's periods (<code>-n 2</code> or <code>-n 3</code>) and
+frame size (<code>-p 512</code>) independently to handle the hardware
+timing layer.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

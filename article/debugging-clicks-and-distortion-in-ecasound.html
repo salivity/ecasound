@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debugging Clicks and Distortion in Ecasound - ecasound</title>
+    <meta name="description" content="Intermittent distortion and clicking sounds during Ecasound processing are typically caused by buffer underruns or overruns (xruns), sample rate mismatches, internal signal clipping, or insufficient real-time system priorities. This guide covers how to i">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/debugging-clicks-and-distortion-in-ecasound">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Debugging Clicks and Distortion in Ecasound - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/debugging-clicks-and-distortion-in-ecasound" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Intermittent distortion and clicking sounds during Ecasound processing are typically caused by buffer underruns or overruns (xruns), sample rate mismatches, internal signal clipping, or insufficient real-time system priorities. This guide covers how to i" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="debugging-clicks-and-distortion-in-ecasound">Debugging Clicks
+and Distortion in Ecasound</h1>
+<p>Intermittent distortion and clicking sounds during Ecasound
+processing are typically caused by buffer underruns or overruns (xruns),
+sample rate mismatches, internal signal clipping, or insufficient
+real-time system priorities. This guide covers how to isolate the root
+cause using Ecasound's logging tools, optimize buffer and format
+parameters, eliminate audio clipping, and configure your operating
+system for reliable, artifact-free stream processing.</p>
+<h3 id="1-enable-verbose-debugging-to-detect-xruns">1. Enable Verbose
+Debugging to Detect Xruns</h3>
+<p>Clicks and pops are most frequently "xruns" (buffer overruns or
+underruns), which occur when the CPU fails to process an audio buffer
+before the audio interface needs the next block of samples.</p>
+<p>To confirm whether xruns are occurring, run Ecasound with explicit
+debugging flags enabled:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-d:1</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa</span></code></pre></div>
+<p>The <code>-d</code> option controls debug output:</p>
+<ul>
+<li><code>-d:1</code> prints standard diagnostic messages and
+warnings.</li>
+<li><code>-d:2</code> or <code>-d:4</code> provides low-level debugging
+details on buffer management and subsystem calls.</li>
+<li><code>-d:16</code> specifically traces real-time audio device
+operations.</li>
+</ul>
+<p>Watch the terminal output while the clicks happen. If you see ALSA or
+JACK reporting <code>xrun</code> or
+<code>buffer underrun/overrun</code>, the pipeline is dropping audio
+frames due to timing constraints.</p>
+<h3 id="2-adjust-buffer-size-and-processing-multipliers">2. Adjust
+Buffer Size and Processing Multipliers</h3>
+<p>If xruns are detected, your current buffer configuration is too small
+for your CPU load, or it is misaligned with the underlying audio
+driver.</p>
+<p>Adjust the buffer size using the <code>-b</code> flag:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-b:512</span> <span class="at">-i</span> input.wav <span class="at">-o</span> alsa,default</span></code></pre></div>
+<ul>
+<li><strong>Increase Buffer Size:</strong> If latency is not critical,
+increase the buffer size (e.g., from <code>128</code> or
+<code>256</code> up to <code>512</code>, <code>1024</code>, or
+<code>2048</code>). Larger buffers give the processor more time to
+absorb execution spikes.</li>
+<li><strong>Internal Buffering (<code>-z:intbuf</code>):</strong> When
+routing across multiple chains or slow storage, use the
+<code>-z:intbuf</code> option to enable internal buffering between the
+processing engine and real-time outputs.</li>
+<li><strong>Period Count (<code>-B</code> option):</strong> When
+targeting raw ALSA devices, adjust the number of periods per buffer
+using <code>-B:auto</code> or specify the period count directly to match
+your sound card's native hardware layout.</li>
+</ul>
+<h3 id="3-identify-and-fix-sample-rate-mismatches">3. Identify and Fix
+Sample Rate Mismatches</h3>
+<p>Intermittent clicks often sound like a periodic ticking when two
+devices or files operate at slightly different sample rates without a
+synchronous resampler.</p>
+<p>Ensure that all inputs, chain processing setups, and output devices
+explicitly use the same audio format:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-f:s16_le,2,44100</span> <span class="at">-i</span> input.wav <span class="at">-f:s16_le,2,44100</span> <span class="at">-o</span> alsa,hw:0,0</span></code></pre></div>
+<ul>
+<li>Explicitly specify the sample format using
+<code>-f:sample_format,channels,sample_rate</code>.</li>
+<li>Avoid hardware devices that lack hardware resampling when feeding
+them mismatched rates. In ALSA, targeting <code>hw:X,Y</code> bypasses
+all software conversion. If your input is 44.1 kHz and the hardware
+requires 48 kHz, using <code>hw:</code> will cause pitch drift, clicks,
+or failure. Switch to <code>plughw:X,Y</code> to allow ALSA’s automatic
+resampling layer, or resample the source before feeding it to
+Ecasound.</li>
+</ul>
+<h3 id="4-check-for-internal-digital-clipping">4. Check for Internal
+Digital Clipping</h3>
+<p>Distortion that only occurs during louder musical passages is usually
+digital clipping, not a buffer issue. Ecasound processes internal audio
+using 32-bit floating-point or 16-bit integer formats depending on
+configuration, but writing to fixed-point outputs (like 16-bit or 24-bit
+PCM) hard-clips values exceeding 0 dBFS.</p>
+<p>Diagnose signal levels by adding the volume analysis operator to your
+chain:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-i</span> input.wav <span class="at">-ea:100</span> <span class="at">-ev</span> <span class="at">-o</span> output.wav</span></code></pre></div>
+<p>The <code>-ev</code> operator analyzes peak and average
+amplitude:</p>
+<ul>
+<li>If the peak amplitude reaches or exceeds <code>1.0</code> (or
+<code>0 dB</code>), digital clipping is occurring.</li>
+<li>Reduce the gain using the amplitude operator (<code>-ea:80</code>
+for 80% volume) or apply a limiter/compressor operator earlier in the
+chain.</li>
+</ul>
+<h3 id="5-configure-system-priorities-and-cpu-scaling">5. Configure
+System Priorities and CPU Scaling</h3>
+<p>If buffer settings are adequate but clicks still occur
+intermittently, background system processes are likely preempting
+Ecasound.</p>
+<ul>
+<li><strong>Set Real-Time Scheduling:</strong> Run Ecasound with
+real-time audio priority using <code>chrt</code>:
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">chrt</span> <span class="at">-f</span> 70 ecasound <span class="at">-i</span> input.wav <span class="at">-o</span> alsa</span></code></pre></div>
+Ensure your user account has real-time permissions defined in
+<code>/etc/security/limits.d/audio.conf</code> (<code>rtprio</code> set
+to 95 or higher, <code>memlock</code> set to
+<code>unlimited</code>).</li>
+<li><strong>Lock CPU Frequency:</strong> Dynamic CPU frequency scaling
+can cause brief latency spikes when ramping clock speeds up and down.
+Set your CPU governor to <code>performance</code> mode:
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> performance <span class="kw">|</span> <span class="fu">sudo</span> tee /sys/devices/system/cpu/cpu<span class="pp">*</span>/cpufreq/scaling_governor</span></code></pre></div></li>
+<li><strong>Use JACK for Complex Routing:</strong> If Ecasound must
+interact with multiple audio streams simultaneously, route Ecasound
+through a dedicated JACK audio server (<code>-i:jack -o:jack</code>).
+JACK provides centralized clocking, synchronous processing, and reliable
+xrun reporting across all client applications.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

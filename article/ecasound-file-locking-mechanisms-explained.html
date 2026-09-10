@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecasound File Locking Mechanisms Explained - ecasound</title>
+    <meta name="description" content="This article provides an overview of how Ecasound safeguards audio data during recording sessions. It examines the specific POSIX-level file locking and access techniques Ecasound uses, how it manages file descriptors, and the protective routines—such">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/ecasound-file-locking-mechanisms-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ecasound File Locking Mechanisms Explained - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/ecasound-file-locking-mechanisms-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Ecasound safeguards audio data during recording sessions. It examines the specific POSIX-level file locking and access techniques Ecasound uses, how it manages file descriptors, and the protective routines—such" />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="ecasound-file-locking-mechanisms-explained">Ecasound File
+Locking Mechanisms Explained</h1>
+<p>This article provides an overview of how Ecasound safeguards audio
+data during recording sessions. It examines the specific POSIX-level
+file locking and access techniques Ecasound uses, how it manages file
+descriptors, and the protective routines—such as clean signal trapping
+and library-level buffering—that prevent header and stream corruption
+during live capture.</p>
+<h3 id="posix-file-handling-and-advisory-locking">POSIX File Handling
+and Advisory Locking</h3>
+<p>Ecasound runs primarily on Unix-like operating systems and relies on
+standard POSIX input/output semantics rather than dedicated, proprietary
+lock-file mechanisms. When Ecasound initializes an audio recording
+session targeting a file on disk, it utilizes POSIX system-level open
+calls (<code>open()</code>) with restrictive access modes—typically
+write-only (<code>O_WRONLY</code>) combined with creation and truncation
+flags (<code>O_CREAT | O_TRUNC</code>) depending on whether an existing
+file is being overwritten or appended.</p>
+<p>Operating systems under the POSIX standard default to advisory file
+locking. While Ecasound relies on standard file descriptors to isolate
+write access within its engine threads, it does not impose
+kernel-enforced mandatory locks on output targets. Instead, file access
+safety relies on:</p>
+<ul>
+<li><strong>Exclusive Output Ownership:</strong> Ecasound’s internal
+engine assigns each output target to a single processing chain
+(<code>chainsetup</code>). Two active chains cannot write to the same
+output file descriptor concurrently within the software.</li>
+<li><strong>Advisory Synchronization:</strong> Where underlying storage
+layers or integrated libraries utilize <code>fcntl()</code> or
+<code>flock()</code> advisory locks, Ecasound respects standard
+system-level file locks to avoid writing over locked resources.</li>
+</ul>
+<h3 id="buffer-management-and-thread-isolation">Buffer Management and
+Thread Isolation</h3>
+<p>Direct stream corruption during recording is frequently caused by
+buffer underruns, race conditions, or interrupted write pipelines.
+Ecasound prevents this through real-time double buffering and isolated
+I/O routines:</p>
+<ol type="1">
+<li><strong>Real-Time Audio Buffers:</strong> Ecasound captures incoming
+audio into dedicated memory buffers via backends like ALSA, JACK, or
+OSS.</li>
+<li><strong>Sequential Writing:</strong> Disk writes are decoupled from
+the hardware capture loop. Buffered audio packets are flushed
+sequentially to the disk interface, ensuring that interleaved writes or
+torn frames do not corrupt raw PCM payloads.</li>
+</ol>
+<h3 id="safe-termination-and-header-finalization">Safe Termination and
+Header Finalization</h3>
+<p>For container-based audio formats (such as WAV, AIFF, or RIFF
+structures), corruption typically occurs when a recording process
+abruptly halts without updating the file header's total byte length
+field. Ecasound guards against this using structured cleanup
+routines:</p>
+<ul>
+<li><strong>Signal Interception:</strong> Ecasound registers signal
+handlers for common termination signals, such as <code>SIGINT</code>
+(Ctrl+C) and <code>SIGTERM</code>.</li>
+<li><strong>Header Rewrites via Audio Libraries:</strong> When utilizing
+format libraries like <code>libsndfile</code>, Ecasound does not close
+the file descriptor immediately upon receiving an exit request. The
+signal handler catches the interrupt, halts data capture, calculates the
+total samples written, seeks back to the start of the file descriptor to
+update the header metadata, and safely closes the file.</li>
+<li><strong>Atomic Close Operations:</strong> By ensuring the write
+pipeline flushes all remaining memory buffers before closing the
+descriptor, Ecasound prevents partial or unfinalized files that standard
+media players would otherwise mark as corrupt.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

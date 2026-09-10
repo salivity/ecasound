@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scripting Ecasound Interactive Mode via Stdin - ecasound</title>
+    <meta name="description" content="Ecasound fully supports feeding batch command scripts directly into its interactive mode using standard input (stdin). By invoking Ecasound with the interactive mode flag (-c), the engine continuously reads text-based instructions from the input stream,">
+    <link rel="canonical" href="https://salivity.github.io/ecasound/article/scripting-ecasound-interactive-mode-via-stdin">
+    <link rel="search" type="application/opensearchdescription+xml" title="ecasound" href="/ecasound/opensearch.xml">
+    <link rel="icon" href="/ecasound/favicon.ico">
+    <link rel="stylesheet" href="/ecasound/css/style.css">
+    <link media="print" rel="stylesheet" href="/ecasound/css/print.css">
+    <script src="/ecasound/js/fuse.min.js"></script>
+    <script src="/ecasound/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Scripting Ecasound Interactive Mode via Stdin - ecasound" />
+    <meta property="og:url" content="https://salivity.github.io/ecasound/article/scripting-ecasound-interactive-mode-via-stdin" />
+    <meta property="og:image:url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/ecasound/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ecasound fully supports feeding batch command scripts directly into its interactive mode using standard input (stdin). By invoking Ecasound with the interactive mode flag (-c), the engine continuously reads text-based instructions from the input stream," />
+    <link rel="manifest" href="/ecasound/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/ecasound/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>ecasound</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/ecasound/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="scripting-ecasound-interactive-mode-via-stdin">Scripting
+Ecasound Interactive Mode via Stdin</h1>
+<p>Ecasound fully supports feeding batch command scripts directly into
+its interactive mode using standard input (<code>stdin</code>). By
+invoking Ecasound with the interactive mode flag (<code>-c</code>), the
+engine continuously reads text-based instructions from the input stream,
+allowing you to automate multitrack processing, effect parameters, and
+routing. Using standard UNIX streams, redirection, pipes, and
+here-documents enables non-interactive, programmatic execution of
+Ecasound Control Interface (ECI) commands.</p>
+<h3 id="how-ecasound-handles-interactive-stdin">How Ecasound Handles
+Interactive Stdin</h3>
+<p>When launched with the <code>-c</code> option, Ecasound starts in
+interactive mode and listens for ECI commands via standard input. Rather
+than manually typing commands into the terminal prompt, you can pipe or
+redirect a pre-written text file containing sequential commands directly
+into the process.</p>
+<h3 id="methods-for-passing-batch-commands">Methods for Passing Batch
+Commands</h3>
+<h4 id="1-input-redirection">1. Input Redirection</h4>
+<p>You can store your commands in a plain text file (commonly with a
+<code>.eci</code> extension) and pass it directly to Ecasound using
+shell redirection:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="op">&lt;</span> batch_commands.eci</span></code></pre></div>
+<h4 id="2-using-standard-pipes">2. Using Standard Pipes</h4>
+<p>If commands need to be generated dynamically by another process, you
+can pipe standard output straight to Ecasound:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> batch_commands.eci <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<p>Or generate single, sequential commands inline:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">&quot;cs-add play_chain\nai-add input.wav\nao-add /dev/dsp\nstart\nsleep 5\nstop\nquit\n&quot;</span> <span class="kw">|</span> <span class="ex">ecasound</span> <span class="at">-c</span></span></code></pre></div>
+<h4 id="3-bash-here-documents">3. Bash Here-Documents</h4>
+<p>For standalone shell scripts, embedding commands directly within a
+here-document avoids the need for external <code>.eci</code> files:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ecasound</span> <span class="at">-c</span> <span class="op">&lt;&lt;EOF</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="st">cs-add session1</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">c-add chain1</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">ai-add audio_track.wav</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">ao-add alsa</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">start</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">int-cmd-sleep 10</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">stop</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="st">quit</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+<h3 id="essential-scripting-guidelines">Essential Scripting
+Guidelines</h3>
+<ul>
+<li><strong>Terminating the Process:</strong> Always ensure the batch
+script ends with the <code>quit</code> command. Because stdin is
+redirected, failing to issue <code>quit</code> or close the stream may
+leave the process hanging or terminate abruptly without flushing audio
+buffers.</li>
+<li><strong>Managing Playback Duration:</strong> Since Ecasound
+processes batch inputs sequentially at machine speed, playback commands
+like <code>start</code> need time to execute before receiving
+<code>stop</code> or <code>quit</code>. Use Ecasound's built-in timing
+commands—such as <code>sleep &lt;seconds&gt;</code> or
+<code>int-cmd-sleep &lt;seconds&gt;</code>—to allow playback or
+recording to run for the desired length of time.</li>
+<li><strong>Error Handling:</strong> Ecasound interactive mode will
+attempt to continue parsing input even if an invalid command is
+encountered. Ensure command sequences are validated beforehand to
+prevent unintended routing or incomplete audio rendering.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/ecasound'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/ecasound/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/ecasound/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
